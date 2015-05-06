@@ -11,6 +11,6 @@ There is an intermittent API modification error or double-sided BB entry error t
 
 <h2>License</h2>
 BecauseWeDynamo: Copyright 2015 Because We Can
-</br>Dynamo: Copyright 2014 Autodesk
-</br>Revit: Copyright 2014 Autodesk
+</br>Dynamo: Copyright 2015 Autodesk
+</br>Revit: Copyright 2015 Autodesk
 <p>Licensed under The MIT License (MIT); you may not use this file except in compliance with the License. You may obtain a copy of the License <a href="https://github.com/BecauseWeCan/BecauseWeDynamo/blob/master/LICENSE.md">here</a>. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
