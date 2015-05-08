@@ -207,7 +207,7 @@ namespace Fabrication
         /// </summary>
         public List<Triangle> triangles { get { return Triangles; } }
         /// <summary>
-        /// edges with this vertex
+        /// Edges with this vertex
         /// </summary>
         public List<TriangleEdge> edges { get { return Edges; } }
         /// <summary>
@@ -311,7 +311,7 @@ namespace Fabrication
         /// <param name="pta"></param>
         /// <param name="ptb"></param>
         /// <param name="name"></param>
-        /// <param name="triangles"></param>
+        /// <param name="Triangles"></param>
         /// <returns></returns>
         public static TriangleEdge ByPoints(TriangleVertex pta, TriangleVertex ptb, string name, List<Triangle> triangles) { return new TriangleEdge(pta, ptb, name, triangles, false); }
         /// <summary>
@@ -320,7 +320,7 @@ namespace Fabrication
         /// <param name="pta"></param>
         /// <param name="ptb"></param>
         /// <param name="name"></param>
-        /// <param name="triangles"></param>
+        /// <param name="Triangles"></param>
         /// <param name="boo"></param>
         /// <returns></returns>
         public static TriangleEdge ByPoints(TriangleVertex pta, TriangleVertex ptb, string name, List<Triangle> triangles, Boolean boo) { return new TriangleEdge(pta, ptb, name, triangles, boo); }
@@ -477,7 +477,7 @@ namespace Fabrication
             else return false;
         }
         /// <summary>
-        /// adds circles to edges
+        /// adds circles to Edges
         /// </summary>
         /// <param name="factor">text scale</param>
         /// <returns></returns>
@@ -509,12 +509,12 @@ namespace Fabrication
                                     Vector.ByTwoPoints(center, edges[j].midpoint) // Y-axis
                                     ).display(factor));
                     } // end switch
-                } // end edges
+                } // end Edges
 
             return labels;
         }// end action
         /// <summary>
-        /// adds circles to edges
+        /// adds circles to Edges
         /// </summary>
         /// <param name="factor">text scale</param>
         /// <returns></returns>
@@ -554,7 +554,7 @@ namespace Fabrication
                         offset += spacing;
                     }
                 } // end switch
-            } // end edges
+            } // end Edges
             return circles;
         }// end action
 
@@ -579,28 +579,13 @@ namespace Fabrication
     {
         //**CLASS VARIABLES
         private Dictionary<Point, TriangleVertex> Vertices;
-        private List<Point> VertexPoints;
-        private List<Triangle> Triangles;
-        private List<List<TriangleVertex>> Splines;
-        private List<TriangleEdge> Edges;
+        public List<Point> VertexPoints { get; set; }
+        public List<Triangle> Triangles { get; set; }
+        public List<List<TriangleVertex>> Splines { get; set; }
+        public List<TriangleEdge> Edges {get; set;}
 
-        //**QUERY
-        /// <summary>
-        /// triangles
-        /// </summary>
-        public List<Triangle> triangles { get { return Triangles; } }
-        /// <summary>
-        /// edges
-        /// </summary>
-        public List<TriangleEdge> edges { get { return Edges; } }
-        /// <summary>
-        /// vertices
-        /// </summary>
         public List<TriangleVertex> vertices{ get { return Vertices.Values.ToList(); } }
-        /// <summary>
-        /// splines
-        /// </summary>
-        public List<List<TriangleVertex>> splines { get { return Splines; } }
+
 
 
         //**CONSTRUCTORS
@@ -651,8 +636,8 @@ namespace Fabrication
 
                             if (j > 0)
                             {
-                                // check triangles
-                                // find triangles on edge
+                                // check Triangles
+                                // find Triangles on edge
                                 List<Triangle> listT = new List<Triangle>();
                                 for (int t = 0; t < Vertices[VertexPoints[k]].triangles.Count; t++)
                                 {
@@ -681,8 +666,8 @@ namespace Fabrication
                         }
                     } // end search
                 } // end spline point iteration
-                // check triangles
-                // find triangles on edge
+                // check Triangles
+                // find Triangles on edge
                 if (OrderedSplines[i].Length > 2)
                 {
                     List<Triangle> listTlast = new List<Triangle>();
@@ -712,7 +697,7 @@ namespace Fabrication
             } // end build spline
 
             
-            //build edges
+            //build Edges
             for (int s = 0; s < Splines.Count - 1; s++)
             {
                 // for each spline
@@ -737,8 +722,8 @@ namespace Fabrication
 
                     for (int sv = 0; sv < Search.Count; sv++ )
                     {
-                        // check triangles
-                        // find triangles on edge
+                        // check Triangles
+                        // find Triangles on edge
                         List<Triangle> listT = new List<Triangle>();
                         for (int t = 0; t < Search[sv].triangles.Count; t++)
                         {
@@ -774,7 +759,7 @@ namespace Fabrication
 
                 } // end spline
 
-            } // end build edges 
+            } // end build Edges 
 
 
 
@@ -865,25 +850,25 @@ namespace Fabrication
 
         //**ACTION
         /// <summary>
-        /// circles edges
+        /// circles Edges
         /// </summary>
         /// <param name="factor">text scale</param>
         /// <returns>list of circles ordered by triangle then edge then letter</returns>
         public List<List<PolyCurve>> GetEdgeLabels(double factor)
         {
-            List<List<PolyCurve>> labels = new List<List<PolyCurve>>(triangles.Count);
-            for (int i = 0; i < triangles.Count; i++ ) { labels.Add(triangles[i].GetEdgeLabels(factor));  }
+            List<List<PolyCurve>> labels = new List<List<PolyCurve>>(Triangles.Count);
+            for (int i = 0; i < Triangles.Count; i++ ) { labels.Add(Triangles[i].GetEdgeLabels(factor));  }
             return labels;
         }
         /// <summary>
-        /// gets index set of triangles sorted by angles
+        /// gets index set of Triangles sorted by angles
         /// </summary>
         /// <returns></returns>
         public List<int> GetSortedTriangleIndicesByName()
         {
-            List<int> index = new List<int>(triangles.Count);
+            List<int> index = new List<int>(Triangles.Count);
             Dictionary<int, string> sorted = new Dictionary<int, string>();
-            for (int i = 0; i < triangles.Count; i++) { sorted.Add(i, triangles[i].name); }
+            for (int i = 0; i < Triangles.Count; i++) { sorted.Add(i, Triangles[i].name); }
             foreach (var item in sorted.OrderBy(i => i.Value)) { index.Add(item.Key); }
 
             return index;
@@ -891,16 +876,16 @@ namespace Fabrication
 
         public void SetHolesBySpline(int[] holes)
         {
-            for (int t = 0; t < triangles.Count; t++) triangles[t].numHoles = holes[triangles[t].splineId];
+            for (int t = 0; t < Triangles.Count; t++) Triangles[t].numHoles = holes[Triangles[t].splineId];
         }
         public List<TriangleEdgeConnector> PlaceEdgeConnectorHolesBySpline(int[] holes, double radius, double spacing)
         {
             SetHolesBySpline(holes);
             List<TriangleEdgeConnector> result = new List<TriangleEdgeConnector>();
-            for (int i = 0; i < edges.Count; i++)
+            for (int i = 0; i < Edges.Count; i++)
             {
-                if (edges[i].isOuterEdge) continue;
-                result.Add(new TriangleEdgeConnector(edges[i], radius, spacing));
+                if (Edges[i].isOuterEdge) continue;
+                result.Add(new TriangleEdgeConnector(Edges[i], radius, spacing));
             }
             return result;
         }
@@ -912,15 +897,15 @@ namespace Fabrication
         }
         public void AddParamterToTriangles(string name, Object[] data )
         {
-            if (data.Length == triangles.Count) for (int i = 0; i < triangles.Count; i++) { triangles[i].Parameters.Add(name, data[i]); }
+            if (data.Length == Triangles.Count) for (int i = 0; i < Triangles.Count; i++) { Triangles[i].Parameters.Add(name, data[i]); }
         }
         public List<int> GetTriangleIndexByParameterValue( string parameter, Object value )
         {
-            if (!triangles[0].Parameters.Keys.Contains(parameter)) return null;
+            if (!Triangles[0].Parameters.Keys.Contains(parameter)) return null;
             List<int> result = new List<int>();
-            for (int i = 0; i < triangles.Count; i++ )
+            for (int i = 0; i < Triangles.Count; i++ )
             {
-                if ( triangles[i].Parameters[parameter].Equals(value) )  ;
+                if ( Triangles[i].Parameters[parameter].Equals(value) )  ;
             }
                 return result;
         }
