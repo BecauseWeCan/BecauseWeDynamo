@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
-using Text;
 
-namespace TriangleRigging
+namespace Fabrication
 {
     public class TriangleEdgeConnector
     {
@@ -351,41 +350,6 @@ namespace TriangleRigging
         public Line GetEdgeGeometry()
         {
             return Line.ByStartPointEndPoint(A.point, B.point);
-        }
-        public List<PolyCurve> GetEdgeLabels(double factor)
-        {
-            List<PolyCurve> labels = new List<PolyCurve>();
-            for (int i = 0; i < triangles.Count; i++)
-            {
-                for (int j = 0; j < triangles[i].edges.Count; j++)
-                {
-                    if (triangles[i].edges[j].name.Equals(this.name))
-                    {
-                        int a = triangles[i].vertices.IndexOf(triangles[i].edges[j].A);
-                        int b = triangles[i].vertices.IndexOf(triangles[i].edges[j].B);
-                        if (((a - b) % 3 + 3) % 3 == 1)
-                        {
-                            labels.AddRange(Word.ByString(
-                                    triangles[i].edges[j].name,
-                                    triangles[i].surface.ClosestPointTo(triangles[i].edges[j].midpoint),
-                                    Vector.ByTwoPoints(triangles[i].edges[j].midpoint, triangles[i].edges[j].B.point),
-                                    Vector.ByTwoPoints(triangles[i].center, triangles[i].edges[j].midpoint)
-                                    ).display(factor));
-                        }
-                        else if (((a - b) % 3 + 3) % 3 == 2)
-                        {
-                            labels.AddRange(Word.ByString(
-                                    triangles[i].edges[j].name, //string
-                                    triangles[i].surface.ClosestPointTo(triangles[i].edges[j].midpoint), //cs point
-                                    Vector.ByTwoPoints(triangles[i].edges[j].midpoint, triangles[i].edges[j].A.point), // X-axis
-                                    Vector.ByTwoPoints(triangles[i].center, triangles[i].edges[j].midpoint) // Y-axis
-                                    ).display(factor));
-                        } // end switch
-                    }
-                } // end Edges
-            }
-
-            return labels;
         }
     }
 
@@ -900,7 +864,7 @@ namespace TriangleRigging
         /// gets index set of Triangles sorted by angles
         /// </summary>
         /// <returns></returns>
-        public List<int> GetSortedTriangleIndexByName()
+        public List<int> GetSortedTriangleIndicesByName()
         {
             List<int> index = new List<int>(Triangles.Count);
             Dictionary<int, string> sorted = new Dictionary<int, string>();
@@ -941,36 +905,10 @@ namespace TriangleRigging
             List<int> result = new List<int>();
             for (int i = 0; i < Triangles.Count; i++ )
             {
-                if (Triangles[i].Parameters[parameter].Equals(value)) result.Add(i);
+                if ( Triangles[i].Parameters[parameter].Equals(value) )  ;
             }
-            return result;
+                return result;
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public List<List<int>> GetTriangleRowIndexBySpline()
-        {
-            int numRow = Splines.Count - 1;
-            int numD = Splines.Count.ToString().Length;
-            List<int> Index = GetSortedTriangleIndexByName();
-            List<int> Row = new List<int>(Index.Count);
-            List<List<int>> result = new List<List<int>>(numRow);
-
-            for (int i = 0; i < Index.Count; i++) Row.Add(Convert.ToInt32(Triangles[Index[i]].name.Substring(1, numD)));
-            for (int i = 0; i < numRow; i++) 
-            {
-                List<int> list = new List<int>();
-                for (int j = Row.IndexOf(i); j < Row.Count; j++)
-                {
-                    if (Row[j] > i) break;
-                    list.Add(j);
-                }
-                result.Add(list);
-            }
-            return result;
-        } 
     } // end class
 
 

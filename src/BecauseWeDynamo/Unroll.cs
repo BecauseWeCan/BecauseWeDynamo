@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Fabrication
 {
-    class Unroll
+    public class Unroll
     {
         //**TODOS
         //***Implement code copy from existing unfolding scripts from Inventor or 123Dmake
