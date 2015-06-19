@@ -13,7 +13,10 @@ Error messages include:
 - Unable to copy the face! ACIS_EXCEPTION_ACCESS_VIOLATION -- access violation
 - Unable to make sheet double-sided: CHANGE_LOST_ENT -- attempt to change record marked as deleted
 - Unable to make sheet double-sided: ILLEGAL_ENTITY_MODIFICATION -- entity modification outside API BEGIN/END block
-
+What helps to prevent errors:
+- Close and reopen Revit when opening different scripts
+- Interacting with GUI before running script
+- Making sure that there is only one active process for Revit
 <h2>License</h2>
 BecauseWeDynamo: Copyright 2015 Because We Can
 </br>Dynamo: Copyright 2015 Autodesk
