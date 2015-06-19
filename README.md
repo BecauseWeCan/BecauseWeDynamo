@@ -7,7 +7,12 @@ Library for building topology from Revit adaptive components based on three poin
 <p>Once BecauseWeDynamo is finished building, navigate to BecauseWeDynamo/bin/ and import BecauseWeDynamo.dll into Dynamo either using library import or addding the .dll file to the root folder of Dynamo. If only interested in the necessary .dll's to import through Zero-Touch Import into Dynamo, check the Zero-Touch Node folder. These .dll's will be updated periodically and will be based on the latest build.</p>
 
 <h2>Known Issues</h2>
-There is an intermittent API modification error or double-sided BB entry error that occasionally occurs that is being looked into. Also, use with manual run in Dynamo and import geometry from Revit independently as this is the slowest part of the process.
+There is an intermittent API modification error or double-sided BB entry error that occasionally occurs that is being looked into. Error message include:
+- External component has thrown an exception
+- Unable to get FACES range: ACIS_EXCEPTION_ACCESS_VIOLATION -- access violation
+- Unable to copy the face! ACIS_EXCEPTION_ACCESS_VIOLATION -- access violation
+- Unable to make sheet double-sided: CHANGE_LOST_ENT -- attempt to change record marked as deleted
+- Unable to make sheet double-sided: ILLEGAL_ENTITY_MODIFICATION -- entity modification outside API BEGIN/END block
 
 <h2>License</h2>
 BecauseWeDynamo: Copyright 2015 Because We Can
