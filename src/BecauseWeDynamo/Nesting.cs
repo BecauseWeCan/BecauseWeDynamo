@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Fabrication
 {
-    public class Nesting
+     class Nesting
     {
         //**TODO SUMMARY 
         /* ***Implement code to do actual nesting based on nesting code from existing freeware
