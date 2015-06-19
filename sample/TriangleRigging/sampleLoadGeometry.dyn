@@ -1,9 +1,9 @@
-<Workspace Version="0.8.2.1601" X="-773.594454149422" Y="796.418799302733" zoom="0.722457982312917" Name="Home" RunType="Manual" RunPeriod="100" HasRunWithoutCrash="False">
+<Workspace Version="0.8.2.1601" X="-872.118332596973" Y="1428.41511665428" zoom="1.38015488055702" Name="Home" RunType="Manual" RunPeriod="100" HasRunWithoutCrash="True">
   <NamespaceResolutionMap />
   <Elements>
     <DSRevitNodesUI.FamilyTypes guid="59f0664b-38ca-4668-9e87-a7254b315e83" type="DSRevitNodesUI.FamilyTypes" nickname="Family Types" x="-9.9689628613707" y="-790.647999623296" isVisible="true" isUpstreamVisible="true" lacing="Disabled" index="4:Triangle Rig:Base" />
     <DSRevitNodesUI.ElementsOfFamilyType guid="29f2395e-43d8-4527-9b2e-0e4033fa097b" type="DSRevitNodesUI.ElementsOfFamilyType" nickname="All Elements of Family Type" x="193.29434227882" y="-789.663753227481" isVisible="true" isUpstreamVisible="true" lacing="Disabled" />
-    <Dynamo.Nodes.DSFunction guid="5616f000-f531-4d61-9c28-38bbd92a09f1" type="Dynamo.Nodes.DSFunction" nickname="Element.Geometry" x="970.745524097327" y="-861.179846536283" isVisible="false" isUpstreamVisible="true" lacing="Shortest" assembly="RevitNodes.dll" function="Revit.Elements.Element.Geometry" />
+    <Dynamo.Nodes.DSFunction guid="5616f000-f531-4d61-9c28-38bbd92a09f1" type="Dynamo.Nodes.DSFunction" nickname="Element.Geometry" x="970.745524097327" y="-861.179846536283" isVisible="true" isUpstreamVisible="true" lacing="Shortest" assembly="RevitNodes.dll" function="Revit.Elements.Element.Geometry" />
     <Dynamo.Nodes.DSFunction guid="20de4f68-4252-42d1-a8c7-3da23afe761e" type="Dynamo.Nodes.DSFunction" nickname="AdaptiveComponent.Locations" x="972.660926765675" y="-766.930507625169" isVisible="false" isUpstreamVisible="true" lacing="Shortest" assembly="RevitNodes.dll" function="Revit.Elements.AdaptiveComponent.Locations" />
     <Dynamo.Nodes.DSModelElementSelection guid="fd7d1236-d4b8-468c-b72c-a0fa168eae9c" type="Dynamo.Nodes.DSModelElementSelection" nickname="Select Model Element" x="381.819109769648" y="-534.039386251479" isVisible="true" isUpstreamVisible="true" lacing="Disabled">
       <instance id="befc0aee-b9d8-4b4f-990c-d3e487920984-00075b27" />
