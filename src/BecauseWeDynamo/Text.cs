@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Autodesk.DesignScript.Geometry;
 
-namespace Fabrication
+namespace Text
 {
     public class Letter
     {
