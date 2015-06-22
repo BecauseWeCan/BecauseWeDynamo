@@ -1,4 +1,4 @@
-<Workspace Version="0.8.2.1601" X="-67.5588682523851" Y="843.954537836179" zoom="0.391618535692916" Name="Home" RunType="Automatic" RunPeriod="100" HasRunWithoutCrash="True">
+<Workspace Version="0.8.2.1601" X="-120.978230158113" Y="401.517509329514" zoom="0.246522303765149" Name="Home" RunType="Manual" RunPeriod="100" HasRunWithoutCrash="False">
   <NamespaceResolutionMap />
   <Elements>
     <Dynamo.Nodes.DSFunction guid="5616f000-f531-4d61-9c28-38bbd92a09f1" type="Dynamo.Nodes.DSFunction" nickname="Element.Geometry" x="1385.30354348292" y="-851.828913768187" isVisible="false" isUpstreamVisible="true" lacing="Shortest" assembly="RevitNodes.dll" function="Revit.Elements.Element.Geometry" />
