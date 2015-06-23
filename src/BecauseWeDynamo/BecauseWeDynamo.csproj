@@ -77,9 +77,7 @@
     <Compile Include="DXFLibrary\Text.cs" />
     <Compile Include="DXFLibrary\UnexpectedElement.cs" />
     <Compile Include="Text.cs" />
-    <Compile Include="TriangleRigging.cs">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="TriangleRigging.cs" />
     <Compile Include="Unroll.cs" />
     <Compile Include="DXFLibrary\Variable.cs" />
     <Compile Include="DXFLibrary\Vertex.cs" />

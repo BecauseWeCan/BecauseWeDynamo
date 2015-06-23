@@ -14,18 +14,18 @@ namespace TriangleRigging
     {
         double radius;
         double spacing;
-        public int[] numHoles { get; set;}
-        public TriangleEdge edge { get; set;}
+        public int[] numHoles { get; set; }
+        public TriangleEdge edge { get; set; }
 
         internal TriangleEdgeConnector(TriangleEdge tEdge, double radiusHole, double spacingHole)
         {
             spacing = spacingHole;
             radius = radiusHole;
             edge = tEdge;
-            numHoles = new int[3]{0,0,0};
+            numHoles = new int[3] { 0, 0, 0 };
             for (int i = 0; i < edge.triangles.Count; i++)
             {
-                numHoles[i] = (int) (Math.Ceiling((edge.triangles[i].surface.ClosestPointTo(edge.midpoint).DistanceTo(edge.midpoint) + 3 * radius) / spacing)) + edge.triangles[i].numHoles - 1;
+                numHoles[i] = (int)(Math.Ceiling((edge.triangles[i].surface.ClosestPointTo(edge.midpoint).DistanceTo(edge.midpoint) + 3 * radius) / spacing)) + edge.triangles[i].numHoles - 1;
             }
             numHoles[2] = numHoles[0] + numHoles[1] + 1;
         }
@@ -82,7 +82,7 @@ namespace TriangleRigging
             vtxs = new Dictionary<Point, TriangleVertex>();
             stpts = StartPoints;
 
-            for (int i =0; i<Curves.Length; i++)
+            for (int i = 0; i < Curves.Length; i++)
             {
                 Point stpt = Curves[i].StartPoint;
                 Point endpt = Curves[i].EndPoint;
@@ -157,7 +157,7 @@ namespace TriangleRigging
                         break;
                     }
                 }
-                if (vtxs[spline[0]].edges.Count == 0) 
+                if (vtxs[spline[0]].edges.Count == 0)
                 {
                     result.Add(spline);
                     continue;
@@ -202,7 +202,7 @@ namespace TriangleRigging
         /// <summary>
         /// point of vertex
         /// </summary>
-        public Point point {get { return id; } }
+        public Point point { get { return id; } }
         /// <summary>
         /// triangle with this vertex
         /// </summary>
@@ -214,7 +214,8 @@ namespace TriangleRigging
         /// <summary>
         /// spline location of vertex
         /// </summary>
-        public int splineId { 
+        public int splineId
+        {
             get { return Spline; }
             set { Spline = value; }
         }
@@ -279,8 +280,9 @@ namespace TriangleRigging
         public TriangleVertex A { get { return a; } }
         public TriangleVertex B { get { return b; } }
         public List<Triangle> triangles { get { return Triangles; } }
-        public Point midpoint { get { return Midpoint;  } }
-        public string name { 
+        public Point midpoint { get { return Midpoint; } }
+        public string name
+        {
             get { return id; }
             set { id = value; }
         }
@@ -302,7 +304,7 @@ namespace TriangleRigging
             IsOuterEdge = isOuterEdge;
             Vertices.Add(pta);
             Vertices.Add(ptb);
-            Normal = Vector.ByCoordinates(0,0,0);
+            Normal = Vector.ByCoordinates(0, 0, 0);
         }
 
         //**CREATE
@@ -404,7 +406,7 @@ namespace TriangleRigging
         private string Name;
         private Point Circumcenter;
         private Point Center;
-        private CoordinateSystem CS; 
+        private CoordinateSystem CS;
 
         //**QUERY**PROPERTIES
         public CoordinateSystem contextCoordinateSystem { get { return CS; } }
@@ -413,9 +415,10 @@ namespace TriangleRigging
         public List<TriangleVertex> vertices { get { return Vertices; } }
         public Point circumcenter { get { return Circumcenter; } }
         public Point center { get { return Center; } }
-        public Curve[] PerimeterCurves{get {return shape.PerimeterCurves(); } }
+        public Curve[] PerimeterCurves { get { return shape.PerimeterCurves(); } }
         public Vector Normal { get; set; }
-        public Surface surface { 
+        public Surface surface
+        {
             get { return shape; }
             set { shape = value; }
         }
@@ -424,8 +427,9 @@ namespace TriangleRigging
             get { return Name; }
             set { Name = value; }
         }
-        public int splineId { 
-            get { return SplineId; } 
+        public int splineId
+        {
+            get { return SplineId; }
             set { SplineId = value; }
         }
         public int numHoles
@@ -449,7 +453,7 @@ namespace TriangleRigging
             Points.AddRange(points);
             Normal = srf.NormalAtParameter();
             Circumcenter = Circle.ByThreePoints(points[0], points[1], points[2]).CenterPoint;
-            Center = Point.ByCoordinates( (points[0].X + points[1].X + points[2].X)/3.0, (points[0].Y + points[1].Y + points[2].Y)/3.0, (points[0].Z + points[1].Z + points[2].Z)/3.0);
+            Center = Point.ByCoordinates((points[0].X + points[1].X + points[2].X) / 3.0, (points[0].Y + points[1].Y + points[2].Y) / 3.0, (points[0].Z + points[1].Z + points[2].Z) / 3.0);
             CS = CoordinateSystem.ByOriginVectors(Center, Vector.ByTwoPoints(points[0], points[1]), Vector.ByTwoPoints(points[0], points[2]));
         }
 
@@ -460,7 +464,7 @@ namespace TriangleRigging
         /// <param name="srf"></param>
         /// <param name="points"></param>
         /// <returns></returns>
-        public static Triangle BySurfaceAndPoints(Surface srf, List<Point> points) { return new Triangle(srf,points); }
+        public static Triangle BySurfaceAndPoints(Surface srf, List<Point> points) { return new Triangle(srf, points); }
 
         //**ACTIONS**METHODS
         /// <summary>
@@ -472,7 +476,7 @@ namespace TriangleRigging
             int a = vertices.IndexOf(edge.A);
             int b = vertices.IndexOf(edge.B);
             int c = 3 - (a + b);
-            if (((a - b) % 3 + 3) % 3 == 1)  CS = CoordinateSystem.ByOriginVectors(center, Vector.ByTwoPoints(Points[b], Points[a]), Vector.ByTwoPoints(Points[b], Points[c]));
+            if (((a - b) % 3 + 3) % 3 == 1) CS = CoordinateSystem.ByOriginVectors(center, Vector.ByTwoPoints(Points[b], Points[a]), Vector.ByTwoPoints(Points[b], Points[c]));
             else if (((a - b) % 3 + 3) % 3 == 2) CS = CoordinateSystem.ByOriginVectors(center, Vector.ByTwoPoints(Points[a], Points[b]), Vector.ByTwoPoints(Points[a], Points[c]));
             double w = points[a].DistanceTo(points[b]);
             double sa = points[c].DistanceTo(points[a]);
@@ -521,31 +525,31 @@ namespace TriangleRigging
         {
             List<PolyCurve> labels = new List<PolyCurve>();
             for (int j = 0; j < edges.Count; j++)
+            {
+                if (edges[j].isOuterEdge) continue;
+
+                int a = vertices.IndexOf(edges[j].A);
+                int b = vertices.IndexOf(edges[j].B);
+
+                if (((a - b) % 3 + 3) % 3 == 1)
                 {
-                    if (edges[j].isOuterEdge) continue;
-
-                    int a = vertices.IndexOf(edges[j].A);
-                    int b = vertices.IndexOf(edges[j].B);
-
-                    if (((a - b) % 3 + 3) % 3 == 1)
-                    {
-                        labels.AddRange(Word.ByString(
-                                    edges[j].name,
-                                    surface.ClosestPointTo(edges[j].midpoint),
-                                    Vector.ByTwoPoints(edges[j].midpoint, edges[j].B.point),
-                                    Vector.ByTwoPoints(center, edges[j].midpoint)
-                                    ).display(factor));
-                    }
-                    else if (((a - b) % 3 + 3) % 3 == 2)
-                    {
-                        labels.AddRange(Word.ByString(
-                                    edges[j].name, //string
-                                    surface.ClosestPointTo(edges[j].midpoint), //cs point
-                                    Vector.ByTwoPoints(edges[j].midpoint, edges[j].A.point), // X-axis
-                                    Vector.ByTwoPoints(center, edges[j].midpoint) // Y-axis
-                                    ).display(factor));
-                    } // end switch
-                } // end Edges
+                    labels.AddRange(Word.ByString(
+                                edges[j].name,
+                                surface.ClosestPointTo(edges[j].midpoint),
+                                Vector.ByTwoPoints(edges[j].midpoint, edges[j].B.point),
+                                Vector.ByTwoPoints(center, edges[j].midpoint)
+                                ).display(factor));
+                }
+                else if (((a - b) % 3 + 3) % 3 == 2)
+                {
+                    labels.AddRange(Word.ByString(
+                                edges[j].name, //string
+                                surface.ClosestPointTo(edges[j].midpoint), //cs point
+                                Vector.ByTwoPoints(edges[j].midpoint, edges[j].A.point), // X-axis
+                                Vector.ByTwoPoints(center, edges[j].midpoint) // Y-axis
+                                ).display(factor));
+                } // end switch
+            } // end Edges
 
             return labels;
         }// end action
@@ -566,14 +570,14 @@ namespace TriangleRigging
 
                 if (((a - b) % 3 + 3) % 3 == 1)
                 {
-                    double offset = spacing * Math.Ceiling( (surface.ClosestPointTo(edges[j].midpoint).DistanceTo(edges[j].midpoint) + 3*radius)/spacing );
+                    double offset = spacing * Math.Ceiling((surface.ClosestPointTo(edges[j].midpoint).DistanceTo(edges[j].midpoint) + 3 * radius) / spacing);
                     for (int k = 0; k < holes; k++)
                     {
-                        circles.Add( Circle.ByCenterPointRadiusNormal(
-                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, surface.ClosestPointTo(edges[j].midpoint)), offset), 
+                        circles.Add(Circle.ByCenterPointRadiusNormal(
+                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, surface.ClosestPointTo(edges[j].midpoint)), offset),
                             radius,
                             Normal
-                            ) );
+                            ));
                         offset += spacing;
                     }
                 }
@@ -582,11 +586,11 @@ namespace TriangleRigging
                     double offset = spacing * Math.Ceiling((surface.ClosestPointTo(edges[j].midpoint).DistanceTo(edges[j].midpoint) + 3 * radius) / spacing);
                     for (int k = 0; k < holes; k++)
                     {
-                        circles.Add( Circle.ByCenterPointRadiusNormal(
-                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, surface.ClosestPointTo(edges[j].midpoint)), offset), 
+                        circles.Add(Circle.ByCenterPointRadiusNormal(
+                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, surface.ClosestPointTo(edges[j].midpoint)), offset),
                             radius,
                             Normal
-                            ) );
+                            ));
                         offset += spacing;
                     }
                 } // end switch
@@ -602,7 +606,7 @@ namespace TriangleRigging
         public List<Curve> GetTriangleCurves(double factor)
         {
             List<Curve> curves = new List<Curve>();
-            List<PolyCurve> letters =  GetEdgeLabels(factor);
+            List<PolyCurve> letters = GetEdgeLabels(factor);
             curves.AddRange(letters);
             curves.AddRange(surface.PerimeterCurves());
             return curves;
@@ -618,9 +622,9 @@ namespace TriangleRigging
         public List<Point> VertexPoints { get; set; }
         public List<Triangle> Triangles { get; set; }
         public List<List<TriangleVertex>> Splines { get; set; }
-        public List<TriangleEdge> Edges {get; set;}
+        public List<TriangleEdge> Edges { get; set; }
 
-        public List<TriangleVertex> vertices{ get { return Vertices.Values.ToList(); } }
+        public List<TriangleVertex> vertices { get { return Vertices.Values.ToList(); } }
 
 
 
@@ -637,7 +641,7 @@ namespace TriangleRigging
             // and create Triangles based on Solids
             for (int i = 0; i < Solids.Length; i++)
             {
-                Triangles.Add(new Triangle((Surface) Solids[i][0].Explode()[0], SolidsPoint[i].ToList()));
+                Triangles.Add(new Triangle((Surface)Solids[i][0].Explode()[0], SolidsPoint[i].ToList()));
                 for (int j = 0; j < SolidsPoint[i].Length; j++)
                 {
                     if (!Vertices.ContainsKey(SolidsPoint[i][j]))
@@ -651,6 +655,108 @@ namespace TriangleRigging
 
             VertexPoints = Vertices.Keys.ToList();
 
+            BuildEdges(OrderedSplines);
+        }
+        internal TriangleRigging(Surface[] TriangleSurfaces, Point[][] OrderedSplines)
+        {
+            // initialize Vertices and Triangles
+            Vertices = new Dictionary<Point, TriangleVertex>();
+            Triangles = new List<Triangle>(TriangleSurfaces.Length);
+            Edges = new List<TriangleEdge>();
+            Splines = new List<List<TriangleVertex>>(OrderedSplines.Length);
+
+            // iterate over Solids and assign topology to Vertices
+            // and create Triangles based on Solids
+            for (int i = 0; i < TriangleSurfaces.Length; i++)
+            {
+                List<Point> pts = new List<Point>(3);
+                TriangleSurfaces[i].Vertices.ForEach(vtx => pts.Add(vtx.PointGeometry));
+                Triangles.Add(new Triangle(TriangleSurfaces[i], pts));
+                for (int j = 0; j < pts.Count; j++)
+                {
+                    if (!Vertices.ContainsKey(pts[j]))
+                    {
+                        Vertices.Add(pts[j], new TriangleVertex(pts[j]));
+                    }
+                    Vertices[pts[j]].AddTriangle(Triangles[i]);
+                    Triangles[i].AddVertex(Vertices[pts[j]]);
+                }
+            }
+
+            VertexPoints = Vertices.Keys.ToList();
+
+            BuildEdges(OrderedSplines);
+        }
+
+        internal TriangleRigging(Solid[][] Solids, Point[][] SolidsPoint, Point[] start)
+        {
+            // initialize Vertices and Triangles
+            Vertices = new Dictionary<Point, TriangleVertex>();
+            Triangles = new List<Triangle>(Solids.Length);
+            Edges = new List<TriangleEdge>();
+            Splines = new List<List<TriangleVertex>>();
+
+            // iterate over Solids and assign topology to Vertices
+            // and create Triangles based on Solids
+            for (int i = 0; i < Solids.Length; i++)
+            {
+                Triangles.Add(new Triangle((Surface)Solids[i][0].Explode()[0], SolidsPoint[i].ToList()));
+                for (int j = 0; j < SolidsPoint[i].Length; j++)
+                {
+                    if (!Vertices.ContainsKey(SolidsPoint[i][j]))
+                    {
+                        Vertices.Add(SolidsPoint[i][j], new TriangleVertex(SolidsPoint[i][j]));
+                    }
+                    Vertices[SolidsPoint[i][j]].AddTriangle(Triangles[i]);
+                    Triangles[i].AddVertex(Vertices[SolidsPoint[i][j]]);
+                }
+            }
+
+            VertexPoints = Vertices.Keys.ToList();
+            
+            // build splines
+            int count = 0;
+            List<Point[]> splinePoints = new List<Point[]>();
+            List<Triangle> lastTriangles = new List<Triangle>();
+            bool makeSplines = true;
+
+            //initial condition
+            splinePoints.Add(start);
+
+            while (makeSplines)
+            {
+                List<Triangle> triangleRing = new List<Triangle>();
+                List<Point> pointRing = new List<Point>();
+                for (int i = 0; i < splinePoints[count].Length; i++)
+                {
+                    for (int t = 0; t < Vertices[splinePoints[count][i]].triangles.Count; t++)
+                    {
+                        if (!lastTriangles.Contains(Vertices[splinePoints[count][i]].triangles[t])) triangleRing.Add(Vertices[splinePoints[count][i]].triangles[t]);
+                    }
+                }
+                if (triangleRing.Count > 0)
+                {
+                    for (int t = 0; t < triangleRing.Count; t++)
+                    {
+                        for (int p = 0; p < triangleRing[t].points.Count; p++)
+                        {
+                            if (!splinePoints[count].Contains(triangleRing[t].points[p])) pointRing.Add(triangleRing[t].points[p]);
+                        }
+                    }
+                    splinePoints.Add(pointRing.ToArray());
+                    count++;
+                }
+                else makeSplines = false;
+                lastTriangles.Clear();
+                lastTriangles.AddRange(triangleRing);
+
+            }
+
+            BuildEdges(splinePoints.ToArray());
+        }
+
+        private void BuildEdges(Point[][] OrderedSplines)
+        {
             //build splines
             int numD = OrderedSplines.Length.ToString().Length;
             for (int i = 0; i < OrderedSplines.Length; i++)
@@ -660,7 +766,7 @@ namespace TriangleRigging
                 int edgeCount = 1;
                 int numDs = OrderedSplines[i].Length.ToString().Length;
                 // iterate through spline vertices
-                for (int j = 0; j < OrderedSplines[i].Length; j++ )
+                for (int j = 0; j < OrderedSplines[i].Length; j++)
                 {
                     // search vertex points for match
                     for (int k = 0; k < VertexPoints.Count; k++)
@@ -683,12 +789,13 @@ namespace TriangleRigging
 
                                 if (listT.Count > 0)
                                 {
-                                    string edgeId = "s" + i.ToString("D"+ numD) + "-" + edgeCount.ToString("D"+numDs);
+                                    string edgeId = "s" + i.ToString("D" + numD) + "-" + edgeCount.ToString("D" + numDs);
                                     TriangleEdge e = new TriangleEdge(Vertices[VertexPoints[z]], Vertices[VertexPoints[k]], edgeId, listT, false);
                                     if (listT.Count == 1) e.isOuterEdge = true;
                                     Edges.Add(e);
                                     // add edge key to vertices
-                                    for (int t = 0; t < listT.Count; t++) { 
+                                    for (int t = 0; t < listT.Count; t++)
+                                    {
                                         listT[t].AddEdge(e); listT[t].BuildGeometricProperties(e);
                                         e.Normal = e.Normal.Add(listT[t].Normal);
                                     }
@@ -720,7 +827,8 @@ namespace TriangleRigging
                         if (listTlast.Count == 1) e.isOuterEdge = true;
                         Edges.Add(e);
                         // add edge key to vertices
-                        for (int t = 0; t < listTlast.Count; t++) { 
+                        for (int t = 0; t < listTlast.Count; t++)
+                        {
                             listTlast[t].AddEdge(e);
                             e.Normal = e.Normal.Add(listTlast[t].Normal);
                         }
@@ -732,7 +840,7 @@ namespace TriangleRigging
                 Splines.Add(Spline);
             } // end build spline
 
-            
+
             //build Edges
             for (int s = 0; s < Splines.Count - 1; s++)
             {
@@ -740,23 +848,23 @@ namespace TriangleRigging
                 int edgeCount = 0;
                 int triangleCount = 1;
                 int numDe = Splines[s].Count.ToString().Length;
-                for (int v = 0; v < Splines[s].Count; v++ )
+                for (int v = 0; v < Splines[s].Count; v++)
                 {
                     List<TriangleVertex> Search = new List<TriangleVertex>();
-                    for (int t = 0; t < Splines[s][v].triangles.Count; t++ )
+                    for (int t = 0; t < Splines[s][v].triangles.Count; t++)
                     {
                         if (!Splines[s][v].triangles[t].HasEdges())
                         {
-                            for (int vt = 0; vt < Splines[s][v].triangles[t].vertices.Count; vt++ )
+                            for (int vt = 0; vt < Splines[s][v].triangles[t].vertices.Count; vt++)
                             {
-                                if ( !Search.Contains(Splines[s][v].triangles[t].vertices[vt]) && Splines[s][v].triangles[t].vertices[vt].splineId == s+1 ) 
+                                if (!Search.Contains(Splines[s][v].triangles[t].vertices[vt]) && Splines[s][v].triangles[t].vertices[vt].splineId == s + 1)
                                     Search.Add(Splines[s][v].triangles[t].vertices[vt]);
                             }
                         }
                     }
                     Search.Remove(Splines[s][v]);
 
-                    for (int sv = 0; sv < Search.Count; sv++ )
+                    for (int sv = 0; sv < Search.Count; sv++)
                     {
                         // check Triangles
                         // find Triangles on edge
@@ -769,12 +877,13 @@ namespace TriangleRigging
 
                         if (listT.Count > 0)
                         {
-                            string edgeId = "e" + s.ToString("D" + numD) + (s + 1).ToString("D" + numD) + "-" + edgeCount.ToString("D"+numDe);
+                            string edgeId = "e" + s.ToString("D" + numD) + (s + 1).ToString("D" + numD) + "-" + edgeCount.ToString("D" + numDe);
                             TriangleEdge e = new TriangleEdge(Splines[s][v], Search[sv], edgeId, listT, false);
                             if (listT.Count == 1) e.isOuterEdge = true;
                             Edges.Add(e);
                             // add edge key to vertices
-                            for (int t = 0; t < listT.Count; t++) { 
+                            for (int t = 0; t < listT.Count; t++)
+                            {
                                 listT[t].AddEdge(e);
                                 e.Normal = e.Normal.Add(listT[t].Normal);
                                 if (!listT[t].HasName)
@@ -796,79 +905,12 @@ namespace TriangleRigging
                 } // end spline
 
             } // end build Edges 
-
-
-
         }
-        internal TriangleRigging(Solid[][] Solids, Point[][] SolidsPoint, Point start)
-        {
-             // initialize Vertices and Triangles
-            Vertices = new Dictionary<Point, TriangleVertex>();
-            Triangles = new List<Triangle>(Solids.Length);
-            Edges = new List<TriangleEdge>();
 
-            // iterate over Solids and assign topology to Vertices
-            // and create Triangles based on Solids
-            int length = Solids.Length.ToString().Length;
-            int eCount = 1;
-            List<TriangleEdge> HalfEdges = new List<TriangleEdge>();
-            for (int i = 0; i < Solids.Length; i++)
-            {
-                Triangles.Add(new Triangle((Surface) Solids[i][0].Explode()[0], SolidsPoint[i].ToList()));
-                for (int j = 0; j < SolidsPoint[i].Length; j++)
-                {
-                    if (!Vertices.ContainsKey(SolidsPoint[i][j]))
-                    {
-                        Vertices.Add(SolidsPoint[i][j], new TriangleVertex(SolidsPoint[i][j]));
-                    }
-                    Vertices[SolidsPoint[i][j]].AddTriangle(Triangles[i]);
-                    Triangles[i].AddVertex(Vertices[SolidsPoint[i][j]]);
-                }
-                for (int j = 0; j < SolidsPoint[i].Length; j++)
-                {
-                    bool addEdge = true;
-                    int k = (j+1)%(SolidsPoint[i].Length);
-                    TriangleEdge e = new TriangleEdge(Vertices[SolidsPoint[i][j]], Vertices[SolidsPoint[i][k]], "e" + eCount.ToString("D" + length), new List<Triangle> { Triangles[i] }, true);
-                    int remove = -1;
-                    for (int n = 0; n < HalfEdges.Count; n ++)
-                    {
-                        if (HalfEdges[n].HasVertices(e.A, e.B))
-                        {
-                            Triangles[i].AddEdge(HalfEdges[n]);
-                            HalfEdges[n].AddTriangle(Triangles[i]);
-                            HalfEdges[n].isOuterEdge = false;
-                            addEdge = false;
-                            remove = n;
-                            break;
-                        }
-                    }
-                    if (addEdge)
-                    {
-                        Edges.Add(e);
-                        HalfEdges.Add(e);
-                        Triangles[i].AddEdge(e);
-                        Vertices[SolidsPoint[i][j]].AddEdge(e);
-                        Vertices[SolidsPoint[i][k]].AddEdge(e);
-                        eCount++;
-                    }
-                    else
-                    {
-                        HalfEdges.RemoveAt(remove);
-                    }
 
-                }
-            }
-        }
-       
         //**CREATE
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="Solids"></param>
-        /// <param name="SolidsPoints"></param>
-        /// <param name="Splines"></param>
-        /// <returns></returns>
-        public static TriangleRigging BySolidsPointsPoints(Solid[][] Solids, Point[][] SolidsPoints, Point[][] Splines)
+
+        public static TriangleRigging BySolidsPointsSplines(Solid[][] Solids, Point[][] SolidsPoints, Point[][] Splines)
         {
             return new TriangleRigging(Solids, SolidsPoints, Splines);
         }
@@ -879,9 +921,13 @@ namespace TriangleRigging
         /// <param name="SolidsPoints"></param>
         /// <param name="start"></param>
         /// <returns></returns>
-        public static TriangleRigging BySolidsPointsPoints(Solid[][] Solids, Point[][] SolidsPoints, Point start)
+        public static TriangleRigging BySolidsPointsPoints(Solid[][] Solids, Point[][] SolidsPoints, Point[] start)
         {
             return new TriangleRigging(Solids, SolidsPoints, start);
+        }
+        public static TriangleRigging ByTriangleSurfacesAndSplines(Surface[] Triangles, Point[][] Splines)
+        {
+            return new TriangleRigging(Triangles, Splines);
         }
 
         //**ACTION
@@ -893,7 +939,7 @@ namespace TriangleRigging
         public List<List<PolyCurve>> GetEdgeLabels(double factor)
         {
             List<List<PolyCurve>> labels = new List<List<PolyCurve>>(Triangles.Count);
-            for (int i = 0; i < Triangles.Count; i++ ) { labels.Add(Triangles[i].GetEdgeLabels(factor));  }
+            for (int i = 0; i < Triangles.Count; i++) { labels.Add(Triangles[i].GetEdgeLabels(factor)); }
             return labels;
         }
         /// <summary>
@@ -931,15 +977,15 @@ namespace TriangleRigging
             for (int i = 0; i < input.Count; i++) { if (input[i].numHoles[2] == HoleCount) result.Add(input[i]); }
             return result;
         }
-        public void AddParamterToTriangles(string name, Object[] data )
+        public void AddParamterToTriangles(string name, Object[] data)
         {
             if (data.Length == Triangles.Count) for (int i = 0; i < Triangles.Count; i++) { Triangles[i].Parameters.Add(name, data[i]); }
         }
-        public List<int> GetTriangleIndexByParameterValue( string parameter, Object value )
+        public List<int> GetTriangleIndexByParameterValue(string parameter, Object value)
         {
             if (!Triangles[0].Parameters.Keys.Contains(parameter)) return null;
             List<int> result = new List<int>();
-            for (int i = 0; i < Triangles.Count; i++ )
+            for (int i = 0; i < Triangles.Count; i++)
             {
                 if (Triangles[i].Parameters[parameter].Equals(value)) result.Add(i);
             }
@@ -959,7 +1005,7 @@ namespace TriangleRigging
             List<List<int>> result = new List<List<int>>(numRow);
 
             for (int i = 0; i < Index.Count; i++) Row.Add(Convert.ToInt32(Triangles[Index[i]].name.Substring(1, numD)));
-            for (int i = 0; i < numRow; i++) 
+            for (int i = 0; i < numRow; i++)
             {
                 List<int> list = new List<int>();
                 for (int j = Row.IndexOf(i); j < Row.Count; j++)
@@ -970,7 +1016,28 @@ namespace TriangleRigging
                 result.Add(list);
             }
             return result;
-        } 
+        }
+
+        public Mesh ConvertToMesh()
+        {
+            List<IndexGroup> indexGroup = new List<IndexGroup>(Triangles.Count);
+            for (int t = 0; t < Triangles.Count; t++)
+            {
+                indexGroup.Add(IndexGroup.ByIndices(
+                    (uint) VertexPoints.IndexOf(Triangles[t].points[0]),
+                    (uint) VertexPoints.IndexOf(Triangles[t].points[1]),
+                    (uint) VertexPoints.IndexOf(Triangles[t].points[2])
+                    ));
+            }
+            return Mesh.ByPointsFaceIndices(VertexPoints, indexGroup);
+        }
+
+        public PolySurface ConvertToPolySurface()
+        {
+            List<Surface> TriangleSurfaces = new List<Surface>(Triangles.Count);
+            for (int t = 0; t < Triangles.Count; t++) TriangleSurfaces.Add(Surface.ByPerimeterPoints(Triangles[t].points));
+            return PolySurface.ByJoinedSurfaces(TriangleSurfaces);
+        }
     } // end class
 
 
