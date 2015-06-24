@@ -1,11 +1,7 @@
 using System;
-using System.Collections;
 
 namespace DXFLibrary
 {
-	/// <summary>
-	/// The representation of a dxf document.
-	/// </summary>
 	class Document
 	{
 		internal Header header;
@@ -16,6 +12,7 @@ namespace DXFLibrary
 		{
 			this.entities = new Entities();
 		}
+
 		public void SetHeader(Header h)
 		{
 			this.header = h;
@@ -41,4 +38,9 @@ namespace DXFLibrary
 			this.blocks.addBlock(b);
 		}
 	}
+
+    class UnexpectedElement : Exception
+    {
+        internal UnexpectedElement() : base("Unrecognized DXF element") { }
+    }
 }

@@ -1,8 +1,8 @@
 namespace DXFLibrary
 {
 	/// <summary>
-	/// The smallest but the most used part of C#DXFLibrary. It represents a piece of data in a dxf file. 
-	/// It contains a dxf code and an information ( string, int,... )
+	/// C# representation of data in a dxf file:
+	/// a dxf code paired with a unit of data.
 	/// </summary>
 	struct Data
 	{

@@ -4,22 +4,9 @@ using System.Globalization;
 
 namespace DXFLibrary
 {
-	/// <summary>
-	/// This class is used to write a dxf document to a stream
-	/// </summary>
 	class Writer
 	{
-		/// <summary>
-		/// Inplicit constructor for Writer
-		/// </summary>
-		public Writer()
-		{
-		}
-		/// <summary>
-		/// Method for writeing a Document into a stream.
-		/// </summary>
-		/// <param name="d">The document</param>
-		/// <param name="s">The stream</param>
+		public Writer() {}
 		public static void Write(Document d, Stream s)
 		{
 			StreamWriter sr = new StreamWriter(s);
@@ -28,7 +15,6 @@ namespace DXFLibrary
 			WriteTables(d.tables,sr);
 			WriteBlocks(d.blocks,sr);
 			WriteEntities(d.entities,sr);
-
 			WriteData(new Data(0,"EOF"),sr);
 			sr.Close();
 		}
