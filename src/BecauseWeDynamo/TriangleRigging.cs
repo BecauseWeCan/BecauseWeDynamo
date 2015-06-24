@@ -25,7 +25,7 @@ namespace TriangleRigging
             numHoles = new int[3] { 0, 0, 0 };
             for (int i = 0; i < edge.triangles.Count; i++)
             {
-                numHoles[i] = (int)(Math.Ceiling((edge.triangles[i].surface.ClosestPointTo(edge.midpoint).DistanceTo(edge.midpoint) + 3 * radius) / spacing)) + edge.triangles[i].numHoles - 1;
+                numHoles[i] = (int)(Math.Ceiling((edge.triangles[i].Geometry.ClosestPointTo(edge.midpoint).DistanceTo(edge.midpoint) + 3 * radius) / spacing)) + edge.triangles[i].numHoles - 1;
             }
             numHoles[2] = numHoles[0] + numHoles[1] + 1;
         }
@@ -42,7 +42,7 @@ namespace TriangleRigging
                 for (int k = 0; k < numHoles[i]; k++)
                 {
                     result.Add(Circle.ByCenterPointRadiusNormal(
-                        (Point)edge.midpoint.Translate(Vector.ByTwoPoints(edge.midpoint, edge.triangles[i].surface.ClosestPointTo(edge.midpoint)), spacing * (k + 1)),
+                        (Point)edge.midpoint.Translate(Vector.ByTwoPoints(edge.midpoint, edge.triangles[i].Geometry.ClosestPointTo(edge.midpoint)), spacing * (k + 1)),
                         DisplayFactor * radius,
                         edge.triangles[i].Normal
                         ));
@@ -369,7 +369,7 @@ namespace TriangleRigging
                         {
                             labels.AddRange(Word.ByString(
                                     triangles[i].edges[j].name,
-                                    triangles[i].surface.ClosestPointTo(triangles[i].edges[j].midpoint),
+                                    triangles[i].Geometry.ClosestPointTo(triangles[i].edges[j].midpoint),
                                     Vector.ByTwoPoints(triangles[i].edges[j].midpoint, triangles[i].edges[j].B.point),
                                     Vector.ByTwoPoints(triangles[i].center, triangles[i].edges[j].midpoint)
                                     ).display(factor));
@@ -378,7 +378,7 @@ namespace TriangleRigging
                         {
                             labels.AddRange(Word.ByString(
                                     triangles[i].edges[j].name, //string
-                                    triangles[i].surface.ClosestPointTo(triangles[i].edges[j].midpoint), //cs point
+                                    triangles[i].Geometry.ClosestPointTo(triangles[i].edges[j].midpoint), //cs point
                                     Vector.ByTwoPoints(triangles[i].edges[j].midpoint, triangles[i].edges[j].A.point), // X-axis
                                     Vector.ByTwoPoints(triangles[i].center, triangles[i].edges[j].midpoint) // Y-axis
                                     ).display(factor));
@@ -393,34 +393,39 @@ namespace TriangleRigging
 
     public class Triangle
     {
-        //*PRIVATE PROPERTIES
+        //*PRIVATE**PROPERTIES
         public Dictionary<string, Object> Parameters;
+        public Boolean HasName;
+
         private int holes;
         private double Height;
         private int SplineId;
         private List<Point> Points;
         private List<TriangleVertex> Vertices;
         private List<TriangleEdge> Edges;
-        private Surface shape;
-        public Boolean HasName;
+        private Geometry geometry;
         private string Name;
         private Point Circumcenter;
         private Point Center;
         private CoordinateSystem CS;
 
-        //**QUERY**PROPERTIES
+        //**PROPERTIES - **QUERY**
         public CoordinateSystem contextCoordinateSystem { get { return CS; } }
         public List<TriangleEdge> edges { get { return Edges; } }
         public List<Point> points { get { return Points; } }
         public List<TriangleVertex> vertices { get { return Vertices; } }
         public Point circumcenter { get { return Circumcenter; } }
         public Point center { get { return Center; } }
-        public Curve[] PerimeterCurves { get { return shape.PerimeterCurves(); } }
+        public Curve[] PerimeterCurves { get {
+            if (geometry is Solid) return ((Surface)geometry.Explode()[0]).PerimeterCurves();
+            else if (geometry is Surface) return ((Surface)geometry).PerimeterCurves();
+            else return null;
+        }}
         public Vector Normal { get; set; }
-        public Surface surface
+        public Geometry Geometry
         {
-            get { return shape; }
-            set { shape = value; }
+            get { return geometry; }
+            set { geometry = value; }
         }
         public string name
         {
@@ -439,9 +444,9 @@ namespace TriangleRigging
         }
 
         //**CONSTRUCTOR
-        internal Triangle(Surface srf, List<Point> points)
+        internal Triangle(Geometry inputGeometry, List<Point> points)
         {
-            shape = srf;
+            geometry = inputGeometry;
             Points = new List<Point>(3);
             Edges = new List<TriangleEdge>(3);
             Vertices = new List<TriangleVertex>(3);
@@ -451,7 +456,7 @@ namespace TriangleRigging
             holes = 1;
 
             Points.AddRange(points);
-            Normal = srf.NormalAtParameter();
+            Normal = Plane.ByBestFitThroughPoints(points).Normal;
             Circumcenter = Circle.ByThreePoints(points[0], points[1], points[2]).CenterPoint;
             Center = Point.ByCoordinates((points[0].X + points[1].X + points[2].X) / 3.0, (points[0].Y + points[1].Y + points[2].Y) / 3.0, (points[0].Z + points[1].Z + points[2].Z) / 3.0);
             CS = CoordinateSystem.ByOriginVectors(Center, Vector.ByTwoPoints(points[0], points[1]), Vector.ByTwoPoints(points[0], points[2]));
@@ -535,7 +540,7 @@ namespace TriangleRigging
                 {
                     labels.AddRange(Word.ByString(
                                 edges[j].name,
-                                surface.ClosestPointTo(edges[j].midpoint),
+                                Geometry.ClosestPointTo(edges[j].midpoint),
                                 Vector.ByTwoPoints(edges[j].midpoint, edges[j].B.point),
                                 Vector.ByTwoPoints(center, edges[j].midpoint)
                                 ).display(factor));
@@ -544,7 +549,7 @@ namespace TriangleRigging
                 {
                     labels.AddRange(Word.ByString(
                                 edges[j].name, //string
-                                surface.ClosestPointTo(edges[j].midpoint), //cs point
+                                Geometry.ClosestPointTo(edges[j].midpoint), //cs point
                                 Vector.ByTwoPoints(edges[j].midpoint, edges[j].A.point), // X-axis
                                 Vector.ByTwoPoints(center, edges[j].midpoint) // Y-axis
                                 ).display(factor));
@@ -570,11 +575,11 @@ namespace TriangleRigging
 
                 if (((a - b) % 3 + 3) % 3 == 1)
                 {
-                    double offset = spacing * Math.Ceiling((surface.ClosestPointTo(edges[j].midpoint).DistanceTo(edges[j].midpoint) + 3 * radius) / spacing);
+                    double offset = spacing * Math.Ceiling((Geometry.ClosestPointTo(edges[j].midpoint).DistanceTo(edges[j].midpoint) + 3 * radius) / spacing);
                     for (int k = 0; k < holes; k++)
                     {
                         circles.Add(Circle.ByCenterPointRadiusNormal(
-                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, surface.ClosestPointTo(edges[j].midpoint)), offset),
+                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, Geometry.ClosestPointTo(edges[j].midpoint)), offset),
                             radius,
                             Normal
                             ));
@@ -583,11 +588,11 @@ namespace TriangleRigging
                 }
                 else if (((a - b) % 3 + 3) % 3 == 2)
                 {
-                    double offset = spacing * Math.Ceiling((surface.ClosestPointTo(edges[j].midpoint).DistanceTo(edges[j].midpoint) + 3 * radius) / spacing);
+                    double offset = spacing * Math.Ceiling((Geometry.ClosestPointTo(edges[j].midpoint).DistanceTo(edges[j].midpoint) + 3 * radius) / spacing);
                     for (int k = 0; k < holes; k++)
                     {
                         circles.Add(Circle.ByCenterPointRadiusNormal(
-                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, surface.ClosestPointTo(edges[j].midpoint)), offset),
+                            (Point)edges[j].midpoint.Translate(Vector.ByTwoPoints(edges[j].midpoint, Geometry.ClosestPointTo(edges[j].midpoint)), offset),
                             radius,
                             Normal
                             ));
@@ -608,7 +613,7 @@ namespace TriangleRigging
             List<Curve> curves = new List<Curve>();
             List<PolyCurve> letters = GetEdgeLabels(factor);
             curves.AddRange(letters);
-            curves.AddRange(surface.PerimeterCurves());
+            curves.AddRange(PerimeterCurves);
             return curves;
         }
 
@@ -617,16 +622,15 @@ namespace TriangleRigging
 
     public class TriangleRigging
     {
-        //**CLASS VARIABLES
+        //**GLOBAL**VARIABLES
         private Dictionary<Point, TriangleVertex> Vertices;
+
+        //**PROPERTIES - **QUERY**
         public List<Point> VertexPoints { get; set; }
         public List<Triangle> Triangles { get; set; }
         public List<List<TriangleVertex>> Splines { get; set; }
         public List<TriangleEdge> Edges { get; set; }
-
         public List<TriangleVertex> vertices { get { return Vertices.Values.ToList(); } }
-
-
 
         //**CONSTRUCTORS
         internal TriangleRigging(Solid[][] Solids, Point[][] SolidsPoint, Point[][] OrderedSplines)
@@ -641,7 +645,7 @@ namespace TriangleRigging
             // and create Triangles based on Solids
             for (int i = 0; i < Solids.Length; i++)
             {
-                Triangles.Add(new Triangle((Surface)Solids[i][0].Explode()[0], SolidsPoint[i].ToList()));
+                Triangles.Add(new Triangle(Solids[i][0], SolidsPoint[i].ToList()));
                 for (int j = 0; j < SolidsPoint[i].Length; j++)
                 {
                     if (!Vertices.ContainsKey(SolidsPoint[i][j]))
@@ -687,7 +691,6 @@ namespace TriangleRigging
 
             BuildEdges(OrderedSplines);
         }
-
         internal TriangleRigging(Solid[][] Solids, Point[][] SolidsPoint, Point[] start)
         {
             // initialize Vertices and Triangles
@@ -755,7 +758,9 @@ namespace TriangleRigging
             BuildEdges(splinePoints.ToArray());
         }
 
-        private void BuildEdges(Point[][] OrderedSplines)
+
+        //**PRIVATE**METHODS
+        internal void BuildEdges(Point[][] OrderedSplines)
         {
             //build splines
             int numD = OrderedSplines.Length.ToString().Length;
@@ -908,34 +913,19 @@ namespace TriangleRigging
         }
 
 
-        //**CREATE
-
-        public static TriangleRigging BySolidsPointsSplines(Solid[][] Solids, Point[][] SolidsPoints, Point[][] Splines)
-        {
-            return new TriangleRigging(Solids, SolidsPoints, Splines);
-        }
+        //**STATIC**METHODS - **CREATE**
         /// <summary>
-        /// 
+        /// For surfaces composed of oriented three-point adaptive models.
         /// </summary>
-        /// <param name="Solids"></param>
-        /// <param name="SolidsPoints"></param>
-        /// <param name="start"></param>
-        /// <returns></returns>
-        public static TriangleRigging BySolidsPointsPoints(Solid[][] Solids, Point[][] SolidsPoints, Point[] start)
-        {
-            return new TriangleRigging(Solids, SolidsPoints, start);
-        }
-        public static TriangleRigging ByTriangleSurfacesAndSplines(Surface[] Triangles, Point[][] Splines)
-        {
-            return new TriangleRigging(Triangles, Splines);
-        }
+        /// <param name="Solids">Adaptive Model Geometry</param>
+        /// <param name="SolidsPoints">Adaptive Model Reference Points</param>
+        /// <param name="Splines">List of Spline Points</param>
+        /// <returns>A dynamo topological structure to layout and label adaptive components.</returns>
+        public static TriangleRigging BySolidsPointsSplines(Solid[][] Solids, Point[][] SolidsPoints, Point[][] Splines) { return new TriangleRigging(Solids, SolidsPoints, Splines); }
+        public static TriangleRigging BySolidsPointsPoints(Solid[][] Solids, Point[][] SolidsPoints, Point[] start) { return new TriangleRigging(Solids, SolidsPoints, start); }
+        public static TriangleRigging ByTriangleSurfacesAndSplines(Surface[] Triangles, Point[][] Splines) { return new TriangleRigging(Triangles, Splines); }
 
-        //**ACTION
-        /// <summary>
-        /// circles Edges
-        /// </summary>
-        /// <param name="factor">text scale</param>
-        /// <returns>list of circles ordered by triangle then edge then letter</returns>
+        //**METHODS - **ACTION**
         public List<List<PolyCurve>> GetEdgeLabels(double factor)
         {
             List<List<PolyCurve>> labels = new List<List<PolyCurve>>(Triangles.Count);
@@ -1037,6 +1027,19 @@ namespace TriangleRigging
             List<Surface> TriangleSurfaces = new List<Surface>(Triangles.Count);
             for (int t = 0; t < Triangles.Count; t++) TriangleSurfaces.Add(Surface.ByPerimeterPoints(Triangles[t].points));
             return PolySurface.ByJoinedSurfaces(TriangleSurfaces);
+        }
+
+        [MultiReturn(new[] { "VertexPoints", "Index" })]
+        public static Dictionary<string, object> ConvertToMeshComponent(TriangleRigging triangleRigging)
+        {
+            List<int> indexGroup = new List<int>(triangleRigging.Triangles.Count);
+            for (int t = 0; t < triangleRigging.Triangles.Count; t++) for (int p = 0; p < 3; p++) indexGroup.Add(triangleRigging.VertexPoints.IndexOf(triangleRigging.Triangles[t].points[p]));
+            
+            return new Dictionary<string, object>
+            {
+                { "VertexPoints",  triangleRigging.VertexPoints},
+                { "Index", indexGroup }
+            };
         }
     } // end class
 
