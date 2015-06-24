@@ -47,41 +47,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DXFLibrary\Arc.cs" />
-    <Compile Include="DXFLibrary\Block.cs" />
-    <Compile Include="DXFLibrary\Blocks.cs" />
-    <Compile Include="DXFLibrary\Circle.cs" />
+    <Compile Include="DXFLibrary\Entities.cs" />
+    <Compile Include="DXFLibrary\Elements.cs" />
     <Compile Include="DXFLibrary\Data.cs" />
     <Compile Include="DXFLibrary\Document.cs" />
     <Compile Include="DXFLibrary\Element.cs" />
-    <Compile Include="DXFLibrary\EndBlk.cs" />
-    <Compile Include="DXFLibrary\Entities.cs" />
-    <Compile Include="DXFLibrary\Entity.cs" />
+    <Compile Include="DXFLibrary\Writer.cs" />
     <Compile Include="ExportToDXF.cs" />
-    <Compile Include="DXFLibrary\Header.cs" />
-    <Compile Include="DXFLibrary\Insert.cs" />
-    <Compile Include="DXFLibrary\Layer.cs" />
-    <Compile Include="DXFLibrary\Line.cs" />
-    <Compile Include="DXFLibrary\LineType.cs" />
-    <Compile Include="DXFLibrary\PolyLine.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="DXFLibrary\Section.cs" />
-    <Compile Include="DXFLibrary\SeqEnd.cs" />
+    <Compile Include="DXFLibrary\Sections.cs" />
     <Compile Include="Nesting.cs" />
     <Compile Include="Sheets.cs" />
     <Compile Include="Slicer.cs" />
-    <Compile Include="DXFLibrary\Style.cs" />
-    <Compile Include="DXFLibrary\Table.cs" />
-    <Compile Include="DXFLibrary\TableEntry.cs" />
-    <Compile Include="DXFLibrary\Tables.cs" />
-    <Compile Include="DXFLibrary\Text.cs" />
-    <Compile Include="DXFLibrary\UnexpectedElement.cs" />
+    <Compile Include="DXFLibrary\TableEntries.cs" />
     <Compile Include="Text.cs" />
     <Compile Include="TriangleRigging.cs" />
     <Compile Include="Unroll.cs" />
-    <Compile Include="DXFLibrary\Variable.cs" />
-    <Compile Include="DXFLibrary\Vertex.cs" />
-    <Compile Include="DXFLibrary\Writer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
