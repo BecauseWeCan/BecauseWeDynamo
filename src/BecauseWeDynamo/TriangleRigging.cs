@@ -687,80 +687,49 @@ namespace TriangleRigging
 
             VertexPoints = Vertices.Keys.ToList();
 
-            //build spline
-
-            List<TriangleVertex> spline = new List<TriangleVertex>();
-            List<TriangleVertex> orderedspline = new List<TriangleVertex>();
-            for (int i = 0; i < Splines[0][0].triangles.Count; i++ )
+            //build unordered spline
+            List<TriangleVertex> found = new List<TriangleVertex>() {Splines[0][0]};
+            List<TriangleVertex> search = new List<TriangleVertex>(vertices);
+            search.Remove(found[0]);
+            int numSpline = 0;
+            while (found.Count < vertices.Count)
             {
-                for (int j=0; j < 3; j++)
-                {
-                    if (!spline.Contains(Splines[0][0].triangles[i].vertices[j])) spline.Add(Splines[0][0].triangles[i].vertices[j]);
-                }
-            }
-            int s0 = (Splines[0][0].triangles[0].vertices.IndexOf(Splines[0][0]) + 1) % 3;
-            List<Triangle> e0triangles = Splines[0][0].triangles.Intersect(Splines[0][0].triangles[0].vertices[s0].triangles).ToList();
-            orderedspline.Add(Splines[0][0].triangles[0].vertices[s0]);
-            orderedspline.Add(Splines[0][0].triangles[0].vertices[(s0 + 1) % 3]);
-            Edges.Add(TriangleEdge.ByPoints(Splines[0][0],Splines[0][0].triangles[0].vertices[s0],"e01-1", e0triangles));
-            for (int i = 0; i < e0triangles.Count; i++)
-            {
-                Edges[0].AddTriangle(e0triangles[i]);
-                e0triangles[i].AddEdge(Edges[0]);
-            }
-            
-            Edges.Add(TriangleEdge.ByPoints(Splines[0][0], Splines[0][0].triangles[0].vertices[ind], "e01-1", Splines[0][0].triangles.Intersect(Splines[0][0].triangles[0].vertices[ind].triangles).ToList()));
-
-
-
-            for (int v=0; v < VertexPoints.Count; v++)
-            {
-                if (VertexPoints[v].DistanceTo(start) < spline0.DistanceTo(start)) spline0 = VertexPoints[v];
-            }
-
-            Splines.Add(new List<TriangleVertex>(1){Vertices[spline0]});
-            Vertices[spline0].splineId = 0;
-            // search vertex points for match
-            for (int k = 0; k < VertexPoints.Count; k++)
-            {
-                if (VertexPoints[k].IsAlmostEqualTo(OrderedSplines[i][j]))
-                {
-                    Spline.Add(Vertices[VertexPoints[k]]);
-                    Vertices[VertexPoints[k]].splineId = i;
-
-                    if (j > 0)
-                    {
-                        // check Triangles
-                        // find Triangles on edge
-                        List<Triangle> listT = new List<Triangle>();
-                        for (int t = 0; t < Vertices[VertexPoints[k]].triangles.Count; t++)
+                List<TriangleVertex> spline = new List<TriangleVertex>();
+                for (int i = 0; i < Splines[numSpline].Count; i++)
+                    for (int j = 0; j < Splines[numSpline][i].triangles.Count; j++)
+                        for (int k = 0; k < 3; k++)
                         {
-                            if (Vertices[VertexPoints[z]].triangles.Contains(Vertices[VertexPoints[k]].triangles[t]))
-                                listT.Add(Vertices[VertexPoints[k]].triangles[t]);
-                        }
-
-                        if (listT.Count > 0)
-                        {
-                            string edgeId = "s" + i.ToString("D" + numD) + "-" + edgeCount.ToString("D" + numDs);
-                            TriangleEdge e = new TriangleEdge(Vertices[VertexPoints[z]], Vertices[VertexPoints[k]], edgeId, listT, false);
-                            if (listT.Count == 1) e.isOuterEdge = true;
-                            Edges.Add(e);
-                            // add edge key to vertices
-                            for (int t = 0; t < listT.Count; t++)
+                            if (found.Count < search.Count)
                             {
-                                listT[t].AddEdge(e); listT[t].BuildGeometricProperties(e);
-                                e.Normal = e.Normal.Add(listT[t].Normal);
+                                if (!found.Contains(Splines[numSpline][i].triangles[j].vertices[k]))
+                                {
+                                    spline.Add(Splines[numSpline][i].triangles[j].vertices[k]);
+                                    found.Add(Splines[numSpline][i].triangles[j].vertices[k]);
+                                    search.Remove(Splines[numSpline][i].triangles[j].vertices[k]);
+                                }
                             }
-                            Vertices[VertexPoints[z]].AddEdge(e);
-                            Vertices[VertexPoints[k]].AddEdge(e);
-                            edgeCount++;
+                            else
+                            {
+                                if (search.Contains(Splines[numSpline][i].triangles[j].vertices[k]))
+                                {
+                                    spline.Add(Splines[numSpline][i].triangles[j].vertices[k]);
+                                    found.Add(Splines[numSpline][i].triangles[j].vertices[k]);
+                                    search.Remove(Splines[numSpline][i].triangles[j].vertices[k]);
+                                }
+                            }
                         }
-                    }
-                    z = k;
-                    break;
-                }
-            } // end search
-        
+                Splines.Add(spline);
+                numSpline++;
+            }
+
+            //order splines
+            numSpline = Splines.Count.ToString().Length;
+            List<List<TriangleVertex>> OrderedSplines = new List<List<TriangleVertex>> (Splines.Count);
+            OrderedSplines.Add(Splines[0]);
+            for (int i = 1; i < Splines.Count; i++)
+            {
+
+            }
             
         }
 
@@ -919,23 +888,11 @@ namespace TriangleRigging
         }
 
         //**STATIC**METHODS - **CREATE**
-        /// <summary>
-        /// For surfaces composed of oriented three-point adaptive models.
-        /// </summary>
-        /// <param name="Solids">Adaptive Model Geometry</param>
-        /// <param name="SolidsPoints">Adaptive Model Reference Points</param>
-        /// <param name="Splines">List of Spline Points</param>
-        /// <returns>A dynamo topological structure to layout and label adaptive components.</returns>
         public static TriangleRigging BySolidsPointsSplines(Solid[][] Solids, Point[][] SolidsPoints, Point[][] Splines) { return new TriangleRigging(Solids, SolidsPoints, Splines); }
-        public static TriangleRigging BySolidsPointsPoints(Solid[][] Solids, Point[][] SolidsPoints, Point[] start) { return new TriangleRigging(Solids, SolidsPoints, start); }
+        public static TriangleRigging BySolidsPointsPoints(Solid[][] Solids, Point[][] SolidsPoints, Point start) { return new TriangleRigging(Solids, SolidsPoints, start); }
         public static TriangleRigging ByTriangleSurfacesAndSplines(Surface[] Triangles, Point[][] Splines) { return new TriangleRigging(Triangles, Splines); }
 
         //**METHODS - **ACTION**
-
-        public TriangleRigging BuildSplines()
-        {
-
-        }
         public List<List<PolyCurve>> GetEdgeLabels(double factor)
         {
             List<List<PolyCurve>> labels = new List<List<PolyCurve>>(Triangles.Count);
