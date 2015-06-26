@@ -18,11 +18,13 @@ namespace Fabrication
         {
             this.CoordinateSystem = CoordinateSystem;
             this.Curves = Curves;
+            this.Circles = null;
         }
         internal Sheets(List<List<Circle>> Circles, List<CoordinateSystem> CoordinateSystem)
         {
             this.CoordinateSystem = CoordinateSystem;
             this.Circles = Circles;
+            this.Curves = null;
         }
 
         //**CREATE
@@ -51,7 +53,7 @@ namespace Fabrication
             List<List<PolyCurve>> result = new List<List<PolyCurve>>(Curves.Count);
             for (int i = 0; i < Curves.Count; i++)
             {
-                List<PolyCurve> temp = new List<PolyCurve>(1){PolyCurve.ByJoinedCurves(Curves[i])};
+                List<PolyCurve> temp = new List<PolyCurve>(1) { PolyCurve.ByJoinedCurves(Curves[i]) };
                 result.Add(temp);
             }
             return new Sheets(result, CS);
@@ -117,7 +119,8 @@ namespace Fabrication
             if (disposed) return;
             if (disposing)
             {
-                Curves.ForEach(a => a.ForEach(c => c.Dispose()));
+                if (Curves != null) Curves.ForEach(a => a.ForEach(c => c.Dispose()));
+                if (Circles != null) Circles.ForEach(a => a.ForEach(c => c.Dispose()));
             }
             disposed = true;
         }
