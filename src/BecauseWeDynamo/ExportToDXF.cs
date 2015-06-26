@@ -56,12 +56,16 @@ namespace Utilities
             List<Curve> Curves = new List<Curve>();
             for (int i = 0; i < polycurves.Length; i++) for (int j = 0; j < polycurves[i].Length; j++) for (int k = 0; k < polycurves[i][j].Curves().Length; k++)
                         Curves.AddRange(polycurves[i][j].Curves()[k].ApproximateWithArcAndLineSegments());
+            Vector stTan = null;
+            Vector endTan = null;
+            Point stpt = null;
+            Point endpt = null;
             for (int i = 0; i < Curves.Count; i++)
             {
-                Vector stTan = Curves[i].TangentAtParameter(0);
-                Vector endTan = Curves[i].TangentAtParameter(Curves[i].EndParameter());
-                Point stpt = Curves[i].StartPoint;
-                Point endpt = Curves[i].EndPoint;
+                stTan = Curves[i].TangentAtParameter(0);
+                endTan = Curves[i].TangentAtParameter(Curves[i].EndParameter());
+                stpt = Curves[i].StartPoint;
+                endpt = Curves[i].EndPoint;
 
                 if (stTan.IsParallel(endTan))
                 {
@@ -85,6 +89,11 @@ namespace Utilities
                     cs.Dispose();
                 }
             }
+            if (stTan != null) stTan.Dispose();
+            if (endTan != null) endTan.Dispose();
+            if (stpt != null) stpt.Dispose();
+            if (endpt != null) endpt.Dispose();
+            Curves.ForEach(c => c.Dispose());
             return this;
         }
         public ExportToDXF AddCircles(Circle[][] circles, string layerName = "0", short ACADcolor = (short) 7)
@@ -105,11 +114,10 @@ namespace Utilities
                         Curves.AddRange(polycurves[i][j].Curves()[k].ApproximateWithArcAndLineSegments());
             for (int i = 0; i < Curves.Count; i++)
             {
-                Point stpt = Curves[i].StartPoint;
-                Point endpt = Curves[i].EndPoint;
-                DXFLibrary.Line line = new DXFLibrary.Line("PROFILES", stpt.X, stpt.Y, stpt.Z, endpt.X, endpt.Y, endpt.Z);
+                DXFLibrary.Line line = new DXFLibrary.Line("PROFILES", Curves[i].StartPoint.X, Curves[i].StartPoint.Y, Curves[i].StartPoint.Z, Curves[i].EndPoint.X, Curves[i].EndPoint.Y, Curves[i].EndPoint.Z);
                 dxf.add(line);
             }
+            Curves.ForEach(c => c.Dispose());
             return this;
         }
         public ExportToDXF AddLines(Line[] lines, string layerName = "0", short ACADcolor = (short) 7)
@@ -117,18 +125,18 @@ namespace Utilities
             CheckLayer(layerName, ACADcolor);
             for (int i = 0; i < lines.Length; i++)
             {
-                Point stpt = lines[i].StartPoint;
-                Point endpt = lines[i].EndPoint;
-                DXFLibrary.Line line = new DXFLibrary.Line("PROFILES", stpt.X, stpt.Y, stpt.Z, endpt.X, endpt.Y, endpt.Z);
+                DXFLibrary.Line line = new DXFLibrary.Line("PROFILES", lines[i].StartPoint.X, lines[i].StartPoint.Y, lines[i].StartPoint.Z, lines[i].EndPoint.X, lines[i].EndPoint.Y, lines[i].EndPoint.Z);
                 dxf.add(line);
             }
             return this;
         }
         public void WriteFile(string filename)
         {
-            FileStream f1 = new FileStream(filename + ".dxf", FileMode.Create);
-            DXFLibrary.Writer.Write(dxf, f1);
-            f1.Close();
+            using (FileStream f1 = new FileStream(filename + ".dxf", FileMode.Create))
+            {
+                DXFLibrary.Writer.Write(dxf, f1);
+                f1.Close();
+            }
         }
     }
 
@@ -153,14 +161,22 @@ namespace Utilities
                 Curves.AddRange(polycurves[i][j].Curves()[k].ApproximateWithArcAndLineSegments());
             for (int i = 0; i < Curves.Count; i++)
             {
-                Point stpt = Curves[i].StartPoint;
-                Point endpt = Curves[i].EndPoint;
-                DXFLibrary.Line line = new DXFLibrary.Line("PROFILES", stpt.X, stpt.Y, stpt.Z, endpt.X, endpt.Y, endpt.Z);
+                DXFLibrary.Line line = new DXFLibrary.Line(
+                    "PROFILES", 
+                    Curves[i].StartPoint.X, 
+                    Curves[i].StartPoint.Y, 
+                    Curves[i].StartPoint.Z, 
+                    Curves[i].EndPoint.X, 
+                    Curves[i].EndPoint.Y, 
+                    Curves[i].EndPoint.Z);
                 dxf.add(line);
             }
-            FileStream f1 = new FileStream(filename, FileMode.Create);
-            DXFLibrary.Writer.Write(dxf, f1);
-            f1.Close();
+            Curves.ForEach(c => c.Dispose());
+            using (FileStream f1 = new FileStream(filename, FileMode.Create))
+            {
+                DXFLibrary.Writer.Write(dxf, f1);
+                f1.Close();
+            }
         }
 
         //**CREATE

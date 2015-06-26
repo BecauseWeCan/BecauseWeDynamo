@@ -177,34 +177,21 @@ namespace TriangleRigging
         }
     }
 
-    public class TriangleVertex
+    public class TriangleVertex : IDisposable
     {
         private List<Triangle> Triangles;
         private List<TriangleEdge> Edges;
         private Point id;
-        private int Spline;
+        bool disposed = false;
 
         //**QUERY**PROPERTIES
         /// <summary>
         /// point of vertex
         /// </summary>
         public Point point { get { return id; } }
-        /// <summary>
-        /// triangle with this vertex
-        /// </summary>
         public List<Triangle> triangles { get { return Triangles; } }
-        /// <summary>
-        /// Edges with this vertex
-        /// </summary>
         public List<TriangleEdge> edges { get { return Edges; } }
-        /// <summary>
-        /// spline location of vertex
-        /// </summary>
-        public int splineId
-        {
-            get { return Spline; }
-            set { Spline = value; }
-        }
+        public int SplineId { get; set; }
 
         //*CONSTRUCTOR
         internal TriangleVertex(Point pt)
@@ -212,7 +199,7 @@ namespace TriangleRigging
             id = pt;
             Triangles = new List<Triangle>();
             Edges = new List<TriangleEdge>();
-            Spline = -1;
+            SplineId = -1;
         }
 
         //**CREATE
@@ -232,26 +219,28 @@ namespace TriangleRigging
         {
             if (!Triangles.Contains(triangle)) Triangles.Add(triangle);
         }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="edge"></param>
         public void AddEdge(TriangleEdge edge)
         {
             if (!Edges.Contains(edge)) Edges.Add(edge);
         }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="vtx"></param>
-        /// <returns></returns>
         public Boolean AlmostEquals(TriangleVertex vtx)
         {
             return (vtx.point.IsAlmostEqualTo(id));
         }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing) id.Dispose();
+            disposed = true;
+        }
     }
 
-    public class TriangleEdge
+    public class TriangleEdge: IDisposable
     {
         private TriangleVertex a;
         private TriangleVertex b;
@@ -260,6 +249,7 @@ namespace TriangleRigging
         private string id;
         private Boolean IsOuterEdge;
         private List<TriangleVertex> Vertices;
+        bool disposed = false;
 
         //**QUERY**PROPERTIES
         public Vector Normal { get; set; }
@@ -302,10 +292,7 @@ namespace TriangleRigging
         /// adds triangle reference data to internal list
         /// </summary>
         /// <param name="t"></param>
-        public void AddTriangle(Triangle t)
-        {
-            if (!Triangles.Contains(t)) Triangles.Add(t);
-        }
+        public void AddTriangle(Triangle t) { if (!Triangles.Contains(t)) Triangles.Add(t); }
         /// <summary>
         /// compare this edge to another
         /// </summary>
@@ -319,10 +306,7 @@ namespace TriangleRigging
         /// <param name="vtx2">second vertex</param>
         /// <returns></returns>
         public Boolean HasVertices(TriangleVertex vtx1, TriangleVertex vtx2) { return ((vtx1.AlmostEquals(a) && vtx2.AlmostEquals(b)) || (vtx1.AlmostEquals(b) && vtx2.AlmostEquals(a))); }
-        public Line GetEdgeGeometry()
-        {
-            return Line.ByStartPointEndPoint(A.point, B.point);
-        }
+        public Line GetEdgeGeometry()  { return Line.ByStartPointEndPoint(A.point, B.point); }
         public List<PolyCurve> GetEdgeLabels(double factor)
         {
             List<PolyCurve> labels = new List<PolyCurve>();
@@ -358,25 +342,40 @@ namespace TriangleRigging
 
             return labels;
         }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                midpoint.Dispose();
+                Midpoint.Dispose();
+                Normal.Dispose();
+            }
+            disposed = true;
+        }
+
     }
 
-    public class Triangle
+    public class Triangle: IDisposable
     {
         //*PRIVATE**PROPERTIES
         public Dictionary<string, Object> Parameters;
         public Boolean HasName;
 
-        private int holes;
         private double Height;
-        private int SplineId;
         private List<Point> Points;
         private List<TriangleVertex> Vertices;
         private List<TriangleEdge> Edges;
-        private Geometry geometry;
-        private string Name;
         private Point Circumcenter;
         private Point Center;
         private CoordinateSystem CS;
+
+        bool disposed = false;
 
         //**PROPERTIES - **QUERY**
         public CoordinateSystem contextCoordinateSystem { get { return CS; } }
@@ -385,44 +384,28 @@ namespace TriangleRigging
         public List<TriangleVertex> vertices { get { return Vertices; } }
         public Point circumcenter { get { return Circumcenter; } }
         public Point center { get { return Center; } }
+        public Vector Normal { get; set; }
+        public Geometry Geometry { get; set; }
+        public string Name { get; set; }
+        public int splineId { get; set; }
+        public int numHoles { get; set; }
         public Curve[] PerimeterCurves { get {
-            if (geometry is Solid) return ((Surface)geometry.Explode()[0]).PerimeterCurves();
-            else if (geometry is Surface) return ((Surface)geometry).PerimeterCurves();
+            if (Geometry is Solid) return ((Surface)Geometry.Explode()[0]).PerimeterCurves();
+            else if (Geometry is Surface) return ((Surface)Geometry).PerimeterCurves();
             else return null;
         }}
-        public Vector Normal { get; set; }
-        public Geometry Geometry
-        {
-            get { return geometry; }
-            set { geometry = value; }
-        }
-        public string name
-        {
-            get { return Name; }
-            set { Name = value; }
-        }
-        public int splineId
-        {
-            get { return SplineId; }
-            set { SplineId = value; }
-        }
-        public int numHoles
-        {
-            get { return holes; }
-            set { holes = value; }
-        }
 
         //**CONSTRUCTOR
         internal Triangle(Geometry inputGeometry, List<Point> points)
         {
-            geometry = inputGeometry;
+            Geometry = inputGeometry;
             Points = new List<Point>(3);
             Edges = new List<TriangleEdge>(3);
             Vertices = new List<TriangleVertex>(3);
             Name = "";
             HasName = false;
             Height = 0;
-            holes = 1;
+            numHoles = 1;
 
             Points.AddRange(points);
             Normal = Plane.ByBestFitThroughPoints(points).Normal;
@@ -571,7 +554,6 @@ namespace TriangleRigging
             } // end Edges
             return circles;
         }// end action
-
         /// <summary>
         /// get profiles and letters
         /// </summary>
@@ -586,14 +568,50 @@ namespace TriangleRigging
             return curves;
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                circumcenter.Dispose();
+                Circumcenter.Dispose();
+                center.Dispose();
+                Center.Dispose();
+                contextCoordinateSystem.Dispose();
+                CS.Dispose();
+                Normal.Dispose();
+                Geometry.Dispose();
+                for (int i = 0; i < PerimeterCurves.Length; i++) PerimeterCurves[i].Dispose();
+                for (int i = 0; i < edges.Count; i++)
+                {
+                    if (edges[i].isOuterEdge) edges[i].Dispose();
+                    else edges[i].isOuterEdge = true;
+                }
+                for (int i = 0; i < vertices.Count; i++)
+                {
+                    bool dispose = true;
+                    for (int j = 0; j < vertices[i].triangles.Count; j++)
+                    {
+                        if (!vertices[i].triangles[j].Name.Equals(Name)) dispose = dispose && vertices[i].triangles[j].disposed;
+                    }
+                    if (dispose) vertices[i].Dispose();
+                }
+            }
+            disposed = true;
+        }
     }
 
-    public class TriangleRigging
+    public class TriangleRigging: IDisposable
     {
         //**GLOBAL**VARIABLES
         private Dictionary<Point, TriangleVertex> Vertices;
-
+        bool disposed = false;
         //**PROPERTIES - **QUERY**
         public List<Point> VertexPoints { get; set; }
         public List<Triangle> Triangles { get; set; }
@@ -754,7 +772,7 @@ namespace TriangleRigging
                         if (VertexPoints[k].IsAlmostEqualTo(OrderedSplines[i][j]))
                         {
                             Spline.Add(Vertices[VertexPoints[k]]);
-                            Vertices[VertexPoints[k]].splineId = i;
+                            Vertices[VertexPoints[k]].SplineId = i;
 
                             if (j > 0)
                             {
@@ -837,7 +855,7 @@ namespace TriangleRigging
                         {
                             for (int vt = 0; vt < Splines[s][v].triangles[t].vertices.Count; vt++)
                             {
-                                if (!Search.Contains(Splines[s][v].triangles[t].vertices[vt]) && Splines[s][v].triangles[t].vertices[vt].splineId == s + 1)
+                                if (!Search.Contains(Splines[s][v].triangles[t].vertices[vt]) && Splines[s][v].triangles[t].vertices[vt].SplineId == s + 1)
                                     Search.Add(Splines[s][v].triangles[t].vertices[vt]);
                             }
                         }
@@ -868,7 +886,7 @@ namespace TriangleRigging
                                 e.Normal = e.Normal.Add(listT[t].Normal);
                                 if (!listT[t].HasName)
                                 {
-                                    listT[t].name = "t" + s.ToString("D" + numD) + (s + 1).ToString("D" + numD) + "-" + triangleCount.ToString("D" + numDe);
+                                    listT[t].Name = "t" + s.ToString("D" + numD) + (s + 1).ToString("D" + numD) + "-" + triangleCount.ToString("D" + numDe);
                                     listT[t].HasName = true;
                                     listT[t].splineId = s;
                                     listT[t].BuildCS();
@@ -907,7 +925,7 @@ namespace TriangleRigging
         {
             List<int> index = new List<int>(Triangles.Count);
             Dictionary<int, string> sorted = new Dictionary<int, string>();
-            for (int i = 0; i < Triangles.Count; i++) { sorted.Add(i, Triangles[i].name); }
+            for (int i = 0; i < Triangles.Count; i++) { sorted.Add(i, Triangles[i].Name); }
             foreach (var item in sorted.OrderBy(i => i.Value)) { index.Add(item.Key); }
 
             return index;
@@ -957,7 +975,7 @@ namespace TriangleRigging
             List<int> Row = new List<int>(Index.Count);
             List<List<int>> result = new List<List<int>>(numRow);
 
-            for (int i = 0; i < Index.Count; i++) Row.Add(Convert.ToInt32(Triangles[Index[i]].name.Substring(1, numD)));
+            for (int i = 0; i < Index.Count; i++) Row.Add(Convert.ToInt32(Triangles[Index[i]].Name.Substring(1, numD)));
             for (int i = 0; i < numRow; i++)
             {
                 List<int> list = new List<int>();
@@ -988,7 +1006,9 @@ namespace TriangleRigging
         {
             List<Surface> TriangleSurfaces = new List<Surface>(Triangles.Count);
             for (int t = 0; t < Triangles.Count; t++) TriangleSurfaces.Add(Surface.ByPerimeterPoints(Triangles[t].points));
-            return PolySurface.ByJoinedSurfaces(TriangleSurfaces);
+            PolySurface result = PolySurface.ByJoinedSurfaces(TriangleSurfaces);
+            TriangleSurfaces.ForEach(s => s.Dispose());
+            return result;
         }
 
         [MultiReturn(new[] { "VertexPoints", "Index" })]
@@ -1003,6 +1023,29 @@ namespace TriangleRigging
                 { "Index", indexGroup }
             };
         }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                Triangles.ForEach(t => t.Dispose());
+                Splines.ForEach(s => s.ForEach(t => t.Dispose()));
+                Edges.ForEach(e => e.Dispose());
+                vertices.ForEach(v => v.Dispose());
+                VertexPoints.ForEach(v => v.Dispose());
+            }
+            disposed = true;
+        }
+
+
+
     } // end class
 
 
