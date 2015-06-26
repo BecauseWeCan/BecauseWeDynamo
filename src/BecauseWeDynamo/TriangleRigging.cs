@@ -390,9 +390,19 @@ namespace TriangleRigging
         public int splineId { get; set; }
         public int numHoles { get; set; }
         public Curve[] PerimeterCurves { get {
-            if (Geometry is Solid) return ((Surface)Geometry.Explode()[0]).PerimeterCurves();
-            else if (Geometry is Surface) return ((Surface)Geometry).PerimeterCurves();
+            if (Geometry is Solid)
+            {
+                Geometry[] g = Geometry.Explode();
+                Curve[] result = ((Surface)Geometry.Explode()[0]).PerimeterCurves();
+                g.ForEach(i => i.Dispose());
+                return result;
+            }
+            else if (Geometry is Surface) return ((Surface) Geometry).PerimeterCurves();
             else return null;
+        }}
+        public Boolean HasEdges { get {
+                if (Edges.Count == 3) return true;
+                else return false;
         }}
 
         //**CONSTRUCTOR
@@ -464,15 +474,6 @@ namespace TriangleRigging
         /// </summary>
         /// <param name="vtx">triangle vertex</param>
         public void AddVertex(TriangleVertex vtx) { if (!Vertices.Contains(vtx)) Vertices.Add(vtx); }
-        /// <summary>
-        /// gets edge
-        /// </summary>
-        /// <returns>boolean</returns>
-        public Boolean HasEdges()
-        {
-            if (Edges.Count == 3) return true;
-            else return false;
-        }
         /// <summary>
         /// adds circles to Edges
         /// </summary>
@@ -851,7 +852,7 @@ namespace TriangleRigging
                     List<TriangleVertex> Search = new List<TriangleVertex>();
                     for (int t = 0; t < Splines[s][v].triangles.Count; t++)
                     {
-                        if (!Splines[s][v].triangles[t].HasEdges())
+                        if (!Splines[s][v].triangles[t].HasEdges)
                         {
                             for (int vt = 0; vt < Splines[s][v].triangles[t].vertices.Count; vt++)
                             {

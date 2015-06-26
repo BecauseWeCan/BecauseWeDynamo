@@ -7,11 +7,11 @@ namespace Text
 
     public class Letter : IDisposable
     {
-        private PolyCurve pl;
+        private PolyCurve[] pl;
         private char ltr;
         bool disposed = false;
 
-        public PolyCurve drawn { get { return pl; } }
+        public PolyCurve[] drawn { get { return pl; } }
 
         internal Letter(char c)
         {
@@ -21,154 +21,171 @@ namespace Text
             switch (c)
             {
                 case 'a':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[0, 2], points[1, 0], points[2, 2], points[0, 2], points[2, 2], points[2, 4] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[0, 2], points[1, 0], points[2, 2], points[2, 4] }),
+                        PolyCurve.ByPoints( new Point[] { points[0, 2], points[2, 2] })};
                     break;
                 case 'b':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[1, 3], points[0, 3], points[1, 3], points[2, 4], points[1, 5], points[0, 5] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[1, 3], points[2, 4], points[1, 5], points[0, 5] }),
+                        PolyCurve.ByPoints( new Point[] { points[0, 3], points[1, 3] })};
                     break;
                 case 'c':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 1], points[1, 0], points[0, 1], points[0, 3], points[1, 4], points[2, 3] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[2, 1], points[1, 0], points[0, 1], points[0, 3], points[1, 4], points[2, 3] })};
                     break;
                 case 'd':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[2, 3], points[1, 4], points[0, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[2, 3], points[1, 4], points[0, 4] })};
                     break;
                 case 'e':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 0], points[1, 0], points[0, 1], points[0, 2], points[2, 2], points[0, 2], points[0, 3], points[1, 4], points[2, 4] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[2, 0], points[1, 0], points[0, 1], points[0, 3], points[1, 4], points[2, 4] }),
+                        PolyCurve.ByPoints( new Point[] { points[0, 2], points[2, 2] })};
                     break;
                 case 'f':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 0], points[1, 0], points[0, 1], points[0, 4], points[0, 2], points[2, 2] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[2, 0], points[1, 0], points[0, 1], points[0, 4], points[0, 2], points[2, 2] })};
                     break;
                 case 'g':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 1], points[1, 0], points[0, 1], points[0, 3], points[1, 4], points[2, 3], points[2, 2], points[1,2] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[2, 1], points[1, 0], points[0, 1], points[0, 3], points[1, 4], points[2, 3], points[2, 2], points[1,2] })};
                     break;
                 case 'h':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[0, 4], points[0, 2], points[2, 2], points[2, 0], points[2, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[0, 4], points[0, 2], points[2, 2], points[2, 0], points[2, 4] })};
                     break;
                 case 'i':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[2, 0], points[1, 0], points[1, 4], points[0, 4], points[2, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[2, 0], points[1, 0], points[1, 4], points[0, 4], points[2, 4] })};
                     break;
                 case 'j':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[2, 0], points[1, 0], points[1, 3], points[0, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[2, 0], points[1, 0], points[1, 3], points[0, 4] })};
                     break;
                 case 'k':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[0, 4], points[0, 2], points[2, 0], points[0, 2], points[2, 4] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[0, 4] }),
+                        PolyCurve.ByPoints( new Point[] { points[2, 4], points[0, 2], points[2, 0] })};
                     break;
                 case 'l':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[0, 4], points[2, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[0, 4], points[2, 4] })};
                     break;
                 case 'm':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[0, 0], points[1, 2], points[2, 0], points[2, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[0, 0], points[1, 2], points[2, 0], points[2, 4] })};
                     break;
                 case 'n':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[0, 0], points[2, 4], points[2, 0] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[0, 0], points[2, 4], points[2, 0] })};
                     break;
                 case 'o':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[1, 0], points[2, 1], points[2, 3], points[1, 4], points[0, 3], points[0, 1], points[1, 0] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[1, 0], points[2, 1], points[2, 3], points[1, 4], points[0, 3], points[0, 1], points[1, 0] })};
                     break;
                 case 'p':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[1, 2], points[0, 2] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[1, 2], points[0, 2] })};
                     break;
                 case 'q':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 4], points[1, 4], points[0, 3], points[0, 1], points[1, 0], points[2, 1], points[2, 3], points[1, 4] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[1, 0], points[2, 1], points[2, 3], points[1, 4], points[0, 3], points[0, 1], points[1, 0] }),
+                        PolyCurve.ByPoints( new Point[] { points[1, 3], points[1, 4] })};
                     break;
                 case 'r':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[1, 2], points[0, 2], points[2,4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[0, 0], points[1, 0], points[2, 1], points[1, 2], points[0, 2], points[2,4] })};
                     break;
                 case 's':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 1], points[1, 0], points[0, 1], points[2, 3], points[1, 4], points[0, 3] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[2, 1], points[1, 0], points[0, 1], points[2, 3], points[1, 4], points[0, 3] })};
                     break;
                 case 't':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[2, 0], points[1, 0], points[1, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[2, 0], points[1, 0], points[1, 4] })};
                     break;
                 case 'u':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[0, 4], points[2, 4], points[2, 0] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[0, 4], points[2, 4], points[2, 0] })};
                     break;
                 case 'v':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[0, 2], points[1, 4], points[2, 2], points[2, 0] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[0, 2], points[1, 4], points[2, 2], points[2, 0] })};
                     break;
                 case 'w':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[0, 4], points[1, 2], points[2, 4], points[2, 0] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[0, 4], points[1, 2], points[2, 4], points[2, 0] })};
                     break;
                 case 'x':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[2, 4], points[1, 2], points[0, 4], points[2, 0] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[2, 4] }),
+                        PolyCurve.ByPoints( new Point[] { points[0, 4], points[2, 0] })};
                     break;
                 case 'y':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[1, 2], points[1, 4], points[1, 2], points[2, 0] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[1, 2] }),
+                        PolyCurve.ByPoints( new Point[] { points[1, 4], points[1, 2], points[2, 0] })};
                     break;
                 case 'z':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[2, 0], points[0, 4], points[2, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 0], points[2, 0], points[0, 4], points[2, 4] })};
                     break;
 
                 case '-':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 2], points[2, 2] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints( new Point[] { points[0, 2], points[2, 2] })};
                     break;
 
                 case '0':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 3], points[1, 4], points[2, 3], points[2, 1], points[0, 3], points[0, 1], points[1, 0], points[2, 1] });
+                    pl = new PolyCurve[2] {
+                        PolyCurve.ByPoints( new Point[] { points[1, 0], points[2, 1], points[2, 3], points[1, 4], points[0, 3], points[0, 1], points[1, 0] }),
+                        PolyCurve.ByPoints( new Point[] { points[1, 3], points[2, 1] })};
                     break;
                 case '1':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 1], points[1, 0], points[1, 4], points[0, 4], points[2, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[0, 1], points[1, 0], points[1, 4], points[0, 4], points[2, 4] })};
                     break;
                 case '2':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[2, 0], points[2, 1], points[0, 4], points[2, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[0, 0], points[2, 0], points[2, 1], points[0, 4], points[2, 4] })};
                     break;
                 case '3':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 0], points[2, 0], points[1, 1], points[2, 1], points[2, 3], points[1,4], points[0, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[0, 0], points[2, 0], points[1, 1], points[2, 1], points[2, 3], points[1,4], points[0, 4] })};
                     break;
                 case '4':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 4], points[2, 0], points[0, 3], points[2, 3] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[2, 4], points[2, 0], points[0, 3], points[2, 3] })};
                     break;
                 case '5':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 0], points[0, 0], points[0, 1], points[2, 1], points[2, 3], points[1, 4], points[0, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[2, 0], points[0, 0], points[0, 1], points[2, 1], points[2, 3], points[1, 4], points[0, 4] })};
                     break;
                 case '6':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 0], points[1, 0], points[0, 1], points[0, 4], points[1, 4], points[2, 3], points[2, 1], points[1, 1], points[0, 2] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[2, 0], points[1, 0], points[0, 1], points[0, 4], points[1, 4], points[2, 3], points[2, 1], points[1, 1], points[0, 2] })};
                     break;
                 case '7':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 1], points[0, 0], points[2, 0], points[2, 1], points[1, 4] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[0, 1], points[0, 0], points[2, 0], points[2, 1], points[1, 4] })};
                     break;
                 case '8':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[2, 0], points[2, 1], points[0, 2], points[0, 4], points[2, 4], points[2, 2], points[0, 1], points[0, 0], points[2, 0] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[2, 0], points[2, 1], points[0, 2], points[0, 4], points[2, 4], points[2, 2], points[0, 1], points[0, 0], points[2, 0] })};
                     break;
                 case '9':
-                    pl = PolyCurve.ByPoints(
-                        new Point[] { points[0, 4], points[1, 4], points[2, 3], points[2, 1], points[1, 0], points[0, 1], points[0, 2], points[1, 3], points[2, 2] });
+                    pl = new PolyCurve[1] {
+                        PolyCurve.ByPoints(
+                        new Point[] { points[0, 4], points[1, 4], points[2, 3], points[2, 1], points[1, 0], points[0, 1], points[0, 2], points[1, 3], points[2, 2] })};
                     break;
 
                 default:
@@ -181,13 +198,13 @@ namespace Text
 
         public Letter Transform(CoordinateSystem newCS)
         {
-            pl = pl.Transform(newCS) as PolyCurve;
+            pl.ForEach(p => p = p.Transform(newCS) as PolyCurve);
             return this;
         }
 
         public Letter Translate(Vector vec, double distance)
         {
-            pl = pl.Translate(vec, distance) as PolyCurve;
+            pl.ForEach(p => p = p.Translate(vec, distance) as PolyCurve);
             return this;
         }
 
@@ -195,7 +212,7 @@ namespace Text
         {
             Point from = cs.Origin.Translate(cs.XAxis, 1) as Point;
             Point to = cs.Origin.Translate(cs.XAxis, factor) as Point;
-            pl = pl.Scale(cs.Origin, from, to) as PolyCurve;
+            pl.ForEach(p => p = p.Scale(cs.Origin, from, to) as PolyCurve);
             from.Dispose();
             to.Dispose();
             return this;
@@ -210,12 +227,12 @@ namespace Text
         protected virtual void Dispose(bool disposing)
         {
             if (disposed) return;
-            if (disposing) pl.Dispose();
+            if (disposing) pl.ForEach(p => p.Dispose());
             disposed = true;
         }
     }// end letter
 
-    public class Word: IDisposable
+    public class Word : IDisposable
     {
         private string word;
         private Letter[] Letters;
@@ -271,14 +288,13 @@ namespace Text
             return this;
         }
 
-        public PolyCurve[] display(double factor)
+        public List<PolyCurve> display(double factor)
         {
-            PolyCurve[] lines = new PolyCurve[Letters.Length];
-            for (int i = 0; i < Letters.Length; i++)
+            List<PolyCurve> lines = new List<PolyCurve>();
+            for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].drawn.Length; j++)
             {
-                lines[i] = Letters[i].drawn.Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, factor) as Point) as PolyCurve;
+                lines.Add( Letters[i].drawn[j].Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, factor) as Point) as PolyCurve );
             }
-
             return lines;
         }
 
