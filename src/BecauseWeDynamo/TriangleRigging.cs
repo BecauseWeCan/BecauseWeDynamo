@@ -588,7 +588,6 @@ namespace TriangleRigging
                 CS.Dispose();
                 Normal.Dispose();
                 Geometry.Dispose();
-                for (int i = 0; i < PerimeterCurves.Length; i++) PerimeterCurves[i].Dispose();
                 for (int i = 0; i < edges.Count; i++)
                 {
                     if (edges[i].isOuterEdge) edges[i].Dispose();
