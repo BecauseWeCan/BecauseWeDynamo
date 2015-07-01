@@ -10,6 +10,14 @@ using Text;
 
 namespace TriangleRigging
 {
+    class TriangleEdgeComparer : IEqualityComparer<TriangleEdge>
+    {
+        bool Equals(TriangleEdge e1, TriangleEdge e2)
+        {
+            return ((e1.A.AlmostEquals(e2.A) && e1.B.AlmostEquals(e2.B)) || (e1.A.AlmostEquals(e2.B) && e1.B.AlmostEquals(e2.A)));
+        }
+    }
+
     public class TriangleEdgeConnector
     {
         double radius;
@@ -242,12 +250,14 @@ namespace TriangleRigging
 
     public class TriangleEdge: IDisposable
     {
+
+        IEqualityComparer<TriangleEdge> almostequal;
         private TriangleVertex a;
         private TriangleVertex b;
         private Point Midpoint;
         private List<Triangle> Triangles;
         private string id;
-        private Boolean IsOuterEdge;
+        private Boolean IsOuterEdge;         
         private List<TriangleVertex> Vertices;
         bool disposed = false;
 
@@ -280,7 +290,7 @@ namespace TriangleRigging
             IsOuterEdge = isOuterEdge;
             Vertices.Add(pta);
             Vertices.Add(ptb);
-            Normal = Vector.ByCoordinates(0, 0, 0);
+            Normal = null;
         }
 
         //**CREATE
@@ -298,7 +308,7 @@ namespace TriangleRigging
         /// </summary>
         /// <param name="e">edge</param>
         /// <returns></returns>
-        public Boolean AlmostEquals(TriangleEdge e) { return (e.A.AlmostEquals(a) && e.B.AlmostEquals(b)); }
+        public Boolean AlmostEquals(TriangleEdge e) { return ((e.A.AlmostEquals(a) && e.B.AlmostEquals(b)) || (e.A.AlmostEquals(b) && e.B.AlmostEquals(A))); }
         /// <summary>
         /// sees if input vertices are edge endpoints
         /// </summary>
@@ -602,6 +612,7 @@ namespace TriangleRigging
                     }
                     if (dispose) vertices[i].Dispose();
                 }
+                PerimeterCurves.ForEach(c => c.Dispose());
             }
             disposed = true;
         }
@@ -690,7 +701,8 @@ namespace TriangleRigging
             // and create Triangles based on Solids
             for (int i = 0; i < Solids.Length; i++)
             {
-                Triangles.Add(new Triangle((Surface)Solids[i][0].Explode()[0], SolidsPoint[i].ToList()));
+                Triangle t = new Triangle((Surface)Solids[i][0].Explode()[0], SolidsPoint[i].ToList());
+                Triangles.Add(t);
                 for (int j = 0; j < SolidsPoint[i].Length; j++)
                 {
                     if (!Vertices.ContainsKey(SolidsPoint[i][j]))
@@ -701,6 +713,22 @@ namespace TriangleRigging
                     Triangles[i].AddVertex(Vertices[SolidsPoint[i][j]]);
                     if (SolidsPoint[i][j].IsAlmostEqualTo(start)) Splines.Add(new List<TriangleVertex>(1){Vertices[SolidsPoint[i][j]]});
                 }
+                for (int j = 0; j < SolidsPoint[i].Length; j++)
+                {
+                    TriangleEdge e = TriangleEdge.ByPoints(Vertices[SolidsPoint[i][j]], Vertices[SolidsPoint[i][(j+1)%SolidsPoint[i].Length]], "e", new List<Triangle>(2){t});
+                    if (!Edges.Contains(e, new TriangleEdgeComparer()))
+                    {
+                        e.isOuterEdge = true;
+                        Edges.Add(e);
+                    }
+                    else
+                    {
+                        TriangleEdge e0 = Edges.Single(f => f.AlmostEquals(e));
+                        if (e0.isOuterEdge) e0.isOuterEdge = false;
+                        e0.triangles.Add(t);
+                        e.Dispose();
+                    }
+                } 
             }
 
             VertexPoints = Vertices.Keys.ToList();
