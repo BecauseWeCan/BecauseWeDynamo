@@ -352,6 +352,12 @@ namespace TriangleRigging
 
             return labels;
         }
+        public TriangleVertex GetOtherVertex(TriangleVertex vtx)
+        {
+            if (vtx.AlmostEquals(A)) return B;
+            else if (vtx.AlmostEquals(B)) return A;
+            return null;
+        }
         public void Dispose()
         {
             Dispose(true);
@@ -578,7 +584,6 @@ namespace TriangleRigging
             curves.AddRange(PerimeterCurves);
             return curves;
         }
-
         public void Dispose()
         {
             Dispose(true);
@@ -723,7 +728,7 @@ namespace TriangleRigging
                     }
                     else
                     {
-                        TriangleEdge e0 = Edges.Single(f => f.AlmostEquals(e));
+                        TriangleEdge e0 = Edges.Find(f => f.AlmostEquals(e));
                         if (e0.isOuterEdge) e0.isOuterEdge = false;
                         e0.triangles.Add(t);
                         e.Dispose();
@@ -742,28 +747,20 @@ namespace TriangleRigging
             {
                 List<TriangleVertex> spline = new List<TriangleVertex>();
                 for (int i = 0; i < Splines[numSpline].Count; i++)
-                    for (int j = 0; j < Splines[numSpline][i].triangles.Count; j++)
-                        for (int k = 0; k < 3; k++)
+                    for (int j = 0; j < Splines[numSpline][i].edges.Count; j++)
+                    {
+                        bool AddVertex = false;
+                        TriangleVertex vtx = Splines[numSpline][i].edges[j].GetOtherVertex(Splines[numSpline][i]);
+                        if (found.Count < search.Count) { if (!found.Contains(vtx)) AddVertex = true; }
+                        else { if (search.Contains(vtx)) AddVertex = true; }
+                        if (AddVertex)
                         {
-                            if (found.Count < search.Count)
-                            {
-                                if (!found.Contains(Splines[numSpline][i].triangles[j].vertices[k]))
-                                {
-                                    spline.Add(Splines[numSpline][i].triangles[j].vertices[k]);
-                                    found.Add(Splines[numSpline][i].triangles[j].vertices[k]);
-                                    search.Remove(Splines[numSpline][i].triangles[j].vertices[k]);
-                                }
-                            }
-                            else
-                            {
-                                if (search.Contains(Splines[numSpline][i].triangles[j].vertices[k]))
-                                {
-                                    spline.Add(Splines[numSpline][i].triangles[j].vertices[k]);
-                                    found.Add(Splines[numSpline][i].triangles[j].vertices[k]);
-                                    search.Remove(Splines[numSpline][i].triangles[j].vertices[k]);
-                                }
-                            }
+                            spline.Add(vtx);
+                            found.Add(vtx);
+                            search.Remove(vtx);
                         }
+                    }
+                        
                 Splines.Add(spline);
                 numSpline++;
             }
