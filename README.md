@@ -15,7 +15,8 @@ This project includes references to:
 <li>Protogeometry</li></ul>
 
 <h2>Installing</h2>
-<p>Once BecauseWeDynamo is finished building, navigate to BecauseWeDynamo/bin/ and import BecauseWeDynamo.dll into Dynamo either using library import or addding the .dll file to the root folder of Dynamo. If only interested in the necessary .dll's to import through Zero-Touch Import into Dynamo, check the Zero-Touch Node folder. These .dll's will be updated periodically and will be based on the latest build.</p>
+<p>A pre-compiled Package is available within the Dynamo Package Manager for easy installtion. It may be slightly out of date. The latest version will always be posted here to GitHub.</p>
+<p>If you build BecauseWeDynamo yourself, once it's done navigate to BecauseWeDynamo/bin/ and import BecauseWeDynamo.dll into Dynamo either using library import or addding the .dll file to the root folder of Dynamo. If only interested in the necessary .dll's to import through Zero-Touch Import into Dynamo, check the Zero-Touch Node folder. These .dll's will be updated periodically and will be based on the latest build. You may need to right-click on these .dll's and give them the rights to run, as Windows will restrict them by default.</p>
 
 <h2>Known Issues</h2>
 Error messages include:
