@@ -1,5 +1,16 @@
 <h1>BecauseWeDynamo</h1>
-Library for building topology from Revit adaptive components based on three points and sets of ordering points to label and array parts for fabrication. This project includes references to:
+A series of digital fabrication Nodes for Autodesk Dynamo.
+
+It includes such things as:
+<ul>
+<li>Nodes for building and walking triangular mesh topology to label edges for assembly.</li>
+<li>Nodes for isolating, arraying, and quasi-nesting parts for subtractive fabrication.</li>
+<li>A DXF (with mathmatical curves) exporting Node.</li>
+<li>A single-line-based font approprate for milling / etching for part labeling.</li>
+<li>Auto-sectioning tools that slice larger solids into layers of a controllable thickness and will produce clean outline vectors of each slice.</li>
+</ul>
+
+This project includes references to:
 <ul><li>DynamoCore</li>
 <li>Protogeometry</li></ul>
 
