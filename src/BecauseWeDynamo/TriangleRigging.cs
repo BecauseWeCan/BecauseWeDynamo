@@ -10,12 +10,17 @@ using Text;
 
 namespace TriangleRigging
 {
-    class TriangleEdgeComparer : IEqualityComparer<TriangleEdge>
+    public class TriangleEdgeComparer : IEqualityComparer<TriangleEdge>
     {
-        bool Equals(TriangleEdge e1, TriangleEdge e2)
+        public bool Equals(TriangleEdge e1, TriangleEdge e2)
         {
             return ((e1.A.AlmostEquals(e2.A) && e1.B.AlmostEquals(e2.B)) || (e1.A.AlmostEquals(e2.B) && e1.B.AlmostEquals(e2.A)));
         }
+        public int GetHashCode(TriangleEdge e)
+        {
+            return e.GetHashCode();
+        }
+
     }
 
     public class TriangleEdgeConnector

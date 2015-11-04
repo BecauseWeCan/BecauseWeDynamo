@@ -33,10 +33,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ProtoGeometry">
-      <HintPath>obj\Debug\ProtoGeometry.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoGeometry.dll</HintPath>
     </Reference>
     <Reference Include="ProtoInterface">
-      <HintPath>obj\Debug\ProtoInterface.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoInterface.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -61,6 +61,7 @@
     <Compile Include="Slicer.cs" />
     <Compile Include="DXFLibrary\TableEntries.cs" />
     <Compile Include="Text.cs" />
+    <Compile Include="TrianglePanel.cs" />
     <Compile Include="TriangleRigging.cs" />
     <Compile Include="Unroll.cs" />
   </ItemGroup>
