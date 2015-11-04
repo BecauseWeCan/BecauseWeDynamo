@@ -20,10 +20,6 @@ namespace TriangleRigging
         {
             return e.GetHashCode();
         }
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/edit
     }
 
     public class TriangleEdgeConnector

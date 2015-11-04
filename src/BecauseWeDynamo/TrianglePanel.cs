@@ -25,7 +25,8 @@ namespace TriangleRigging
         public List<Point> ControlPoints { get { return this[0].GetRange(0, 3); } }
         public List<Point> PanelPoints { get { return this[1]; } }
         public List<List<Point>> ArcPoints { get { if (this.Count > 4) return this.GetRange(2, 3); else return null; } }
-        public Vector[][] V { get; set; }
+        public Vector[][] EdgeVectors { get; set; }
+        public Vector Normal { get; set; }
 
         //CONSTRUCTOR
         internal TrianglePanel(IEnumerable<Point> Points, double EdgeOffset, double CornerOffset, double Thickness, int Direction = 0, double MinRadius = 1/8)
@@ -55,6 +56,7 @@ namespace TriangleRigging
                 ));
             // circumcenter
             Circle c = Circle.ByThreePoints(this[0][0], this[0][1], this[0][2]);
+            Normal = c.Normal;
             this[0].Add(c.CenterPoint);
             c.Dispose();
             // incenter
@@ -89,12 +91,12 @@ namespace TriangleRigging
             v2[2] = v2[0].Add(v2[1]).Scale(EdgeOffset / Math.Sin(angle[2]));
             v2[3] = v2[0].Subtract(v2[1]).Normalized();
             Vector[][] v = { v0, v1, v2 };
-            V = v;
+            EdgeVectors = v;
             // panel points
             Point[] pts = {
-                              this[0][0].Add(V[0][2]),
-                              this[0][1].Add(V[1][2]),
-                              this[0][2].Add(V[2][2])
+                              this[0][0].Add(EdgeVectors[0][2]),
+                              this[0][1].Add(EdgeVectors[1][2]),
+                              this[0][2].Add(EdgeVectors[2][2])
                           };
             this.Add(pts.ToList());
             // corner offsets
@@ -105,22 +107,22 @@ namespace TriangleRigging
                        };
             for (int i = 0; i < 3; i++) if (r[i] < CornerOffset) r[i] = CornerOffset;
             // arc at point 0
-            Point[] arc0 = { null, this[0][0].Add(V[0][3].Normalized().Scale(r[0])), null };
+            Point[] arc0 = { null, this[0][0].Add(EdgeVectors[0][3].Normalized().Scale(r[0])), null };
             double r0 = (r[0] - this[0][0].DistanceTo(this[1][0])) * Math.Tan(angle[0] / 2);
-            arc0[0] = arc0[1].Subtract(V[0][4].Scale(r0)).Add(V[0][1].Scale(r0));
-            arc0[2] = arc0[1].Add(V[0][4].Scale(r0)).Add(V[0][0].Scale(r0));
+            arc0[0] = arc0[1].Subtract(EdgeVectors[0][4].Scale(r0)).Add(EdgeVectors[0][1].Scale(r0));
+            arc0[2] = arc0[1].Add(EdgeVectors[0][4].Scale(r0)).Add(EdgeVectors[0][0].Scale(r0));
             this.Add(arc0.ToList());
             // arc at point 1
-            Point[] arc1 = { null, this[0][1].Add(V[1][3].Normalized().Scale(r[1])), null };
+            Point[] arc1 = { null, this[0][1].Add(EdgeVectors[1][3].Normalized().Scale(r[1])), null };
             double r1 = (r[1] - this[0][1].DistanceTo(this[1][1])) * Math.Tan(angle[1] / 2);
-            arc1[0] = arc1[1].Subtract(V[1][4].Scale(r1)).Add(V[1][1].Scale(r1));
-            arc1[2] = arc1[1].Add(V[1][4].Scale(r1)).Add(V[1][0].Scale(r1));
+            arc1[0] = arc1[1].Subtract(EdgeVectors[1][4].Scale(r1)).Add(EdgeVectors[1][1].Scale(r1));
+            arc1[2] = arc1[1].Add(EdgeVectors[1][4].Scale(r1)).Add(EdgeVectors[1][0].Scale(r1));
             this.Add(arc1.ToList());
             // arc at point 0
-            Point[] arc2 = { null, this[0][2].Add(V[2][3].Normalized().Scale(r[2])), null };
+            Point[] arc2 = { null, this[0][2].Add(EdgeVectors[2][3].Normalized().Scale(r[2])), null };
             double r2 = (r[2] - this[0][2].DistanceTo(this[1][2])) * Math.Tan(angle[2] / 2);
-            arc2[0] = arc2[1].Subtract(V[2][4].Scale(r2)).Add(V[2][1].Scale(r2));
-            arc2[2] = arc2[1].Add(V[2][4].Scale(r2)).Add(V[2][0].Scale(r2));
+            arc2[0] = arc2[1].Subtract(EdgeVectors[2][4].Scale(r2)).Add(EdgeVectors[2][1].Scale(r2));
+            arc2[2] = arc2[1].Add(EdgeVectors[2][4].Scale(r2)).Add(EdgeVectors[2][0].Scale(r2));
             this.Add(arc2.ToList());
         }
 
@@ -155,19 +157,17 @@ namespace TriangleRigging
         public Solid GetPanelSolid()
         {
             Curve c = GetPanelProfile();
-            Vector N = c.Normal;
             Point a = c.StartPoint;
             Point b = c.StartPoint;
             if (Direction == 0)
             {
-                a = a.Add(N.Scale(-Thickness / 2));
-                b = b.Add(N.Scale(Thickness / 2));
+                a = a.Add(Normal.Scale(-Thickness / 2));
+                b = b.Add(Normal.Scale(Thickness / 2));
             }
-            else b = b.Add(N.Scale(Direction * Thickness));
+            else b = b.Add(Normal.Scale(Direction * Thickness));
             Line l = Line.ByStartPointEndPoint(a,b);
             Solid s = c.SweepAsSolid(l);
             c.Dispose();
-            N.Dispose();
             a.Dispose();
             b.Dispose();
             l.Dispose();
@@ -185,7 +185,8 @@ namespace TriangleRigging
             if (disposed) return;
             if (disposing)
             {
-                V.ForEach(v => v.Dispose());
+                EdgeVectors.ForEach(v => v.Dispose());
+                Normal.Dispose();
             }
             disposed = true;
         }

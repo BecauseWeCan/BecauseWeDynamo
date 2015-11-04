@@ -182,6 +182,8 @@ namespace Topology
             X.Dispose(); Y.Dispose(); Z.Dispose(); Center.Dispose();
         }
 
+        //**METHODS**CREATE
+        public static Face ByPoints(IEnumerable<Point> Points) { return new Face(Points); }
 
 
         //**METHODS** //**ACTION**
@@ -273,5 +275,14 @@ namespace Topology
             }
             disposed = true;
         }
+    }
+
+    public class Mesh
+    {
+        public List<Face> Faces { get; set; }
+        public List<Vertex> Vertices { get; set; }
+        public List<Edge> Edges { get; set; }
+
+        
     }
 }
