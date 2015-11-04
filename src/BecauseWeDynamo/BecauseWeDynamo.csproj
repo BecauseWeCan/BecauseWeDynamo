@@ -36,6 +36,12 @@
       <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoGeometry.dll</HintPath>
     </Reference>
     <Reference Include="ProtoInterface">
+    <Reference Include="ProtoGeometry, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoGeometry.dll</HintPath>
+    </Reference>
+    <Reference Include="ProtoInterface, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoInterface.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -54,6 +60,7 @@
     <Compile Include="DXFLibrary\Element.cs" />
     <Compile Include="DXFLibrary\Writer.cs" />
     <Compile Include="ExportToDXF.cs" />
+    <Compile Include="Topology.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DXFLibrary\Sections.cs" />
     <Compile Include="Nesting.cs" />
@@ -63,6 +70,7 @@
     <Compile Include="Text.cs" />
     <Compile Include="TrianglePanel.cs" />
     <Compile Include="TriangleRigging.cs" />
+    <Compile Include="TriangleRiggingTest.cs" />
     <Compile Include="Unroll.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
