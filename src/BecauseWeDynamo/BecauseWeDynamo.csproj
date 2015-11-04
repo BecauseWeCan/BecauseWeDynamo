@@ -56,7 +56,6 @@
     <Compile Include="DXFLibrary\Element.cs" />
     <Compile Include="DXFLibrary\Writer.cs" />
     <Compile Include="ExportToDXF.cs" />
-    <Compile Include="Topology.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DXFLibrary\Sections.cs" />
     <Compile Include="Nesting.cs" />
@@ -65,7 +64,6 @@
     <Compile Include="DXFLibrary\TableEntries.cs" />
     <Compile Include="Text.cs" />
     <Compile Include="TriangleRigging.cs" />
-    <Compile Include="TriangleRiggingTest.cs" />
     <Compile Include="Unroll.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
