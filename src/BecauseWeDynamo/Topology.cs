@@ -7,19 +7,10 @@ using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
 using Text;
+using Autodesk.Dynamo.MeshToolkit;
 
 namespace Topology
 {
-    public class PointList : List<Point>
-    {
-        public PointList() : base() {}
-        
-        public Vertex[] GetVertices() {
-            Vertex[] vtxs = new Vertex[this.Count()];
-            for (int i = 0; i < this.Count(); i++) vtxs[i] = new Vertex(this.ElementAt(i));
-            return vtxs;
-        }
-    }
 
     public class HalfEdge : List<Vertex>
     {
@@ -34,7 +25,7 @@ namespace Topology
 
         //**CONSTRUCTOR**
         internal HalfEdge(Vertex A, Vertex B) : base(2) { this.Add(A); this.Add(B); }
-        internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face) : this(A,B) { edge = Edge; face = Face; }
+        internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face) : this(A, B) { edge = Edge; face = Face; }
         internal HalfEdge(IEnumerable<Vertex> Vertices) : base(Vertices) { }
         internal HalfEdge(IEnumerable<Vertex> Vertices, Edge Edge, Face Face) : this(Vertices) { edge = Edge; face = Face; }
 
@@ -43,7 +34,7 @@ namespace Topology
         {
             Point A = this[0].GetPoint();
             Point B = this[1].GetPoint();
-            Vector output = Vector.ByTwoPoints(A,B);
+            Vector output = Vector.ByTwoPoints(A, B);
             A.Dispose(); B.Dispose();
             return output;
         }
@@ -71,12 +62,30 @@ namespace Topology
         public HashSet<Face> Faces { get; set; }
 
         //**CONSTRUCTOR**
-        internal Vertex(Point Point) { X = Point.X; Y = Point.Y; Z = Point.Z; }
-        internal Vertex(Point Point, IEnumerable<Edge> Edges, IEnumerable<Face> Faces) : this(Point) { 
-            this.Edges = new HashSet<Edge>(Edges); this.Faces = new HashSet<Face>(Faces); }
-        internal Vertex(double X, double Y, double Z) { this.X = X; this.Y = Y; this.Z = Z; }
-        internal Vertex(double X, double Y, double Z, IEnumerable<Edge> Edges, IEnumerable<Face> Faces) : this(X, Y, Z) { 
-            this.Edges = new HashSet<Edge>(Edges); this.Faces = new HashSet<Face>(Faces); }
+        internal Vertex(Point Point)
+        {
+            X = Point.X; Y = Point.Y; Z = Point.Z;
+            Edges = new HashSet<Edge>();
+            Faces = new HashSet<Face>();
+        }
+        internal Vertex(Point Point, IEnumerable<Edge> Edges, IEnumerable<Face> Faces)
+        {
+            X = Point.X; Y = Point.Y; Z = Point.Z;
+            this.Edges = new HashSet<Edge>(Edges);
+            this.Faces = new HashSet<Face>(Faces);
+        }
+        internal Vertex(double X, double Y, double Z)
+        {
+            this.X = X; this.Y = Y; this.Z = Z;
+            Edges = new HashSet<Edge>();
+            Faces = new HashSet<Face>();
+        }
+        internal Vertex(double X, double Y, double Z, IEnumerable<Edge> Edges, IEnumerable<Face> Faces)
+        {
+            this.X = X; this.Y = Y; this.Z = Z;
+            this.Edges = new HashSet<Edge>(Edges);
+            this.Faces = new HashSet<Face>(Faces);
+        }
 
         //**METHODS** //**ACTION**
         [MultiReturn(new[] { "X", "Y", "Z" })]
@@ -95,6 +104,7 @@ namespace Topology
             return (X == vtx.X && Y == vtx.Y && Z == vtx.Z);
         }
         public bool Equals(Vertex Vertex) { return (X == Vertex.X && Y == Vertex.Y && Z == Vertex.Z); }
+        public bool IsAtPoint(Point Point) { return (X == Point.X && Y == Point.Y && Z == Point.Z); }
         public override int GetHashCode() { return string.Format("{0}-{1}-{2}", X, Y, Z).GetHashCode(); }
     }
 
@@ -106,7 +116,7 @@ namespace Topology
 
         //**PROPERTIES** //**QUERY**
         public string Name { get; set; }
-        public double Angle { get; set; }
+        public double[] Angle { get; set; }
         public Point MidPoint { get { return Point.ByCoordinates(this.ToList()[0][0].X + this.ToList()[0][1].X, this.ToList()[0][0].Y, this.ToList()[0][0].Z); } }
         public Face[] Faces { get { return new Face[2] { this.ToList()[0].Face, this.ToList()[1].Face }; } }
         public Vertex[] Vertices { get { return new Vertex[2] { this.ToList()[0][0], this.ToList()[1][0] }; } }
@@ -119,12 +129,14 @@ namespace Topology
         internal Edge(IEnumerable<Vertex> Vertices, string Name) : this(Vertices) { this.Name = Name; }
 
         //**METHODS** //**ACTION**
-        public HalfEdge GetOtherHalfEdge(HalfEdge HalfEdge) { 
+        public HalfEdge GetOtherHalfEdge(HalfEdge HalfEdge)
+        {
             if (this.ElementAt(0).Equals(HalfEdge)) return this.ElementAt(1);
             if (this.ElementAt(1).Equals(HalfEdge)) return this.ElementAt(0);
             return null;
         }
-        public Vertex GetOtherVertex(Vertex Vertex) {
+        public Vertex GetOtherVertex(Vertex Vertex)
+        {
             if (this.ElementAt(0)[0].Equals(Vertex)) return this.ElementAt(0)[1];
             if (this.ElementAt(1)[0].Equals(Vertex)) return this.ElementAt(1)[1];
             return null;
@@ -132,9 +144,13 @@ namespace Topology
         public Line GetLine()
         {
             Line output;
-            using (Point a = this.ToList()[0][0].GetPoint()) {
-                using (Point b = this.ToList()[0][1].GetPoint()) {
-                    output = Line.ByStartPointEndPoint(a, b); }}
+            using (Point a = this.ToList()[0][0].GetPoint())
+            {
+                using (Point b = this.ToList()[0][1].GetPoint())
+                {
+                    output = Line.ByStartPointEndPoint(a, b);
+                }
+            }
             return output;
         }
     }
@@ -150,29 +166,42 @@ namespace Topology
         public Point Center { get { return CS.Origin; } }
         public Vector Normal { get { return CS.ZAxis; } }
         public Dictionary<string, Object> Parameters { get; set; }
-        public Vertex[] Vertices { get {
+        public Vertex[] Vertices
+        {
+            get
+            {
                 Vertex[] output = new Vertex[Count];
                 for (int i = 0; i < Count; i++) output[i] = this[i][0];
-                return output; } }
-        public Edge[] Edges { get {
+                return output;
+            }
+        }
+        public Edge[] Edges
+        {
+            get
+            {
                 Edge[] output = new Edge[Count];
                 for (int i = 0; i < Count; i++) output[i] = this[i].Edge;
-                return output; } }
+                return output;
+            }
+        }
 
         //**CONSTRUCTOR**
         internal Face() : base() { }
-        internal Face(IEnumerable<Point> Points) : this(((PointList) Points).GetVertices()) { }
-        internal Face(IEnumerable<Vertex> Vertices) : base (Vertices.Count())
+        internal Face(IEnumerable<Vertex> Vertices)
+            : base(Vertices.Count())
         {
-            for (int i = 0; i < Vertices.Count(); i++) this.Add(new HalfEdge(Vertices.ElementAt(i), Vertices.ElementAt((i+1)%Capacity)));
-            double[] xyz = {0,0,0};
-            for (int i = 0; i <Count; i++)
+            for (int i = 0; i < Vertices.Count(); i++)
+            {
+                this.Add(new HalfEdge(Vertices.ElementAt(i), Vertices.ElementAt((i + 1) % Capacity)));
+            }
+            double[] xyz = { 0, 0, 0 };
+            for (int i = 0; i < Count; i++)
             {
                 xyz[0] += Vertices.ElementAt(i).X / Count;
                 xyz[1] += Vertices.ElementAt(i).Y / Count;
                 xyz[2] += Vertices.ElementAt(i).Z / Count;
             }
-            Point Center = Point.ByCoordinates(xyz[0],xyz[1],xyz[2]);
+            Point Center = Point.ByCoordinates(xyz[0], xyz[1], xyz[2]);
             Vector X = this[Count - 1].GetVector();
             X = X.Reverse();
             Vector Y = this[0].GetVector();
@@ -181,10 +210,6 @@ namespace Topology
             CS = CoordinateSystem.ByOriginVectors(Center, X, Y);
             X.Dispose(); Y.Dispose(); Z.Dispose(); Center.Dispose();
         }
-
-        //**METHODS**CREATE
-        public static Face ByPoints(IEnumerable<Point> Points) { return new Face(Points); }
-
 
         //**METHODS** //**ACTION**
         public Face ReOrderVertices(Vertex Start)
@@ -204,7 +229,7 @@ namespace Topology
             if (disposed) return;
             if (disposing)
             {
-                for (int i = 0; i < Count; i ++) 
+                for (int i = 0; i < Count; i++)
                 {
                     if (this[i].Edge.Count < 2) this[i].Dispose();
                     if (this[i][0].Faces.Count < 2) this[i][0] = null;
@@ -214,8 +239,8 @@ namespace Topology
                 if (Center != null) Center.Dispose();
                 if (Normal != null) Normal.Dispose();
                 if (CS != null) CS.Dispose();
-                if (Parameters != null) for (int i = 0; i < Parameters.Count; i++) 
-                    if (Parameters.Values.ToArray()[i] is IDisposable) ((IDisposable) Parameters.Values.ToArray()[i]).Dispose();
+                if (Parameters != null) for (int i = 0; i < Parameters.Count; i++)
+                        if (Parameters.Values.ToArray()[i] is IDisposable) ((IDisposable)Parameters.Values.ToArray()[i]).Dispose();
             }
             disposed = true;
         }
@@ -231,13 +256,8 @@ namespace Topology
         public Point Circumcenter { get { return circumcenter; } }
 
         //**CONSTRUCTOR**
-        internal Triangle(IEnumerable<Point> Points) : base(Points) 
-        {
-            Circle c = Circle.ByBestFitThroughPoints(Points);
-            circumcenter = c.CenterPoint;
-            c.Dispose();
-        }
-        internal Triangle(IEnumerable<Vertex> Vertices) : base(Vertices) 
+        internal Triangle(IEnumerable<Vertex> Vertices)
+            : base(Vertices)
         {
             Point[] pts = { Vertices.ElementAt(0).GetPoint(), Vertices.ElementAt(1).GetPoint(), Vertices.ElementAt(2).GetPoint() };
             Circle c = Circle.ByBestFitThroughPoints(pts);
@@ -277,12 +297,50 @@ namespace Topology
         }
     }
 
-    public class Mesh
+    public class Mesh : IDisposable
     {
-        public List<Face> Faces { get; set; }
-        public List<Vertex> Vertices { get; set; }
-        public List<Edge> Edges { get; set; }
+        //**FIELDS**
+        private Point circumcenter;
+        private bool disposed = false;
+        private Dictionary<Point, Vertex> V;
 
-        
+        //**PROPERTIES**QUERY
+        public List<Face> Faces { get; set; }
+        public List<Vertex> Vertices { get { return V.Values.ToList(); } }
+        public List<Edge> Edges { get; set; }
+        public Point[] Points { get; set; }
+
+        internal Mesh(Surface[] Surfaces, Point[] Points)
+        {
+            Faces = new List<Face>(Surfaces.Length);
+            V = new Dictionary<Point, Vertex>(Points.Length);
+            Edges = new List<Edge>();
+            this.Points = Points;
+            for (int i = 0; i < Points.Length; i++) V.Add(Points[i], new Vertex(Points[i]));
+            for (int i = 0; i < Surfaces.Length; i++)
+            {
+                Autodesk.DesignScript.Geometry.Vertex[] vtx = Surfaces[i].Vertices;
+                List<Vertex> v = new List<Vertex>(vtx.Length);
+                for (int j = 0; j < vtx.Length; j++)
+                {
+                    Point pt = vtx[j].PointGeometry;
+                    for (int k = 0; k < Points.Length; k++)
+                    {
+                        if (pt.IsAlmostEqualTo(Points[k]))
+                        {
+                            v.Add(V[Points[k]]);
+                            break ;
+                        }
+                    }
+                    pt.Dispose();
+                }
+                vtx.ForEach(x => x.Dispose());
+
+                Triangle t = new Triangle(v);
+
+                
+            }
+        }
+
     }
 }
