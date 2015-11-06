@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
-using TriangleRigging;
+using Topology;
 
-namespace TriangleRigging
+namespace Panelization
 {
     class TrianglePanel : List<List<Point>>, IDisposable
     {
@@ -127,6 +127,8 @@ namespace TriangleRigging
         }
 
         //METHOD**CREATE
+        public static TrianglePanel ByMeshFace(Triangle Triangle, double EdgeOffset, double CornerOffset, double Thickness, int Direction, double MinRadius)
+        { return new TrianglePanel(Triangle.GetVertexPoints(), EdgeOffset, CornerOffset, Thickness, Direction, MinRadius); }
         public static TrianglePanel ByPointsOffsetThickness(IEnumerable<Point> Points, double EdgeOffset, double CornerOffset, double Thickness)
         { return new TrianglePanel(Points, EdgeOffset, CornerOffset, Thickness); }
         public static TrianglePanel ByPointsOffsetThicknessDirectionRadius(IEnumerable<Point> Points, double EdgeOffset, double CornerOffset, double Thickness, int Direction, double MinRadius)

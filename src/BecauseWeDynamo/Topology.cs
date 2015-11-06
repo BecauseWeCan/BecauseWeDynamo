@@ -7,7 +7,6 @@ using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
 using Text;
-using Autodesk.Dynamo.MeshToolkit;
 
 namespace Topology
 {
@@ -24,9 +23,9 @@ namespace Topology
         public Face Face { get { return face; } }
 
         //**CONSTRUCTOR**
-        internal HalfEdge(Vertex A, Vertex B) : base(2) { this.Add(A); this.Add(B); }
+        internal HalfEdge(Vertex A, Vertex B) : base(2) { this.Add(A); this.Add(B); edge = null; face = null; }
         internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face) : this(A, B) { edge = Edge; face = Face; }
-        internal HalfEdge(IEnumerable<Vertex> Vertices) : base(Vertices) { }
+        internal HalfEdge(IEnumerable<Vertex> Vertices) : base(Vertices) { edge = null; face = null; }
         internal HalfEdge(IEnumerable<Vertex> Vertices, Edge Edge, Face Face) : this(Vertices) { edge = Edge; face = Face; }
 
         //**METHODS** //**ACTION**
@@ -45,6 +44,24 @@ namespace Topology
             this[1] = temp[0];
             temp = null;
             return this;
+        }
+        public bool AddEdge(Edge Edge)
+        {
+            if (edge == null)
+            {
+                edge = Edge;
+                return true;
+            }
+            return false;
+        }
+        public bool AddFace(Face Face)
+        {
+            if (face == null)
+            {
+                face = Face;
+                return true;
+            }
+            return false;
         }
         public void Dispose() { edge = null; }
     }
@@ -129,12 +146,6 @@ namespace Topology
         internal Edge(IEnumerable<Vertex> Vertices, string Name) : this(Vertices) { this.Name = Name; }
 
         //**METHODS** //**ACTION**
-        public HalfEdge GetOtherHalfEdge(HalfEdge HalfEdge)
-        {
-            if (this.ElementAt(0).Equals(HalfEdge)) return this.ElementAt(1);
-            if (this.ElementAt(1).Equals(HalfEdge)) return this.ElementAt(0);
-            return null;
-        }
         public Vertex GetOtherVertex(Vertex Vertex)
         {
             if (this.ElementAt(0)[0].Equals(Vertex)) return this.ElementAt(0)[1];
@@ -152,6 +163,17 @@ namespace Topology
                 }
             }
             return output;
+        }
+        public bool IsAtCurve(Curve Line)
+        {
+            Line ln = GetLine();
+            if (ln.IsAlmostEqualTo(Line))
+            {
+                ln.Dispose();
+                return true;
+            }
+            ln.Dispose();
+            return false;
         }
     }
 
@@ -193,7 +215,9 @@ namespace Topology
             for (int i = 0; i < Vertices.Count(); i++)
             {
                 this.Add(new HalfEdge(Vertices.ElementAt(i), Vertices.ElementAt((i + 1) % Capacity)));
+                Vertices.ElementAt(i).AddFace(this);
             }
+            this.ForEach(he => he.AddFace(this));
             double[] xyz = { 0, 0, 0 };
             for (int i = 0; i < Count; i++)
             {
@@ -266,6 +290,15 @@ namespace Topology
         }
 
         //**METHODS** //**ACTION**
+        public Point[] GetVertexPoints()
+        {
+            if (Vertices.Length < 3) { return null; }
+            else
+            {
+                Point[] Points = { Vertices[0].GetPoint(), Vertices[1].GetPoint(), Vertices[2].GetPoint() };
+                return Points;
+            }
+        }
         public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected virtual void Dispose(bool disposing)
         {
@@ -303,6 +336,7 @@ namespace Topology
         private Point circumcenter;
         private bool disposed = false;
         private Dictionary<Point, Vertex> V;
+        private Dictionary<string, Edge> E;
 
         //**PROPERTIES**QUERY
         public List<Face> Faces { get; set; }
@@ -312,13 +346,20 @@ namespace Topology
 
         internal Mesh(Surface[] Surfaces, Point[] Points)
         {
+            // initialize
             Faces = new List<Face>(Surfaces.Length);
             V = new Dictionary<Point, Vertex>(Points.Length);
+            E = new Dictionary<string, Edge>();
             Edges = new List<Edge>();
+
+            // store input points
             this.Points = Points;
+            // create vertex lookup table from points
             for (int i = 0; i < Points.Length; i++) V.Add(Points[i], new Vertex(Points[i]));
+            // create faces from surfaces
             for (int i = 0; i < Surfaces.Length; i++)
             {
+                // find face vertices in lookup table
                 Autodesk.DesignScript.Geometry.Vertex[] vtx = Surfaces[i].Vertices;
                 List<Vertex> v = new List<Vertex>(vtx.Length);
                 for (int j = 0; j < vtx.Length; j++)
@@ -329,18 +370,63 @@ namespace Topology
                         if (pt.IsAlmostEqualTo(Points[k]))
                         {
                             v.Add(V[Points[k]]);
-                            break ;
+                            break;
                         }
                     }
                     pt.Dispose();
                 }
                 vtx.ForEach(x => x.Dispose());
-
+                // create face based on vertices
                 Triangle t = new Triangle(v);
+                Faces.Add(t);
+                // create or find edges
+                for (int j = 0; j < t.Count; j++)
+                {
+                    bool edgeFound = false;
+                    Point mpt = Point.ByCoordinates(t[j][0].X / 2 + t[j][1].X / 2, t[j][0].Y / 2 + t[j][1].Y / 2, t[j][0].Z / 2 + t[j][1].Z / 2);
+                    for (int k = 0; k < Edges.Count; k++)
+                    {
+                        if (Edges[k].MidPoint.IsAlmostEqualTo(mpt))
+                        {
+                            Edges[k].Add(t[j]);
+                            t[j].AddEdge(Edges[k]);
+                            edgeFound = true;
+                            break;
+                        }
+                    }
+                    if (!edgeFound)
+                    {
+                        Edge e = new Edge();
+                        e.Add(t[j]);
+                        t[j].AddEdge(e);
+                        Edges.Add(e);
+                    }
+                }
 
-                
             }
         }
 
+        public static Mesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new Mesh(Surfaces, Points); }
+
+        public bool AddEdgeNames(PolyCurve[] Spline, int Digits = 3)
+        {
+            int D = (Spline.Length + 1).ToString().Length;
+            for (int i = 0; i < Spline.Length; i++)
+            {
+                for (int k = 0; k < Spline[i].Curves().Length; k++)
+                {
+                    for (int j = 0; j < Edges.Count; j++)
+                    {
+                        if (Edges[j].IsAtCurve(Spline[i].Curves()[k]))
+                        {
+                            Edges[j].Name = "s" + (i + 1).ToString("D" + D) + "-" + (k + 1).ToString("D" + Digits);
+                            E.Add(Edges[j].Name, Edges[j]);
+                            break;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
     }
 }
