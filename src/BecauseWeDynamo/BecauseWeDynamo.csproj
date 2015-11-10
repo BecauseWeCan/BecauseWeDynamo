@@ -68,7 +68,7 @@
     <Compile Include="Text.cs" />
     <Compile Include="TrianglePanel.cs" />
     <Compile Include="TriangleRigging.cs" />
-    <Compile Include="TriangleRiggingTest.cs" />
+    <Compile Include="TopologyRigging.cs" />
     <Compile Include="Unroll.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

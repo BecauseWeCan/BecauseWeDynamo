@@ -159,24 +159,23 @@ namespace Text
 
     public class Word : IDisposable
     {
-        private string word;
-        private Letter[] letters;
-        private CoordinateSystem cs;
+        internal string word;
+        internal CoordinateSystem cs;
         bool disposed = false;
 
-        public Letter[] Letters { get { return letters; } }
+        public Letter[] Letters { get; private set; }
 
         internal Word(string str, Point origin, Vector X, Vector Y)
         {
             cs = CoordinateSystem.ByOriginVectors(origin, X, Y);
             word = str;
             char[] ltrs = str.ToCharArray();
-            letters = new Letter[ltrs.Length];
+            Letters = new Letter[ltrs.Length];
             double dblLtr = (ltrs.Length - 1) * (-1.5);
             for (int i = 0; i < ltrs.Length; i++)
             {
-                letters[i] = new Letter(ltrs[i]);
-                for (int j = 0; j < letters[i].Count; j++) letters[i][j] = (PolyCurve) letters[i][j].Transform(cs).Translate(cs.XAxis, dblLtr);
+                Letters[i] = new Letter(ltrs[i]);
+                for (int j = 0; j < Letters[i].Count; j++) Letters[i][j] = (PolyCurve) Letters[i][j].Transform(cs).Translate(cs.XAxis, dblLtr);
                 dblLtr = dblLtr + 3.0;
             }
         }
@@ -187,30 +186,30 @@ namespace Text
 
         public Word Transform(CoordinateSystem newCS)
         {
-            for (int i = 0; i < letters.Length; i++) for (int j = 0; j < letters[i].Count; j++)
-                { letters[i][j] = letters[i][j].Transform(newCS) as PolyCurve; }
+            for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
+                { Letters[i][j] = Letters[i][j].Transform(newCS) as PolyCurve; }
             return this;
         }
 
         public Word Translate(Vector vec, double distance)
         {
-            for (int i = 0; i < letters.Length; i++) for (int j = 0; j < letters[i].Count; j++)
-                { letters[i][j] = letters[i][j].Translate(vec, distance) as PolyCurve; }
+            for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
+                { Letters[i][j] = Letters[i][j].Translate(vec, distance) as PolyCurve; }
             return this;
         }
 
         public Word Scale(double factor)
         {
-            for (int i = 0; i < letters.Length; i++) for (int j = 0; j < letters[i].Count; j++)
-                { letters[i][j] = letters[i][j].Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, factor) as Point) as PolyCurve; }
+            for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
+                { Letters[i][j] = Letters[i][j].Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, factor) as Point) as PolyCurve; }
             return this;
         }
 
         public List<PolyCurve> display(double factor)
         {
             List<PolyCurve> lines = new List<PolyCurve>();
-            for (int i = 0; i < letters.Length; i++) for (int j = 0; j < letters[i].Count; j++)
-                { lines.Add(letters[i][j].Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, factor) as Point) as PolyCurve); }
+            for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
+                { lines.Add(Letters[i][j].Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, factor) as Point) as PolyCurve); }
             return lines;
         }
 
@@ -223,7 +222,11 @@ namespace Text
         protected virtual void Dispose(bool disposing)
         {
             if (disposed) return;
-            if (disposing) for (int i = 0; i < letters.Length; i++) letters[i].Dispose();
+            if (disposing)
+            {
+                Letters.ForEach(l => l.Dispose());
+                cs.Dispose();
+            }
             disposed = true;
         }
 

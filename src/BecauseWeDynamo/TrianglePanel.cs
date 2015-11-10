@@ -10,7 +10,7 @@ using Topology;
 
 namespace Panelization
 {
-    class TrianglePanel : List<List<Point>>, IDisposable
+    public class TrianglePanel : IDisposable
     {
         //FIELDS
         double Thickness;
@@ -18,13 +18,13 @@ namespace Panelization
         bool disposed = false;
 
         //PROPERTIES**QUERY
-        public double[] Angles { get; set; }
-        public Point Centroid { get { return this[0][3]; } }
-        public Point Circumcenter { get { return this[0][4]; } }
-        public Point Incenter { get { return this[0][5]; } }
-        public List<Point> ControlPoints { get { return this[0].GetRange(0, 3); } }
-        public List<Point> PanelPoints { get { return this[1]; } }
-        public List<List<Point>> ArcPoints { get { if (this.Count > 4) return this.GetRange(2, 3); else return null; } }
+        public List<double> Angles { get; set; }
+        public Point Centroid { get; private set; }
+        public Point Circumcenter { get; private set; }
+        public Point Incenter { get; private set; }
+        public List<Point> ControlPoints { get; private set; }
+        public List<Point> PanelPoints { get; private set; }
+        public List<List<Point>> ArcPoints { get; private set; }
         public Vector[][] EdgeVectors { get; set; }
         public Vector Normal { get; set; }
 
@@ -34,96 +34,99 @@ namespace Panelization
             this.Thickness = Thickness;
             this.Direction = Direction;
             // anchor points
-            this.Add(Points.ToList());
+            ControlPoints = new List<Point>(Points.ToList());
             // side lengths of triangle opposite of point
             double[] s = { 
-                             this[0][1].DistanceTo(this[0][2]), 
-                             this[0][2].DistanceTo(this[0][0]), 
-                             this[0][0].DistanceTo(this[0][1]) 
+                             ControlPoints[1].DistanceTo(ControlPoints[2]), 
+                             ControlPoints[2].DistanceTo(ControlPoints[0]), 
+                             ControlPoints[0].DistanceTo(ControlPoints[1]) 
                          };
             // angle at point
-            double[] angle = { 
+            Angles = new List<double>{ 
                                  Math.Acos((s[1] * s[1] + s[2] * s[2] - s[0] * s[0]) / (2 * s[1] * s[2])), 
                                  Math.Acos((s[2] * s[2] + s[0] * s[0] - s[1] * s[1]) / (2 * s[2] * s[0])), 
                                  Math.Acos((s[0] * s[0] + s[1] * s[1] - s[2] * s[2]) / (2 * s[0] * s[1])) 
                              };
-            Angles = angle;
             // centroid
-            this[0].Add(Point.ByCoordinates(
-                (this[0][0].X + this[0][1].X + this[0][2].X) / 3,
-                (this[0][0].Y + this[0][1].Y + this[0][2].Y) / 3,
-                (this[0][0].Z + this[0][1].Z + this[0][2].Z) / 3
-                ));
+            Centroid = Point.ByCoordinates(
+                (ControlPoints[0].X + ControlPoints[1].X + ControlPoints[2].X) / 3,
+                (ControlPoints[0].Y + ControlPoints[1].Y + ControlPoints[2].Y) / 3,
+                (ControlPoints[0].Z + ControlPoints[1].Z + ControlPoints[2].Z) / 3
+                );
             // circumcenter
-            Circle c = Circle.ByThreePoints(this[0][0], this[0][1], this[0][2]);
+            Circle c = Circle.ByThreePoints(ControlPoints[0], ControlPoints[1], ControlPoints[2]);
             Normal = c.Normal;
-            this[0].Add(c.CenterPoint);
+            Circumcenter = c.CenterPoint;
             c.Dispose();
             // incenter
-            this[0].Add(Point.ByCoordinates(
-                (s[0] * this[0][0].X + s[1] * this[0][1].X + s[2] * this[0][2].X) / (s[0] + s[1] + s[2]),
-                (s[0] * this[0][0].Y + s[1] * this[0][1].Y + s[2] * this[0][2].Y) / (s[0] + s[1] + s[2]),
-                (s[0] * this[0][0].Z + s[1] * this[0][1].Z + s[2] * this[0][2].Z) / (s[0] + s[1] + s[2])
-                ));
+            Incenter = Point.ByCoordinates(
+                (s[0] * ControlPoints[0].X + s[1] * ControlPoints[1].X + s[2] * ControlPoints[2].X) / (s[0] + s[1] + s[2]),
+                (s[0] * ControlPoints[0].Y + s[1] * ControlPoints[1].Y + s[2] * ControlPoints[2].Y) / (s[0] + s[1] + s[2]),
+                (s[0] * ControlPoints[0].Z + s[1] * ControlPoints[1].Z + s[2] * ControlPoints[2].Z) / (s[0] + s[1] + s[2])
+                );
             // triangle vectors
             Vector[] v0 = {
-                             Vector.ByTwoPoints(this[0][0], this[0][1]).Normalized(),
-                             Vector.ByTwoPoints(this[0][0], this[0][2]).Normalized(),
+                             Vector.ByTwoPoints(ControlPoints[0], ControlPoints[1]).Normalized(),
+                             Vector.ByTwoPoints(ControlPoints[0], ControlPoints[2]).Normalized(),
                              null,
                              null
                          };
-            v0[2] = v0[0].Add(v0[1]).Scale(EdgeOffset / Math.Sin(angle[0]));
+            v0[2] = v0[0].Add(v0[1]).Scale(EdgeOffset / Math.Sin(Angles[0]));
             v0[3] = v0[0].Subtract(v0[1]).Normalized();
             Vector[] v1 = {
-                             Vector.ByTwoPoints(this[0][1], this[0][2]).Normalized(),
-                             Vector.ByTwoPoints(this[0][1], this[0][0]).Normalized(),
+                             Vector.ByTwoPoints(ControlPoints[1], ControlPoints[2]).Normalized(),
+                             Vector.ByTwoPoints(ControlPoints[1], ControlPoints[0]).Normalized(),
                              null,
                              null
                           };
-            v1[2] = v1[0].Add(v1[1]).Scale(EdgeOffset / Math.Sin(angle[1]));
+            v1[2] = v1[0].Add(v1[1]).Scale(EdgeOffset / Math.Sin(Angles[1]));
             v1[3] = v1[0].Subtract(v1[1]).Normalized();
             Vector[] v2 = {
-                             Vector.ByTwoPoints(this[0][2], this[0][0]).Normalized(),
-                             Vector.ByTwoPoints(this[0][2], this[0][1]).Normalized(),
+                             Vector.ByTwoPoints(ControlPoints[2], ControlPoints[0]).Normalized(),
+                             Vector.ByTwoPoints(ControlPoints[2], ControlPoints[1]).Normalized(),
                              null,
                              null
                           };
-            v2[2] = v2[0].Add(v2[1]).Scale(EdgeOffset / Math.Sin(angle[2]));
+            v2[2] = v2[0].Add(v2[1]).Scale(EdgeOffset / Math.Sin(Angles[2]));
             v2[3] = v2[0].Subtract(v2[1]).Normalized();
             Vector[][] v = { v0, v1, v2 };
             EdgeVectors = v;
             // panel points
-            Point[] pts = {
-                              this[0][0].Add(EdgeVectors[0][2]),
-                              this[0][1].Add(EdgeVectors[1][2]),
-                              this[0][2].Add(EdgeVectors[2][2])
+            PanelPoints = new List<Point> {
+                              ControlPoints[0].Add(EdgeVectors[0][2]),
+                              ControlPoints[1].Add(EdgeVectors[1][2]),
+                              ControlPoints[2].Add(EdgeVectors[2][2])
                           };
-            this.Add(pts.ToList());
             // corner offsets
             double[] r = {
-                           (EdgeOffset + MinRadius) / Math.Sin(angle[0]) - MinRadius,
-                           (EdgeOffset + MinRadius) / Math.Sin(angle[1]) - MinRadius,
-                           (EdgeOffset + MinRadius) / Math.Sin(angle[2]) - MinRadius
+                           (EdgeOffset + MinRadius) / Math.Sin(Angles[0]) - MinRadius,
+                           (EdgeOffset + MinRadius) / Math.Sin(Angles[1]) - MinRadius,
+                           (EdgeOffset + MinRadius) / Math.Sin(Angles[2]) - MinRadius
                        };
             for (int i = 0; i < 3; i++) if (r[i] < CornerOffset) r[i] = CornerOffset;
+
+            Point a0,a1,a2;
             // arc at point 0
-            Point[] arc0 = { null, this[0][0].Add(EdgeVectors[0][3].Normalized().Scale(r[0])), null };
-            double r0 = (r[0] - this[0][0].DistanceTo(this[1][0])) * Math.Tan(angle[0] / 2);
-            arc0[0] = arc0[1].Subtract(EdgeVectors[0][4].Scale(r0)).Add(EdgeVectors[0][1].Scale(r0));
-            arc0[2] = arc0[1].Add(EdgeVectors[0][4].Scale(r0)).Add(EdgeVectors[0][0].Scale(r0));
-            this.Add(arc0.ToList());
+            double r0 = (r[0] - ControlPoints[0].DistanceTo(PanelPoints[0])) * Math.Tan(Angles[0] / 2);
+            a1 = ControlPoints[0].Add(EdgeVectors[0][3].Normalized().Scale(r[0]));
+            a0 = a1.Subtract(EdgeVectors[0][4].Scale(r0)).Add(EdgeVectors[0][1].Scale(r0));
+            a2 = a1.Add(EdgeVectors[0][4].Scale(r0)).Add(EdgeVectors[0][0].Scale(r0));
+            List<Point> arc0 =  new List<Point>{ a0, a1, a2 };
             // arc at point 1
-            Point[] arc1 = { null, this[0][1].Add(EdgeVectors[1][3].Normalized().Scale(r[1])), null };
-            double r1 = (r[1] - this[0][1].DistanceTo(this[1][1])) * Math.Tan(angle[1] / 2);
-            arc1[0] = arc1[1].Subtract(EdgeVectors[1][4].Scale(r1)).Add(EdgeVectors[1][1].Scale(r1));
-            arc1[2] = arc1[1].Add(EdgeVectors[1][4].Scale(r1)).Add(EdgeVectors[1][0].Scale(r1));
-            this.Add(arc1.ToList());
+            double r1 = (r[1] - ControlPoints[1].DistanceTo(PanelPoints[1])) * Math.Tan(Angles[1] / 2);
+            a1 = ControlPoints[1].Add(EdgeVectors[1][3].Normalized().Scale(r[1]));
+            a0 = a1.Subtract(EdgeVectors[1][4].Scale(r1)).Add(EdgeVectors[1][1].Scale(r1));
+            a2 = a1.Add(EdgeVectors[1][4].Scale(r1)).Add(EdgeVectors[1][0].Scale(r1));
+            List<Point> arc1 = new List<Point> { a0, a1, a2 };
             // arc at point 0
-            Point[] arc2 = { null, this[0][2].Add(EdgeVectors[2][3].Normalized().Scale(r[2])), null };
-            double r2 = (r[2] - this[0][2].DistanceTo(this[1][2])) * Math.Tan(angle[2] / 2);
-            arc2[0] = arc2[1].Subtract(EdgeVectors[2][4].Scale(r2)).Add(EdgeVectors[2][1].Scale(r2));
-            arc2[2] = arc2[1].Add(EdgeVectors[2][4].Scale(r2)).Add(EdgeVectors[2][0].Scale(r2));
-            this.Add(arc2.ToList());
+            double r2 = (r[2] - ControlPoints[2].DistanceTo(PanelPoints[2])) * Math.Tan(Angles[2] / 2);
+            a1 = ControlPoints[2].Add(EdgeVectors[2][3].Normalized().Scale(r[2]));
+            a0 = a1.Subtract(EdgeVectors[2][4].Scale(r2)).Add(EdgeVectors[2][1].Scale(r2));
+            a2 = a1.Add(EdgeVectors[2][4].Scale(r2)).Add(EdgeVectors[2][0].Scale(r2));
+            List<Point> arc2 = new List<Point> { a0, a1, a2 };
+            a0.Dispose(); a1.Dispose(); a2.Dispose();
+            ArcPoints = new List<List<Point>> { arc0, arc1, arc2};
+            arc0 = arc1 = arc2 = null;
         }
 
         //METHOD**CREATE
@@ -187,6 +190,12 @@ namespace Panelization
             if (disposed) return;
             if (disposing)
             {
+                Centroid.Dispose();
+                Circumcenter.Dispose();
+                Incenter.Dispose();
+                ControlPoints.ForEach(p => p.Dispose());
+                PanelPoints.ForEach(p => p.Dispose());
+                ArcPoints.ForEach(p => p.ForEach(pt => pt.Dispose()));
                 EdgeVectors.ForEach(v => v.Dispose());
                 Normal.Dispose();
             }

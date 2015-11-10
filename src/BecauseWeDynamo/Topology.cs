@@ -11,43 +11,44 @@ using Text;
 namespace Topology
 {
 
-    public class HalfEdge<T>: List<T> where T: Vertex
+    public class HalfEdge
     {
+        internal List<Vertex> V;
         //**PROPERTIES** //**QUERY**
-        public Edge<T> Edge { get; private set; }
-        public Face<T> Face { get; private set; }
+        public Edge Edge { get; private set; }
+        public Face Face { get; private set; }
 
         //**CONSTRUCTOR**
-        internal HalfEdge(T A, T B): base(2)
+        internal HalfEdge(Vertex A, Vertex B)
         {
-            this.Add(A); this.Add(B); 
+            V = new List<Vertex>{A,B};
             Edge = null; Face = null; 
         }
-        internal HalfEdge(T A, T B, Edge<T> Edge, Face<T> Face) : this(A,B)
+        internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face) : this(A,B)
         {this.Edge = Edge; this.Face = Face; }
-        internal HalfEdge(IEnumerable<T> Vertices): base(Vertices)
-        {this.Edge = null; Face = null; }
-        internal HalfEdge(IEnumerable<T> Vertices, Edge<T> Edge, Face<T> Face): base(Vertices)
-        {this.Edge = Edge; this.Face = Face; }
+        internal HalfEdge(IEnumerable<Vertex> Vertices)
+        {V = Vertices.ToList(); this.Edge = null; Face = null; }
+        internal HalfEdge(IEnumerable<Vertex> Vertices, Edge Edge, Face Face)
+        {V = Vertices.ToList(); this.Edge = Edge; this.Face = Face; }
 
         //**METHODS** //**ACTION**
         public Vector GetVector()
         {
-            Point A = this[0].GetPoint();
-            Point B = this[1].GetPoint();
+            Point A = V[0].Point;
+            Point B = V[1].Point;
             Vector output = Vector.ByTwoPoints(A, B);
             A.Dispose(); B.Dispose();
             return output;
         }
-        public HalfEdge<T> FlipDirection()
+        public HalfEdge FlipDirection()
         {
-            HalfEdge<T> temp = new HalfEdge<T>(this);
-            this[0] = temp[1];
-            this[1] = temp[0];
+            List<Vertex> temp = new List<Vertex>(V);
+            V[0] = temp[1];
+            V[1] = temp[0];
             temp = null;
             return this;
         }
-        public bool AddEdge(Edge<T> Edge)
+        public bool AddEdge(Edge Edge)
         {
             if (this.Edge == null)
             {
@@ -56,7 +57,7 @@ namespace Topology
             }
             return false;
         }
-        public bool AddFace(Face<T> Face)
+        public bool AddFace(Face Face)
         {
             if (this.Face == null)
             {
@@ -70,46 +71,47 @@ namespace Topology
     public class Vertex: IEquatable<Vertex>
     {
         //**PROPERTIES** //**QUERY**
-        public double X { get; private set; }
-        public double Y { get; private set; }
-        public double Z { get; private set; }
-        public HashSet<Edge<Vertex>> Edges { get; private set; }
-        public HashSet<Face<Vertex>> Faces { get; private set; }
+        public List<double> Coordinates { get; private set; }
+        public double X { get { return Coordinates[0]; } }
+        public double Y { get { return Coordinates[1]; } }
+        public double Z { get { return Coordinates[2]; } }
+        public Point Point { get { return Point.ByCoordinates(X, Y, Z); } }
+        public HashSet<Edge> Edges { get; private set; }
+        public HashSet<Face> Faces { get; private set; }
 
         //**CONSTRUCTOR**
         internal Vertex(Point Point)
         {
-            X = Point.X; Y = Point.Y; Z = Point.Z;
-            Edges = new HashSet<Edge<Vertex>>();
-            Faces = new HashSet<Face<Vertex>>();
+            Coordinates = new List<double> { Point.X, Point.Y, Point.Z };
+            Edges = new HashSet<Edge>();
+            Faces = new HashSet<Face>();
         }
-        internal Vertex(Point Point, IEnumerable<Edge<Vertex>> Edges, IEnumerable<Face<Vertex>> Faces)
+        internal Vertex(Point Point, IEnumerable<Edge> Edges, IEnumerable<Face> Faces)
         {
-            X = Point.X; Y = Point.Y; Z = Point.Z;
-            this.Edges = new HashSet<Edge<Vertex>>(Edges);
-            this.Faces = new HashSet<Face<Vertex>>(Faces);
+            Coordinates = new List<double> { Point.X, Point.Y, Point.Z };
+            this.Edges = new HashSet<Edge>(Edges);
+            this.Faces = new HashSet<Face>(Faces);
         }
         internal Vertex(double X, double Y, double Z)
         {
-            this.X = X; this.Y = Y; this.Z = Z;
-            Edges = new HashSet<Edge<Vertex>>();
-            Faces = new HashSet<Face<Vertex>>();
+            Coordinates = new List<double> { X, Y, Z };
+            Edges = new HashSet<Edge>();
+            Faces = new HashSet<Face>();
         }
-        internal Vertex(double X, double Y, double Z, IEnumerable<Edge<Vertex>> Edges, IEnumerable<Face<Vertex>> Faces)
+        internal Vertex(double X, double Y, double Z, IEnumerable<Edge> Edges, IEnumerable<Face> Faces)
         {
-            this.X = X; this.Y = Y; this.Z = Z;
-            this.Edges = new HashSet<Edge<Vertex>>(Edges);
-            this.Faces = new HashSet<Face<Vertex>>(Faces);
+            Coordinates = new List<double> { X, Y, Z };
+            this.Edges = new HashSet<Edge>(Edges);
+            this.Faces = new HashSet<Face>(Faces);
         }
 
         //**METHODS** //**ACTION**
         [MultiReturn(new[] { "X", "Y", "Z" })]
         public Dictionary<string, double> GetCoordinates() { return new Dictionary<string, double> { { "X", X }, { "Y", Y }, { "Z", Z } }; }
-        public Point GetPoint() { return Point.ByCoordinates(X, Y, Z); }
-        public void AddEdge(Edge<Vertex> Edge) { if (Edge.Vertices.Contains(this)) Edges.Add(Edge); }
-        public void AddEdges(IEnumerable<Edge<Vertex>> Edges) { for (int i = 0; i < Edges.Count(); i++) AddEdge(Edges.ElementAt(i)); }
-        public void AddFace(Face<Vertex> Face) { if (Face.Vertices.Contains(this)) Faces.Add(Face); }
-        public void AddFaces(IEnumerable<Face<Vertex>> Faces) { for (int i = 0; i < Faces.Count(); i++) AddFace(Faces.ElementAt(i)); }
+        public void AddEdge(Edge Edge) { if (Edge.Vertices.Contains(this)) Edges.Add(Edge); }
+        public void AddEdges(IEnumerable<Edge> Edges) { for (int i = 0; i < Edges.Count(); i++) AddEdge(Edges.ElementAt(i)); }
+        public void AddFace(Face Face) { if (Face.Vertices.Contains(this)) Faces.Add(Face); }
+        public void AddFaces(IEnumerable<Face> Faces) { for (int i = 0; i < Faces.Count(); i++) AddFace(Faces.ElementAt(i)); }
 
         public override bool Equals(Object Object) { return this.Equals(Object as Vertex); }
         public bool Equals(Vertex Vertex)
@@ -134,37 +136,35 @@ namespace Topology
     }
 
 
-    public class Edge<T> : HashSet<HalfEdge<T>>, IDisposable where T : Vertex
+    public class Edge
     {
         //**FIELDS**
-        private bool disposed = false;
+        internal HashSet<HalfEdge> E;
 
         //**PROPERTIES** //**QUERY**
         public string Name { get; set; }
         public double[] Angle { get; set; }
-
-        public Point MidPoint { get { return Point.ByCoordinates(this.ToList()[0][0].X + this.ToList()[0][1].X, this.ToList()[0][0].Y, this.ToList()[0][0].Z); } }
-        public Face<T>[] Faces { get { return new Face<T>[2] { this.ToList()[0].Face, this.ToList()[1].Face }; } }
-        public T[] Vertices { get { return new T[2] { this.ToList()[0][0], this.ToList()[1][0] }; } }
-
+        public Point MidPoint { get { return Point.ByCoordinates(E.ToList()[0].V[0].X/2 + E.ToList()[0].V[1].X/2, E.ToList()[0].V[0].Y/2 + E.ToList()[0].V[1].Y/2, E.ToList()[0].V[0].Z/2 + E.ToList()[0].V[1].Z/2); } }
+        public List<Face> Faces { get { List<Face> F = new List<Face>(E.Count); E.ToList().ForEach(e => F.Add(e.Face)); return F; } }
+        public List<Vertex> Vertices { get { return E.ElementAt(0).V; } }
         //**CONSTRUCTOR**
-        internal Edge() : base() { Name = ""; Angle = null; }
-        internal Edge(IEnumerable<HalfEdge<T>> HalfEdges) : base(HalfEdges) { Name = ""; Angle = null; }
-        internal Edge(IEnumerable<HalfEdge<T>> HalfEdges, string Name) : base(HalfEdges) { this.Name = Name; Angle = null; }
+        internal Edge() : base() { E = new HashSet<HalfEdge>(); Name = ""; Angle = null; }
+        internal Edge(IEnumerable<HalfEdge> HalfEdges) { E = new HashSet<HalfEdge>(HalfEdges); Name = ""; Angle = null; }
+        internal Edge(IEnumerable<HalfEdge> HalfEdges, string Name) { E = new HashSet<HalfEdge>(HalfEdges); this.Name = Name; Angle = null; }
 
         //**METHODS** //**ACTION**
-        public T GetOtherVertex(T Vertex)
+        public Vertex GetOtherVertex(Vertex Vertex)
         {
-            if (this.ElementAt(0)[0].Equals(Vertex)) return this.ElementAt(0)[1];
-            if (this.ElementAt(1)[0].Equals(Vertex)) return this.ElementAt(1)[1];
+            if (Vertices[0].Equals(Vertex)) return Vertices[1];
+            if (Vertices[1].Equals(Vertex)) return Vertices[0];
             return null;
         }
         public Line GetLine()
         {
             Line output;
-            using (Point a = this.ToList()[0][0].GetPoint())
+            using (Point a = Vertices[0].Point)
             {
-                using (Point b = this.ToList()[0][1].GetPoint())
+                using (Point b = Vertices[1].Point)
                 {
                     output = Line.ByStartPointEndPoint(a, b);
                 }
@@ -182,23 +182,13 @@ namespace Topology
             ln.Dispose();
             return false;
         }
-        public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposed) return;
-            if (disposing)
-            {
-                this.Clear();
-                if (MidPoint != null) MidPoint.Dispose();
-            }
-            disposed = true;
-        }
     }
 
-    public class Face<T> : List<HalfEdge<T>>, IDisposable where T: Vertex
+    public class Face: IDisposable
     {
         //**FIELDS**
         private bool disposed = false;
+        internal List<HalfEdge> E;
 
         //**PROPERTIES** //**QUERY**
         public string Name { get; set; }
@@ -207,73 +197,79 @@ namespace Topology
         public Vector Normal { get { return CS.ZAxis; } }
         public Dictionary<string, Object> Parameters { get; set; }
 
-        public T[] Vertices
+        public Vertex[] Vertices
         {
             get
             {
-                T[] output = new T[Count];
-                for (int i = 0; i < Count; i++) output[i] = this[i][0];
+                Vertex[] output = new Vertex[E.Count];
+                for (int i = 0; i < E.Count; i++) output[i] = E[i].V[0];
                 return output;
             }
         }
-        public Edge<T>[] Edges
+        public Edge[] Edges
         {
             get
             {
-                Edge<T>[] output = new Edge<T>[Count];
-                for (int i = 0; i < Count; i++) output[i] = this[i].Edge;
+                Edge[] output = new Edge[E.Count];
+                for (int i = 0; i < E.Count; i++) output[i] = E[i].Edge;
                 return output;
             }
         }
 
         //**CONSTRUCTOR**
         internal Face() : base() { }
-        internal Face(IEnumerable<T> Vertices)
-            : base(Vertices.Count())
+        internal Face(IEnumerable<Vertex> Vertices)
         {
+            E = new List<HalfEdge>(Vertices.ToList().Count);
             for (int i = 0; i < Vertices.Count(); i++)
             {
-                this.Add(new HalfEdge<T>(Vertices.ElementAt(i), Vertices.ElementAt((i + 1) % Capacity)));
-                Vertices.ElementAt(i).AddFace(this as Face<Vertex>);
+                E.Add(new HalfEdge(Vertices.ElementAt(i), Vertices.ElementAt((i + 1) % E.Capacity)));
+                Vertices.ElementAt(i).AddFace(this as Face);
             }
-            this.ForEach(he => he.AddFace(this));
+            E.ForEach(he => he.AddFace(this));
             double[] xyz = { 0, 0, 0 };
-            for (int i = 0; i < Count; i++)
+            for (int i = 0; i < E.Count; i++)
             {
-                xyz[0] += Vertices.ElementAt(i).X / Count;
-                xyz[1] += Vertices.ElementAt(i).Y / Count;
-                xyz[2] += Vertices.ElementAt(i).Z / Count;
+                xyz[0] += Vertices.ElementAt(i).X / E.Count;
+                xyz[1] += Vertices.ElementAt(i).Y / E.Count;
+                xyz[2] += Vertices.ElementAt(i).Z / E.Count;
             }
             Point Center = Point.ByCoordinates(xyz[0], xyz[1], xyz[2]);
-            Vector X = this[Count - 1].GetVector();
-            X = X.Reverse();
-            Vector Y = this[0].GetVector();
-            Vector Z = X.Cross(Y);
-            Y = Z.Cross(X);
-            CS = CoordinateSystem.ByOriginVectors(Center, X, Y);
-            X.Dispose(); Y.Dispose(); Z.Dispose(); Center.Dispose();
+            SetCS(Center);
+            Center.Dispose();
         }
 
         //**METHODS** //**ACTION**
-        public Face<T> ReOrderVertices(T Start)
+        public Face ReOrderVertices(Vertex Start)
         {
-            if (this[0][0].Equals(Start)) return null;
+            if (E[0].V[0].Equals(Start)) return null;
             int index = 0;
-            HalfEdge<T>[] temp = new HalfEdge<T>[this.Count];
-            this.CopyTo(temp);
-            for (int i = 1; i < Count; i++) if (this[i].Equals(Start)) { index = i; break; }
-            for (int i = 0; i < Count; i++) this[i] = temp[(index + 1) % Count];
+            HalfEdge[] temp = new HalfEdge[E.Count];
+            E.CopyTo(temp);
+            for (int i = 1; i < E.Count; i++) if (E[i].Equals(Start)) { index = i; break; }
+            for (int i = 0; i < E.Count; i++) E[i] = temp[(index + 1) % E.Count];
             temp = null;
+            SetCS(CS.Origin);
             return this;
         }
-        public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+        internal void SetCS(Point Center)
+        {
+            Vector Y = E[E.Count - 1].GetVector();
+            Y = Y.Reverse();
+            Vector X = E[0].GetVector();
+            Vector Z = X.Cross(Y);
+            Y = Z.Cross(X);
+            CS = CoordinateSystem.ByOriginVectors(Center, X, Y);
+            X.Dispose(); Y.Dispose(); Z.Dispose();
+        }
+        public virtual void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected virtual void Dispose(bool disposing)
         {
             if (disposed) return;
             if (disposing)
             {
-                this.ForEach(e => e.Edge.Remove(e));
-                this.Clear();
+                E.ForEach(e => e.Edge.E.Remove(e));
+                E.Clear();
                 if (Center != null) Center.Dispose();
                 if (Normal != null) Normal.Dispose();
                 if (CS != null) CS.Dispose();
@@ -284,7 +280,7 @@ namespace Topology
         }
     }
 
-    public class Triangle : Face<Vertex>, IDisposable
+    public class Triangle : Face, IDisposable
     {
         //**FIELDS**
         private bool disposed = false;
@@ -296,7 +292,7 @@ namespace Topology
         internal Triangle(IEnumerable<Vertex> Vertices)
             : base(Vertices)
         {
-            Point[] pts = { Vertices.ElementAt(0).GetPoint(), Vertices.ElementAt(1).GetPoint(), Vertices.ElementAt(2).GetPoint() };
+            Point[] pts = { Vertices.ElementAt(0).Point, Vertices.ElementAt(1).Point, Vertices.ElementAt(2).Point };
             Circle c = Circle.ByBestFitThroughPoints(pts);
             Circumcenter = c.CenterPoint;
             c.Dispose(); pts[0].Dispose(); pts[1].Dispose(); pts[2].Dispose(); pts = null;
@@ -308,11 +304,11 @@ namespace Topology
             if (Vertices.Length < 3) { return null; }
             else
             {
-                Point[] Points = { Vertices[0].GetPoint(), Vertices[1].GetPoint(), Vertices[2].GetPoint() };
+                Point[] Points = { Vertices[0].Point, Vertices[1].Point, Vertices[2].Point };
                 return Points;
             }
         }
-        public new void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+        public override void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
@@ -325,12 +321,12 @@ namespace Topology
         }
     }
 
-    public class Quad : Face<Vertex>
+    public class Quad : Face
     {
         //**FIELDS**
         private bool disposed = false;
 
-        public new void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+        public override void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
@@ -345,24 +341,23 @@ namespace Topology
     public class Mesh : IDisposable
     {
         //**FIELDS**
-        private Point circumcenter;
         private bool disposed = false;
         private Dictionary<Point, Vertex> V;
-        private Dictionary<string, Edge<Vertex>> E;
+        private Dictionary<string, Edge> E;
 
         //**PROPERTIES**QUERY
-        public List<Face<Vertex>> Faces { get; set; }
+        public List<Face> Faces { get; set; }
         public List<Vertex> Vertices { get { return V.Values.ToList(); } }
-        public List<Edge<Vertex>> Edges { get; set; }
+        public List<Edge> Edges { get; set; }
         public Point[] Points { get; set; }
 
         internal Mesh(Surface[] Surfaces, Point[] Points)
         {
             // initialize
-            Faces = new List<Face<Vertex>>(Surfaces.Length);
+            Faces = new List<Face>(Surfaces.Length);
             V = new Dictionary<Point, Vertex>(Points.Length);
-            E = new Dictionary<string, Edge<Vertex>>();
-            Edges = new List<Edge<Vertex>>();
+            E = new Dictionary<string, Edge>();
+            Edges = new List<Edge>();
 
             // store input points
             this.Points = Points;
@@ -392,17 +387,17 @@ namespace Topology
                 Triangle t = new Triangle(v);
                 Faces.Add(t);
                 // create or find edges
-                for (int j = 0; j < t.Count; j++)
+                for (int j = 0; j < t.E.Count; j++)
                 {
                     bool edgeFound = false;
                     if (Edges.Count > 0)
                     {
                         for (int k = 0; k < Edges.Count; k++)
                         {
-                            if (Edges[k].Vertices.Contains(t[j][0]) && Edges[k].Vertices.Contains(t[j][1]))
+                            if (Edges[k].Vertices.Contains(t.E[j].V[0]) && Edges[k].Vertices.Contains(t.E[j].V[1]))
                             {
-                                Edges[k].Add(t[j]);
-                                t[j].AddEdge(Edges[k]);
+                                Edges[k].E.Add(t.E[j]);
+                                t.E[j].AddEdge(Edges[k]);
                                 edgeFound = true;
                                 break;
                             }
@@ -410,21 +405,20 @@ namespace Topology
                     }
                     if (!edgeFound)
                     {
-                        Edge<Vertex> e = new Edge<Vertex>();
-                        e.Add(t[j]);
-                        t[j].AddEdge(e);
+                        Edge e = new Edge();
+                        e.E.Add(t.E[j]);
+                        t.E[j].AddEdge(e);
                         Edges.Add(e);
                     }
                 }
-
             }
         }
 
         public static Mesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new Mesh(Surfaces, Points); }
 
-        public bool AddEdgeNames(PolyCurve[] Spline, int Digits = 3)
+        public Mesh AddEdgeNames(PolyCurve[] Spline, int Digits = 3)
         {
-            int D = (Spline.Length + 1).ToString().Length;
+            int D = (Spline.Length).ToString().Length;
             for (int i = 0; i < Spline.Length; i++)
             {
                 for (int k = 0; k < Spline[i].Curves().Length; k++)
@@ -440,7 +434,7 @@ namespace Topology
                     }
                 }
             }
-            return false;
+            return this;
         }
 
         public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
@@ -449,9 +443,7 @@ namespace Topology
             if (disposed) return;
             if (disposing)
             {
-                Edges.ForEach(e => e = null);
                 Faces.ForEach(f => f.Dispose());
-                Vertices.ForEach(v => v = null);
             }
             disposed = true;
         }
