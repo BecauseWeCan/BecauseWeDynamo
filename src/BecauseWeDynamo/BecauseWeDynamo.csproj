@@ -58,6 +58,7 @@
     <Compile Include="DXFLibrary\Element.cs" />
     <Compile Include="DXFLibrary\Writer.cs" />
     <Compile Include="ExportToDXF.cs" />
+    <Compile Include="TopologyMesh.cs" />
     <Compile Include="Topology.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DXFLibrary\Sections.cs" />
