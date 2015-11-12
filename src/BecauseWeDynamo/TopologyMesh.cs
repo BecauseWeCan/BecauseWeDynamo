@@ -124,9 +124,15 @@ namespace Topology
                     double[] a1, a2;
                     if (n0[0] < n1[0]) { e1 = e[0]; e2 = e[1]; a1 = n0; a2 = n1; }
                     else { e1 = e[1]; e2 = e[0]; a1 = n1; a2 = n0; }
+                    Vector e1N = e1.Face.Normal, e2N = e2.Face.Normal;
+                    double[] a3 = { e1N.X - e2N.X, e1N.Y - e2N.Y, e1N.Z - e2N.Z };
+                    e1N.Dispose(); e2N.Dispose();
                     Edges[i].E = new HashSet<HalfEdge> { e0, e1, e2 };
                     Edges[i].Angle = new double[] { a1[0], a2[0] - a1[0], 360 - a2[0] };
-                    Edges[i].N = new double[] { a1[1], a1[2], a1[3], a2[1], a2[2], a2[3] };
+                    Edges[i].N = new double[] { -a1[1], -a1[2], -a1[3], -a3[0], -a3[1], -a3[2], a2[1], a2[2], a2[3] };
+                    Edges[i].E.ElementAt(0).Angle = a1[0];
+                    Edges[i].E.ElementAt(1).Angle = Math.Min(a1[0], a2[0] - a1[0]);
+                    Edges[i].E.ElementAt(2).Angle = a2[0] - a1[0];
                     E3.Add(Edges[i]);
                 }
                 else E0.Add(Edges[i]);
@@ -155,8 +161,8 @@ namespace Topology
                     double[] AngleNormal = Edges[i].GetAngleNormal(Edges[i].E.ElementAt(0), Edges[i].E.ElementAt(1));
                     Edges[i].Angle = new double[] { AngleNormal[0] };
                     Edges[i].N = new double[] { AngleNormal[1], AngleNormal[2], AngleNormal[3] };
-                    //Edges[i].E.ElementAt(0).Angle = AngleNormal[0];
-                    //Edges[i].E.ElementAt(1).Angle = AngleNormal[0];
+                    Edges[i].E.ElementAt(0).Angle = AngleNormal[0];
+                    Edges[i].E.ElementAt(1).Angle = AngleNormal[0];
                     E2.Add(Edges[i]);
                 }
                 else if (Edges[i].E.Count == 3)
@@ -184,10 +190,10 @@ namespace Topology
                     e1N.Dispose(); e2N.Dispose();
                     Edges[i].E = new HashSet<HalfEdge> { e0, e1, e2 };
                     Edges[i].Angle = new double[] { a1[0], a2[0] - a1[0], 360 - a2[0] };
-                    Edges[i].N = new double[] { -a1[1], -a1[2], -a1[3], -a3[1], -a3[2], -a3[3], a2[1], a2[2], a2[3] };
-                    //Edges[i].E.ElementAt(0).Angle = a1[0];
-                    //Edges[i].E.ElementAt(1).Angle = Math.Min(a1[0], a2[0] - a1[0]);
-                    //Edges[i].E.ElementAt(2).Angle = a2[0] - a1[0];
+                    Edges[i].N = new double[] { -a1[1], -a1[2], -a1[3], -a3[0], -a3[1], -a3[2], a2[1], a2[2], a2[3] };
+                    Edges[i].E.ElementAt(0).Angle = a1[0];
+                    Edges[i].E.ElementAt(1).Angle = Math.Min(a1[0], a2[0] - a1[0]);
+                    Edges[i].E.ElementAt(2).Angle = a2[0] - a1[0];
                     E3.Add(Edges[i]);
                 }
                 else E0.Add(Edges[i]);

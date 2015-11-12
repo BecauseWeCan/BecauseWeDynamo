@@ -18,52 +18,57 @@ namespace Panelization
         bool disposed = false;
 
         //PROPERTIES**QUERY
+        public double EdgeOffset { get; set; }
         public Triangle Triangle { get; set; }
         public Point[][] ArcPoints { get; private set; }
         public Vector[][] EdgeVectors { get; private set; }
 
         //CONSTRUCTOR
-        internal TrianglePanel(Triangle Triangle, double CornerOffset, double Thickness, int Direction, double MinRadius)
+        internal TrianglePanel(Triangle Triangle, double CornerOffset, double MinEdgeOffset, double Thickness, int Direction, double MinRadius)
         {
             this.Thickness = Thickness;
             this.Direction = Direction;
             this.Triangle = Triangle;
             double[] s = { Triangle.Edges[0].Length, Triangle.Edges[1].Length, Triangle.Edges[2].Length };
             List<Vector[]> eV = new List<Vector[]>(3);
-            double EdgeOffset = 0.5 * Thickness / Math.Tan(Triangle.MinEdgeAngle * Math.PI / 360);
+            EdgeOffset = 0.5 * Thickness / Math.Tan(Triangle.MinEdgeAngle * Math.PI / 360);
+            for (int i = 0; i < 3; i++)
+            {
+                double d = MinEdgeOffset / Math.Sin(Triangle.Angles[0] / 2) - 0.5 * Thickness / Math.Tan(Triangle.Angles[0]/2);
+                if (EdgeOffset < d) EdgeOffset = d;
+            }
             for (int i = 0; i < 3; i++)
             {
                 List<Vector> V = new List<Vector> { Triangle.E[i].GetVector().Normalized(), Triangle.E[(i + 2) % 3].GetVector().Normalized().Reverse() };
-                V.Add(V[0].Add(V[1]).Scale(EdgeOffset / Math.Sin(Triangle.Angles[i])));
+                V.Add(V[0].Add(V[1]).Normalized());
                 V.Add(V[0].Subtract(V[1]).Normalized());
                 eV.Add(V.ToArray());
             }
             EdgeVectors = eV.ToArray();
             // corner offsets
             double[] r = {
-                           (EdgeOffset + MinRadius) / Math.Sin(Triangle.Angles[0]) - MinRadius,
-                           (EdgeOffset + MinRadius) / Math.Sin(Triangle.Angles[1]) - MinRadius,
-                           (EdgeOffset + MinRadius) / Math.Sin(Triangle.Angles[2]) - MinRadius
+                           (EdgeOffset + MinRadius) / Math.Sin(Triangle.Angles[0]/2) - MinRadius,
+                           (EdgeOffset + MinRadius) / Math.Sin(Triangle.Angles[1]/2) - MinRadius,
+                           (EdgeOffset + MinRadius) / Math.Sin(Triangle.Angles[2]/2) - MinRadius
                        };
-            for (int i = 0; i < 3; i++) if (r[i] < CornerOffset) r[i] = CornerOffset;
+            for (int i = 0; i < r.Length; i++) if (r[i] < CornerOffset) r[i] = CornerOffset;
             // arc at point 0
             List<Point[]> P = new List<Point[]>(3);
             for (int i = 0; i < 3; i++)
             {
-                double r0 = (r[i] - EdgeVectors[i][2].Length) * Math.Tan(Triangle.Angles[i] / 2);
-                Point a1 = Triangle.VertexPoints[i].Add(EdgeVectors[i][3].Normalized().Scale(r[i]));
-                Point a0 = a1.Subtract(EdgeVectors[i][4].Scale(r0)).Add(EdgeVectors[i][1].Scale(r0));
-                Point a2 = a1.Add(EdgeVectors[i][4].Scale(r0)).Add(EdgeVectors[i][0].Scale(r0));
+                double rV = r[i] * Math.Tan(Triangle.Angles[i] / 2) - EdgeOffset/Math.Cos(Triangle.Angles[i]/2);
+                Point a1 = Triangle.VertexPoints[i].Add(EdgeVectors[i][2].Scale(r[i]));
+                Point a0 = a1.Add(EdgeVectors[i][1].Scale(rV)).Subtract(EdgeVectors[i][3].Scale(rV));
+                Point a2 = a1.Add(EdgeVectors[i][0].Scale(rV)).Add(EdgeVectors[i][3].Scale(rV));
                 Point[] arc0 = new Point[] { a0, a1, a2 };
                 P.Add(arc0);
-                a0.Dispose(); a1.Dispose(); a2.Dispose();
             }
             ArcPoints = P.ToArray();
         }
 
         //METHOD**CREATE
-        public static TrianglePanel ByMeshFace(Triangle Triangle, double CornerOffset, double Thickness, double MinRadius, int Direction = 0)
-        { return new TrianglePanel(Triangle, CornerOffset, Thickness, Direction, MinRadius); }
+        public static TrianglePanel ByMeshFace(Triangle Triangle, double CornerOffset, double MinEdgeOffset, double Thickness, double MinRadius, int Direction = 0)
+        { return new TrianglePanel(Triangle, CornerOffset, MinEdgeOffset, Thickness, Direction, MinRadius); }
 
 
         //METHODS**ACTION
@@ -119,7 +124,6 @@ namespace Panelization
             if (disposed) return;
             if (disposing)
             {
-                if (!Triangle.Equals(null)) Triangle.Dispose();
                 ArcPoints.ForEach(p => p.ForEach(pt => pt.Dispose()));
                 EdgeVectors.ForEach(v => v.Dispose());
             }

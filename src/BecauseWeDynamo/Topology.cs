@@ -22,6 +22,7 @@ namespace Topology
         //**CONSTRUCTOR**
         internal HalfEdge(Vertex A, Vertex B)
         {
+            Angle = 360;
             V = new Vertex[] { A, B };
             Edge = null; Face = null;
         }
@@ -162,6 +163,7 @@ namespace Topology
         public double Length { get { return E.ElementAt(0).Length; } }
         public string Name { get; set; }
         public double[] Angle { get; set; }
+        public HalfEdge[] HalfEdges { get { return E.ToArray(); } }
         public Vector[] Normal
         {
             get
@@ -183,7 +185,7 @@ namespace Topology
         public List<Face> Faces { get { List<Face> F = new List<Face>(E.Count); E.ToList().ForEach(e => F.Add(e.Face)); return F; } }
         public Vertex[] Vertices { get { if (E.Count > 0) return E.ElementAt(0).V; return null; } }
         //**CONSTRUCTOR**
-        internal Edge() { E = new HashSet<HalfEdge>(); Name = ""; Angle = null; N = null; }
+        internal Edge() { E = new HashSet<HalfEdge>(); Name = ""; Angle = new double[]{360}; N = null; }
         internal Edge(IEnumerable<HalfEdge> HalfEdges) : this() { E = new HashSet<HalfEdge>(HalfEdges); Vertices.ForEach(v => v.AddEdge(this)); }
         internal Edge(IEnumerable<HalfEdge> HalfEdges, string Name) : this(HalfEdges) { this.Name = Name; }
 
@@ -244,6 +246,7 @@ namespace Topology
         public Point Center { get { return CS.Origin; } }
         public Vector Normal { get { return CS.ZAxis; } }
         public Dictionary<string, Object> Parameters { get; set; }
+        public List<HalfEdge> HalfEdges { get { return E; } }
         public Vertex[] Vertices
         {
             get
@@ -350,9 +353,9 @@ namespace Topology
             get
             {
                 return new double[]{ 
-                                 Math.Acos((E[1].Length * E[1].Length + E[2].Length * E[2].Length - E[0].Length * E[0].Length) / (2 * E[1].Length * E[2].Length)), 
                                  Math.Acos((E[2].Length * E[2].Length + E[0].Length * E[0].Length - E[1].Length * E[1].Length) / (2 * E[2].Length * E[0].Length)), 
-                                 Math.Acos((E[0].Length * E[0].Length + E[1].Length * E[1].Length - E[2].Length * E[2].Length) / (2 * E[0].Length * E[1].Length)) 
+                                 Math.Acos((E[0].Length * E[0].Length + E[1].Length * E[1].Length - E[2].Length * E[2].Length) / (2 * E[0].Length * E[1].Length)),
+                                 Math.Acos((E[1].Length * E[1].Length + E[2].Length * E[2].Length - E[0].Length * E[0].Length) / (2 * E[1].Length * E[2].Length))
                              };
             }
         }
