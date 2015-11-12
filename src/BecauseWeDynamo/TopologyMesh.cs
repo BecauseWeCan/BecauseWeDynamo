@@ -28,6 +28,7 @@ namespace Topology
         public List<Spline> Splines { get; set; }
         public Point[] Points { get; set; }
 
+        //**CONSTRUCTOR
         internal TriangleMesh(Surface[] Surfaces, Point[] Points)
         {
             // initialize
@@ -41,6 +42,7 @@ namespace Topology
             E0 = new List<Edge>();
             Splines = new List<Spline>();
 
+            //**CONSTRUCT MESH
             // store input points
             this.Points = Points;
             // create vertex lookup table from points
@@ -89,14 +91,17 @@ namespace Topology
                     }
                 }
             }
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
             for (int i = 0; i < Edges.Count; i++)
             {
                 if (Edges[i].E.Count == 1) E1.Add(Edges[i]);
                 else if (Edges[i].E.Count == 2)
                 {
                     double[] AngleNormal = Edges[i].GetAngleNormal(Edges[i].E.ElementAt(0), Edges[i].E.ElementAt(1));
-                    Edges[i].Angle = AngleNormal[0];
+                    Edges[i].Angle = new double[] { AngleNormal[0] };
                     Edges[i].N = new double[] { AngleNormal[1], AngleNormal[2], AngleNormal[3] };
+                    Edges[i].E.ElementAt(0).Angle = AngleNormal[0];
+                    Edges[i].E.ElementAt(1).Angle = AngleNormal[0];
                     E2.Add(Edges[i]);
                 }
                 else if (Edges[i].E.Count == 3)
@@ -111,7 +116,6 @@ namespace Topology
                         else if (Edges[i].E.ElementAt(j).V[0].Equals(B)) eB.Add(Edges[i].E.ElementAt(j));
                     }
                     if (eA.Count + eB.Count != 3) continue;
-
                     HalfEdge e0, e1, e2;
                     List<HalfEdge> e;
                     if (eA.Count == 1) { e0 = eA[0]; e = eB; } else { e0 = eB[0]; e = eA; }
@@ -121,7 +125,7 @@ namespace Topology
                     if (n0[0] < n1[0]) { e1 = e[0]; e2 = e[1]; a1 = n0; a2 = n1; }
                     else { e1 = e[1]; e2 = e[0]; a1 = n1; a2 = n0; }
                     Edges[i].E = new HashSet<HalfEdge> { e0, e1, e2 };
-                    Edges[i].Angle = new double[] { a1[0], a2[0] };
+                    Edges[i].Angle = new double[] { a1[0], a2[0] - a1[0], 360 - a2[0] };
                     Edges[i].N = new double[] { a1[1], a1[2], a1[3], a2[1], a2[2], a2[3] };
                     E3.Add(Edges[i]);
                 }
@@ -129,12 +133,72 @@ namespace Topology
             }
         }
 
+        //**METHODS**CREATE
         public static TriangleMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new TriangleMesh(Surfaces, Points); }
+
+
+        //**METHODS**ACTIONS
+        public Vertex GetVertexAtPoint(Point Point)
+        {
+            Vertex Result = null;
+            for (int k = 0; k < V.Keys.Count; k++) if (Point.IsAlmostEqualTo(Points[k])) { Result = V[Points[k]]; break; }
+            return Result;
+        }
+        public TriangleMesh CalculateAngles()
+        {
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
+            for (int i = 0; i < Edges.Count; i++)
+            {
+                if (Edges[i].E.Count == 1) E1.Add(Edges[i]);
+                else if (Edges[i].E.Count == 2)
+                {
+                    double[] AngleNormal = Edges[i].GetAngleNormal(Edges[i].E.ElementAt(0), Edges[i].E.ElementAt(1));
+                    Edges[i].Angle = new double[] { AngleNormal[0] };
+                    Edges[i].N = new double[] { AngleNormal[1], AngleNormal[2], AngleNormal[3] };
+                    //Edges[i].E.ElementAt(0).Angle = AngleNormal[0];
+                    //Edges[i].E.ElementAt(1).Angle = AngleNormal[0];
+                    E2.Add(Edges[i]);
+                }
+                else if (Edges[i].E.Count == 3)
+                {
+                    Vertex A = Edges[i].Vertices[0];
+                    Vertex B = Edges[i].Vertices[1];
+                    List<HalfEdge> eA = new List<HalfEdge>(2);
+                    List<HalfEdge> eB = new List<HalfEdge>(2);
+                    for (int j = 0; j < 3; j++)
+                    {
+                        if (Edges[i].E.ElementAt(j).V[0].Equals(A)) eA.Add(Edges[i].E.ElementAt(j));
+                        else if (Edges[i].E.ElementAt(j).V[0].Equals(B)) eB.Add(Edges[i].E.ElementAt(j));
+                    }
+                    if (eA.Count + eB.Count != 3) continue;
+                    HalfEdge e0, e1, e2;
+                    List<HalfEdge> e;
+                    if (eA.Count == 1) { e0 = eA[0]; e = eB; } else { e0 = eB[0]; e = eA; }
+                    double[] n0 = Edges[i].GetAngleNormal(e0, e[0]);
+                    double[] n1 = Edges[i].GetAngleNormal(e0, e[1]);
+                    double[] a1, a2;
+                    if (n0[0] < n1[0]) { e1 = e[0]; e2 = e[1]; a1 = n0; a2 = n1; }
+                    else { e1 = e[1]; e2 = e[0]; a1 = n1; a2 = n0; }
+                    Vector e1N = e1.Face.Normal, e2N = e2.Face.Normal;
+                    double[] a3 = { e1N.X - e2N.X, e1N.Y - e2N.Y, e1N.Z - e2N.Z };
+                    e1N.Dispose(); e2N.Dispose();
+                    Edges[i].E = new HashSet<HalfEdge> { e0, e1, e2 };
+                    Edges[i].Angle = new double[] { a1[0], a2[0] - a1[0], 360 - a2[0] };
+                    Edges[i].N = new double[] { -a1[1], -a1[2], -a1[3], -a3[1], -a3[2], -a3[3], a2[1], a2[2], a2[3] };
+                    //Edges[i].E.ElementAt(0).Angle = a1[0];
+                    //Edges[i].E.ElementAt(1).Angle = Math.Min(a1[0], a2[0] - a1[0]);
+                    //Edges[i].E.ElementAt(2).Angle = a2[0] - a1[0];
+                    E3.Add(Edges[i]);
+                }
+                else E0.Add(Edges[i]);
+            }
+            return this;
+        }
 
         public TriangleMesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
         {
             // find start point
-            Vertex v = Vertices.Find(vtx => vtx.X == Point.X && vtx.Y == Point.Y && vtx.Z == Point.Z);
+            Vertex v = GetVertexAtPoint(Point);
             if (v.Equals(null)) return null;
             List<Edge> E0 = new List<Edge>(Edges);
             Spline S0 = new Spline(); S0.Vertices.Add(v);
@@ -174,12 +238,12 @@ namespace Topology
                     if (T0.Count > 1) { }
                     S.Vertices.Add(T0[0].Vertices[2]);
                     for (int j = T0[0].E.Count - 1; j > 0; j--) if (T0[0].E[i].Edge.Name.Equals(""))
-                    {
-                        T0[0].E[i].Edge.Name = "e" + s.ToString("D" + SplineCount) + (s + 1).ToString("D" + SplineCount) + "-" + eN.ToString("D" + EdgeCount);
-                        E.Add(T0[0].E[i].Edge.Name, T0[0].E[i].Edge);
-                        E0.Remove(T0[0].E[i].Edge);
-                        eN++;
-                    }
+                        {
+                            T0[0].E[i].Edge.Name = "e" + s.ToString("D" + SplineCount) + (s + 1).ToString("D" + SplineCount) + "-" + eN.ToString("D" + EdgeCount);
+                            E.Add(T0[0].E[i].Edge.Name, T0[0].E[i].Edge);
+                            E0.Remove(T0[0].E[i].Edge);
+                            eN++;
+                        }
                     T0[0].Name = "t" + s.ToString("D" + SplineCount) + (s + 1).ToString("D" + SplineCount) + "-" + tN.ToString("D" + EdgeCount);
                     tN++;
                     List<Face> T1 = T0[0].E[1].Edge.Faces.FindAll(f => f.Name.Equals(""));

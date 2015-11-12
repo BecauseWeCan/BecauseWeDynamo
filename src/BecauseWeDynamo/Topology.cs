@@ -9,11 +9,13 @@ using Autodesk.DesignScript.Runtime;
 
 namespace Topology
 {
-
     public class HalfEdge
     {
         internal Vertex[] V;
         //**PROPERTIES** //**QUERY**
+        public double Angle { get; set; }
+        public double Length { get { return Math.Sqrt(Math.Pow(V[0].X - V[1].X, 2) + Math.Pow(V[0].Y - V[1].Y, 2) + Math.Pow(V[0].Z - V[1].Z, 2)); } }
+        public Vector Normal { get { return Face.Normal; } }
         public Edge Edge { get; private set; }
         public Face Face { get; private set; }
 
@@ -114,6 +116,20 @@ namespace Topology
         public void AddEdges(IEnumerable<Edge> Edges) { for (int i = 0; i < Edges.Count(); i++) AddEdge(Edges.ElementAt(i)); }
         public void AddFace(Face Face) { if (Face.Vertices.Contains(this) && !Faces.Contains(Face)) Faces.Add(Face); }
         public void AddFaces(IEnumerable<Face> Faces) { for (int i = 0; i < Faces.Count(); i++) AddFace(Faces.ElementAt(i)); }
+        public double DistanceTo(Vertex Vertex)
+        {
+            double x = X - Vertex.X;
+            double y = Y - Vertex.Y;
+            double z = Z - Vertex.Z;
+            return Math.Sqrt(x * x + y * y + z * z);
+        }
+        public double DistanceTo(Point Point)
+        {
+            double x = X - Point.X;
+            double y = Y - Point.Y;
+            double z = Z - Point.Z;
+            return Math.Sqrt(x * x + y * y + z * z);
+        }
 
         public override bool Equals(Object Object) { return this.Equals(Object as Vertex); }
         public bool Equals(Vertex Vertex)
@@ -137,22 +153,23 @@ namespace Topology
         public static bool operator !=(Vertex a, Vertex b) { return !(a == b); }
     }
 
-
     public class Edge
     {
         //**FIELDS**
         internal HashSet<HalfEdge> E;
         internal double[] N;
         //**PROPERTIES** //**QUERY**
+        public double Length { get { return E.ElementAt(0).Length; } }
         public string Name { get; set; }
-        public Object Angle { get; set; }
-        public Object Normal
+        public double[] Angle { get; set; }
+        public Vector[] Normal
         {
             get
             {
-                if (N.Length < 3 || N.Equals(null)) return null;
-                if (N.Length < 6) return Vector.ByCoordinates(N[0], N[1], N[2]);
-                return new Vector[] { Vector.ByCoordinates(N[0], N[1], N[2]), Vector.ByCoordinates(N[3], N[4], N[5]) };
+                if (!(N.Length > 2)) return null;
+                List<Vector> V = new List<Vector>();
+                for (int i = 0; i < N.Length / 3; i++) V.Add(Vector.ByCoordinates(N[i * 3], N[i * 3 + 1], N[i * 3 + 2]));
+                return V.ToArray();
             }
         }
         public Point MidPoint
@@ -257,7 +274,8 @@ namespace Topology
 
         //**CONSTRUCTOR**
         internal Face() { Name = ""; Parameters = new Dictionary<string, object>(); }
-        internal Face(IEnumerable<Vertex> Vertices) : this()
+        internal Face(IEnumerable<Vertex> Vertices)
+            : this()
         {
             E = new List<HalfEdge>(Vertices.ToList().Count);
             for (int i = 0; i < Vertices.Count(); i++)
@@ -326,6 +344,27 @@ namespace Topology
 
         //**PROPERTIES** //**QUERY**
         public Point Circumcenter { get; private set; }
+        public Point Incenter { get; private set; }
+        public double[] Angles
+        {
+            get
+            {
+                return new double[]{ 
+                                 Math.Acos((E[1].Length * E[1].Length + E[2].Length * E[2].Length - E[0].Length * E[0].Length) / (2 * E[1].Length * E[2].Length)), 
+                                 Math.Acos((E[2].Length * E[2].Length + E[0].Length * E[0].Length - E[1].Length * E[1].Length) / (2 * E[2].Length * E[0].Length)), 
+                                 Math.Acos((E[0].Length * E[0].Length + E[1].Length * E[1].Length - E[2].Length * E[2].Length) / (2 * E[0].Length * E[1].Length)) 
+                             };
+            }
+        }
+        public double MinEdgeAngle
+        {
+            get
+            {
+                double min = 360;
+                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
+                return min;
+            }
+        }
 
         //**CONSTRUCTOR**
         internal Triangle(IEnumerable<Vertex> Vertices)
@@ -353,6 +392,7 @@ namespace Topology
             if (disposing)
             {
                 if (Circumcenter != null) Circumcenter.Dispose();
+                if (Incenter != null) Incenter.Dispose();
                 base.Dispose();
             }
             disposed = true;
