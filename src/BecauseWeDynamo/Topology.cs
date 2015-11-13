@@ -11,7 +11,9 @@ namespace Topology
 {
     public class HalfEdge
     {
+        //**FIELD
         internal Vertex[] V;
+
         //**PROPERTIES** //**QUERY**
         public double Angle { get; set; }
         public double Length { get { return Math.Sqrt(Math.Pow(V[0].X - V[1].X, 2) + Math.Pow(V[0].Y - V[1].Y, 2) + Math.Pow(V[0].Z - V[1].Z, 2)); } }
@@ -24,15 +26,12 @@ namespace Topology
         {
             Angle = 360;
             V = new Vertex[] { A, B };
-            Edge = null; Face = null;
         }
-        internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face)
-            : this(A, B)
+        internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face) : this(A, B)
         { this.Edge = Edge; this.Face = Face; }
-        internal HalfEdge(IEnumerable<Vertex> Vertices)
-        { V = Vertices.ToArray(); this.Edge = null; Face = null; }
-        internal HalfEdge(IEnumerable<Vertex> Vertices, Edge Edge, Face Face)
-        { V = Vertices.ToArray(); this.Edge = Edge; this.Face = Face; }
+        internal HalfEdge(IEnumerable<Vertex> Vertices) : this(Vertices.ElementAt(0), Vertices.ElementAt(1)) { }
+        internal HalfEdge(IEnumerable<Vertex> Vertices, Edge Edge, Face Face) : this(Vertices)
+        {this.Edge = Edge; this.Face = Face; }
 
         //**METHODS** //**ACTION**
         public Vector GetVector()
@@ -131,7 +130,9 @@ namespace Topology
             double z = Z - Point.Z;
             return Math.Sqrt(x * x + y * y + z * z);
         }
+        public bool IsAtPoint(Point Point) { return (X == Point.X && Y == Point.Y && Z == Point.Z); }
 
+        //**METHODS**IEQUATABLE
         public override bool Equals(Object Object) { return this.Equals(Object as Vertex); }
         public bool Equals(Vertex Vertex)
         {
@@ -140,18 +141,7 @@ namespace Topology
             if (this.GetType() != Vertex.GetType()) return false;
             return (X == Vertex.X && Y == Vertex.Y && Z == Vertex.Z);
         }
-        public bool IsAtPoint(Point Point) { return (X == Point.X && Y == Point.Y && Z == Point.Z); }
         public override int GetHashCode() { return string.Format("{0}-{1}-{2}", X, Y, Z).GetHashCode(); }
-        public static bool operator ==(Vertex a, Vertex b)
-        {
-            if (Object.ReferenceEquals(a, null))
-            {
-                if (Object.ReferenceEquals(b, null)) return true;
-                return false;
-            }
-            return a.Equals(b);
-        }
-        public static bool operator !=(Vertex a, Vertex b) { return !(a == b); }
     }
 
     public class Edge
@@ -159,6 +149,7 @@ namespace Topology
         //**FIELDS**
         internal HashSet<HalfEdge> E;
         internal double[] N;
+
         //**PROPERTIES** //**QUERY**
         public double Length { get { return E.ElementAt(0).Length; } }
         public string Name { get; set; }
@@ -184,6 +175,7 @@ namespace Topology
         }
         public List<Face> Faces { get { List<Face> F = new List<Face>(E.Count); E.ToList().ForEach(e => F.Add(e.Face)); return F; } }
         public Vertex[] Vertices { get { if (E.Count > 0) return E.ElementAt(0).V; return null; } }
+        
         //**CONSTRUCTOR**
         internal Edge() { E = new HashSet<HalfEdge>(); Name = ""; Angle = new double[]{360}; N = null; }
         internal Edge(IEnumerable<HalfEdge> HalfEdges) : this() { E = new HashSet<HalfEdge>(HalfEdges); Vertices.ForEach(v => v.AddEdge(this)); }
@@ -219,10 +211,7 @@ namespace Topology
         }
         public bool IsAtCurve(Curve Line)
         {
-            Line ln = GetLine();
-            if (ln.IsAlmostEqualTo(Line))
-            { ln.Dispose(); return true; }
-            ln.Dispose(); return false;
+            return (Vertices[0].IsAtPoint(Line.EndPoint) && Vertices[1].IsAtPoint(Line.StartPoint)) || (Vertices[0].IsAtPoint(Line.StartPoint) && Vertices[1].IsAtPoint(Line.EndPoint));
         }
     }
 
@@ -312,10 +301,20 @@ namespace Topology
             SetCS(CS.Origin);
             return this;
         }
+        public void AddParameter(string Name, Object Object)
+        {
+            Parameters.Add(Name, Object);
+        }
+        public Object GetParameter(string Name)
+        {
+            if (Parameters.Keys.Contains(Name)) return Parameters[Name];
+            return null;
+        }
+        
+        //**METHODS**INTERNAL
         internal void SetCS(Point Center)
         {
-            Vector Y = E[E.Count - 1].GetVector();
-            Y = Y.Reverse();
+            Vector Y = E[E.Count - 1].GetVector().Reverse();
             Vector X = E[0].GetVector();
             Vector Z = X.Cross(Y);
             Y = Z.Cross(X);
