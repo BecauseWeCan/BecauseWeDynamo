@@ -57,6 +57,7 @@
     <Compile Include="DXFLibrary\Document.cs" />
     <Compile Include="DXFLibrary\Element.cs" />
     <Compile Include="DXFLibrary\Writer.cs" />
+    <Compile Include="EdgeConnector.cs" />
     <Compile Include="ExportToDXF.cs" />
     <Compile Include="TopologyMesh.cs" />
     <Compile Include="Topology.cs" />

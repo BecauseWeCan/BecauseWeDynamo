@@ -226,7 +226,7 @@ namespace Topology
     public class Face : IDisposable
     {
         //**FIELDS**
-        private bool disposed = false;
+        internal bool disposed = false;
         internal List<HalfEdge> E;
 
         //**PROPERTIES** //**QUERY**
@@ -321,7 +321,7 @@ namespace Topology
             CS = CoordinateSystem.ByOriginVectors(Center, X, Y);
             X.Dispose(); Y.Dispose(); Z.Dispose();
         }
-        public virtual void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+        public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected virtual void Dispose(bool disposing)
         {
             if (disposed) return;
@@ -339,11 +339,8 @@ namespace Topology
         }
     }
 
-    public class Triangle : Face, IDisposable
+    public class Triangle : Face
     {
-        //**FIELDS**
-        private bool disposed = false;
-
         //**PROPERTIES** //**QUERY**
         public Point Circumcenter { get; private set; }
         public Point Incenter { get; private set; }
@@ -387,7 +384,6 @@ namespace Topology
 
 
         //**METHODS** //**ACTION**
-        public override void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
@@ -404,9 +400,6 @@ namespace Topology
     public class Quad : Face
     {
         //**FIELDS**
-        private bool disposed = false;
-
-        public override void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
