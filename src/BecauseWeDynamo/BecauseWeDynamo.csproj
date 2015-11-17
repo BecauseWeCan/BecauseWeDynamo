@@ -57,7 +57,6 @@
     <Compile Include="DXFLibrary\Document.cs" />
     <Compile Include="DXFLibrary\Element.cs" />
     <Compile Include="DXFLibrary\Writer.cs" />
-    <Compile Include="EdgeConnector.cs" />
     <Compile Include="ExportToDXF.cs" />
     <Compile Include="TopologyMesh.cs" />
     <Compile Include="Topology.cs" />
@@ -68,7 +67,7 @@
     <Compile Include="Slicer.cs" />
     <Compile Include="DXFLibrary\TableEntries.cs" />
     <Compile Include="Text.cs" />
-    <Compile Include="TrianglePanel.cs" />
+    <Compile Include="TopologyPanelization.cs" />
     <Compile Include="TriangleRigging.cs" />
     <Compile Include="TopologyRigging.cs" />
     <Compile Include="Unroll.cs" />

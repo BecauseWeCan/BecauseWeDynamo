@@ -8,7 +8,7 @@ using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
 using Text;
 
-namespace Topology
+namespace Topology.Rigging
 {
     public class TriangleVertex: Vertex
     {

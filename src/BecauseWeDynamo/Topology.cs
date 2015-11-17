@@ -27,11 +27,13 @@ namespace Topology
             Angle = 360;
             V = new Vertex[] { A, B };
         }
-        internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face) : this(A, B)
+        internal HalfEdge(Vertex A, Vertex B, Edge Edge, Face Face)
+            : this(A, B)
         { this.Edge = Edge; this.Face = Face; }
         internal HalfEdge(IEnumerable<Vertex> Vertices) : this(Vertices.ElementAt(0), Vertices.ElementAt(1)) { }
-        internal HalfEdge(IEnumerable<Vertex> Vertices, Edge Edge, Face Face) : this(Vertices)
-        {this.Edge = Edge; this.Face = Face; }
+        internal HalfEdge(IEnumerable<Vertex> Vertices, Edge Edge, Face Face)
+            : this(Vertices)
+        { this.Edge = Edge; this.Face = Face; }
 
         //**METHODS** //**ACTION**
         public Vector GetVector()
@@ -147,7 +149,7 @@ namespace Topology
     public class Edge
     {
         //**FIELDS**
-        internal HashSet<HalfEdge> E;
+        internal List<HalfEdge> E;
         internal double[] N;
 
         //**PROPERTIES** //**QUERY**
@@ -175,10 +177,10 @@ namespace Topology
         }
         public List<Face> Faces { get { List<Face> F = new List<Face>(E.Count); E.ToList().ForEach(e => F.Add(e.Face)); return F; } }
         public Vertex[] Vertices { get { if (E.Count > 0) return E.ElementAt(0).V; return null; } }
-        
+
         //**CONSTRUCTOR**
-        internal Edge() { E = new HashSet<HalfEdge>(); Name = ""; Angle = new double[]{360}; N = null; }
-        internal Edge(IEnumerable<HalfEdge> HalfEdges) : this() { E = new HashSet<HalfEdge>(HalfEdges); Vertices.ForEach(v => v.AddEdge(this)); }
+        internal Edge() { E = new List<HalfEdge>(); Name = ""; Angle = new double[] { 360 }; N = null; }
+        internal Edge(IEnumerable<HalfEdge> HalfEdges) : this() { E = new List<HalfEdge>(HalfEdges); Vertices.ForEach(v => v.AddEdge(this)); }
         internal Edge(IEnumerable<HalfEdge> HalfEdges, string Name) : this(HalfEdges) { this.Name = Name; }
 
         //**METHODS** //**ACTION**
@@ -310,7 +312,7 @@ namespace Topology
             if (Parameters.Keys.Contains(Name)) return Parameters[Name];
             return null;
         }
-        
+
         //**METHODS**INTERNAL
         internal void SetCS(Point Center)
         {
@@ -344,6 +346,21 @@ namespace Topology
         //**PROPERTIES** //**QUERY**
         public Point Circumcenter { get; private set; }
         public Point Incenter { get; private set; }
+        public Vector[][] EdgeVectors
+        {
+            get
+            {
+                List<Vector[]> eV = new List<Vector[]>(3);
+                for (int i = 0; i < 3; i++)
+                {
+                    List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[(i + 2) % 3].GetVector().Normalized().Reverse() };
+                    V.Add(V[0].Add(V[1]).Normalized());
+                    V.Add(V[0].Subtract(V[1]).Normalized());
+                    eV.Add(V.ToArray());
+                }
+                return eV.ToArray();
+            }
+        }
         public double[] Angles
         {
             get
