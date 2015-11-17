@@ -265,6 +265,21 @@ namespace Topology
                 return output;
             }
         }
+        public Vector[][] VertexVectors
+        {
+            get
+            {
+                List<Vector[]> eV = new List<Vector[]>(3);
+                for (int i = 0; i < 3; i++)
+                {
+                    List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[(i + 2) % 3].GetVector().Normalized().Reverse() };
+                    V.Add(V[0].Add(V[1]).Normalized());
+                    V.Add(V[0].Subtract(V[1]).Normalized());
+                    eV.Add(V.ToArray());
+                }
+                return eV.ToArray();
+            }
+        }
 
         //**CONSTRUCTOR**
         internal Face() { Name = ""; Parameters = new Dictionary<string, object>(); }
@@ -346,21 +361,6 @@ namespace Topology
         //**PROPERTIES** //**QUERY**
         public Point Circumcenter { get; private set; }
         public Point Incenter { get; private set; }
-        public Vector[][] EdgeVectors
-        {
-            get
-            {
-                List<Vector[]> eV = new List<Vector[]>(3);
-                for (int i = 0; i < 3; i++)
-                {
-                    List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[(i + 2) % 3].GetVector().Normalized().Reverse() };
-                    V.Add(V[0].Add(V[1]).Normalized());
-                    V.Add(V[0].Subtract(V[1]).Normalized());
-                    eV.Add(V.ToArray());
-                }
-                return eV.ToArray();
-            }
-        }
         public double[] Angles
         {
             get

@@ -220,8 +220,6 @@ namespace Topology.Rigging
 
     }
 
-
-
     public class TrianglePanel: IDisposable
     {
         //*PRIVATE**PROPERTIES

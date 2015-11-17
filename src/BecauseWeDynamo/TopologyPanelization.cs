@@ -11,17 +11,19 @@ using Topology;
 
 namespace Topology.Panelization
 {
-    public class TrianglePanel: IDisposable
+    public class TrianglePanel : IDisposable
     {
+        //**FIELDS
         internal double Thickness;
         internal int Direction;
         bool disposed = false;
 
-        //PROPERTIES**QUERY
+        //**PROPERTIES**QUERY
         public Triangle Triangle { get; private set; }
         public Point[][] ArcPoints { get; set; }
-        public Vector[][] EdgeVectors { get; private set; }
+        public Vector[][] VertexVectors { get; private set; }
 
+        //**METHODS**CONSTRUCTOR
         internal TrianglePanel(Triangle Triangle, double Thickness, double MinEdgeOffset, int Direction)
         {
             // initialize
@@ -29,10 +31,10 @@ namespace Topology.Panelization
             this.Direction = Direction;
             this.Triangle = Triangle;
             // edge vectors indexed by triangle vertex
-            EdgeVectors = Triangle.EdgeVectors;
+            VertexVectors = Triangle.VertexVectors;
         }
 
-        //METHODS**ACTION
+        //**METHODS**ACTION
         public PolyCurve GetPanelProfile()
         {
             if (ArcPoints.Equals(null)) return null;
@@ -83,8 +85,8 @@ namespace Topology.Panelization
             {
                 if (Triangle.E[j].Edge.E.Count == 1) continue;
                 Point m = Triangle.E[j].Edge.MidPoint;
-                Vector Y = Triangle.Normal.Cross(EdgeVectors[j][0]);
-                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, EdgeVectors[j][0], Y);
+                Vector Y = Triangle.Normal.Cross(VertexVectors[j][0]);
+                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, VertexVectors[j][0], Y);
                 labels.AddRange(w.display(Scale));
                 m.Dispose(); Y.Dispose(); w.Dispose();
             }
@@ -105,7 +107,7 @@ namespace Topology.Panelization
             if (disposing)
             {
                 if (!ArcPoints.Equals(null)) ArcPoints.ForEach(p => p.ForEach(pt => pt.Dispose()));
-                if (!EdgeVectors.Equals(null)) EdgeVectors.ForEach(v => v.Dispose());
+                if (!VertexVectors.Equals(null)) VertexVectors.ForEach(v => v.Dispose());
             }
             disposed = true;
         }
@@ -117,7 +119,8 @@ namespace Topology.Panelization
         public double EdgeOffset { get; set; }
 
         //CONSTRUCTOR
-        internal TrianglePanelC(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinRadius, int Direction) : base(Triangle, Thickness, MinEdgeOffset, Direction)
+        internal TrianglePanelC(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinRadius, int Direction)
+            : base(Triangle, Thickness, MinEdgeOffset, Direction)
         {
             // edge offsets indexed by triangle halfedge angles
             EdgeOffset = 0.5 * Thickness / Math.Tan(Triangle.MinEdgeAngle * Math.PI / 360);
@@ -139,9 +142,9 @@ namespace Topology.Panelization
             for (int i = 0; i < 3; i++)
             {
                 double rV = r[i] * Math.Tan(Triangle.Angles[i] / 2) - EdgeOffset / Math.Cos(Triangle.Angles[i] / 2);
-                Point a1 = Triangle.VertexPoints[i].Add(EdgeVectors[i][2].Scale(r[i]));
-                Point a0 = a1.Add(EdgeVectors[i][1].Scale(rV)).Subtract(EdgeVectors[i][3].Scale(rV));
-                Point a2 = a1.Add(EdgeVectors[i][0].Scale(rV)).Add(EdgeVectors[i][3].Scale(rV));
+                Point a1 = Triangle.VertexPoints[i].Add(VertexVectors[i][2].Scale(r[i]));
+                Point a0 = a1.Add(VertexVectors[i][1].Scale(rV)).Subtract(VertexVectors[i][3].Scale(rV));
+                Point a2 = a1.Add(VertexVectors[i][0].Scale(rV)).Add(VertexVectors[i][3].Scale(rV));
                 Point[] arc0 = new Point[] { a0, a1, a2 };
                 P.Add(arc0);
             }
@@ -159,10 +162,11 @@ namespace Topology.Panelization
         public double[] EdgeOffset { get; set; }
 
         //CONSTRUCTOR
-        internal TrianglePanelE(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction): base(Triangle,Thickness,MinEdgeOffset,Direction)
+        internal TrianglePanelE(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction)
+            : base(Triangle, Thickness, MinEdgeOffset, Direction)
         {
             // edge offsets indexed by triangle halfedge angles
-            EdgeOffset = new double[] { 0, 0, 0 };
+            EdgeOffset = new double[] { MinEdgeOffset, MinEdgeOffset, MinEdgeOffset };
             for (int i = 0; i < 3; i++)
             {
                 if (Triangle.E[i].Angle == 360) continue;
@@ -178,9 +182,9 @@ namespace Topology.Panelization
                 double sinB = Math.Sin(Triangle.Angles[i] / 2);
                 double tanB = Math.Tan(Triangle.Angles[i] / 2);
                 int j = (i + 2) % 3;
-                Point a0 = Triangle.VertexPoints[i].Add(EdgeVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(EdgeVectors[i][0].Scale(EdgeOffset[j] / sinA));
-                Point a1 = Triangle.VertexPoints[i].Add(EdgeVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(EdgeVectors[i][0].Scale(EdgeOffset[j] / sinA)).Add(EdgeVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
-                Point a2 = Triangle.VertexPoints[i].Add(EdgeVectors[i][0].Scale(EdgeOffset[j] / sinA + CornerRadius / tanB)).Add(EdgeVectors[i][1].Scale(EdgeOffset[i] / sinA));
+                Point a0 = Triangle.VertexPoints[i].Add(VertexVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(VertexVectors[i][0].Scale(EdgeOffset[j] / sinA));
+                Point a1 = Triangle.VertexPoints[i].Add(VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)).Add(VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
+                Point a2 = Triangle.VertexPoints[i].Add(VertexVectors[i][0].Scale(EdgeOffset[j] / sinA + CornerRadius / tanB)).Add(VertexVectors[i][1].Scale(EdgeOffset[i] / sinA));
                 Point[] arc = new Point[] { a0, a1, a2 };
                 P.Add(arc);
             }
@@ -204,7 +208,7 @@ namespace Topology.Panelization
         public List<Vector> Profile { get; private set; }
         public Vector[] Vectors { get; private set; }
 
-        internal EdgeConnector(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness)
+        internal EdgeConnector(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness, double PanelMinOffset)
         {
             //initialize
             Profile = new List<Vector>();
@@ -226,7 +230,8 @@ namespace Topology.Panelization
                     if (Edge.E.IndexOf(e1) == 1) { N1 = N1.Reverse(); Z1 = Z1.Reverse(); }
                     if (Edge.E.IndexOf(e2) == 1) { N2 = N2.Reverse(); Z2 = Z2.Reverse(); }
                 }
-                Inset = Math.Max(Width / 2, (PanelThickness / 2 + Width) / Math.Tan(Edge.Angle[i] * Math.PI / 360));
+                double EdgeOffset = Math.Max(0.5 * PanelThickness / Math.Tan(Edge.Angle[i] * Math.PI / 360), PanelMinOffset / Math.Sin(Edge.Angle[i] * Math.PI / 360) - PanelThickness / Math.Tan(Edge.Angle[i] * Math.PI / 360));
+                Inset = Math.Max(Width / 2 + EdgeOffset, (PanelThickness / 2 + Width) / Math.Tan(Edge.Angle[i] * Math.PI / 360));
                 Vector eN = Edge.Normal[i];
 
                 List<Vector> P1 = new List<Vector>();
@@ -260,7 +265,7 @@ namespace Topology.Panelization
 
 
         //**METHOD**CREATE
-        public static EdgeConnector ByHalfEdge(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness) { return new EdgeConnector(e1, e2, Width, PanelThickness); }
+        public static EdgeConnector ByHalfEdge(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness, double PanelMinOffset) { return new EdgeConnector(e1, e2, Width, PanelThickness, PanelMinOffset); }
 
         //**METHOD**ACTIONS
         public PolyCurve GetConnectorProfile(Point Point)
@@ -295,7 +300,7 @@ namespace Topology.Panelization
             Curves.ForEach(c => c.Dispose());
             return Result;
         }
-        public Surface GetPanelSurface(Point Point)
+        public Surface GetConnectorSurface(Point Point)
         {
             Curve c = GetConnectorProfile(Point);
             if (c.Equals(null)) { c.Dispose(); return null; }
@@ -303,12 +308,12 @@ namespace Topology.Panelization
             c.Dispose();
             return s;
         }
-        public Solid GetPanelSolid(Point Point)
+        public Solid GetConnectorSolid(Point Point)
         {
             Curve c = GetConnectorProfile(Point);
             if (c.Equals(null)) { c.Dispose(); return null; }
-            Point a = c.StartPoint.Add(Vectors[0].Scale(-Width / 2));
-            Point b = c.StartPoint.Add(Vectors[0].Scale(-Width / 2));
+            Point a = c.StartPoint.Add(Vectors[1].Scale(Width / 2));
+            Point b = c.StartPoint.Add(Vectors[3].Scale(Width / 2));
             Line l = Line.ByStartPointEndPoint(a, b);
             Solid s = c.SweepAsSolid(l);
             c.Dispose();
@@ -347,5 +352,11 @@ namespace Topology.Panelization
             }
             disposed = true;
         }
+    }
+
+    public class Panelization
+    {
+        Mesh m;
+
     }
 }
