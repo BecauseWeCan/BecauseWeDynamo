@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
-
+using Topology.Panelization;
 namespace Topology
 {
     public class TriangleMesh : IDisposable
@@ -68,6 +68,7 @@ namespace Topology
                 vtx.ForEach(x => x.Dispose());
                 // create face based on vertices
                 Triangle t = new Triangle(v);
+                t.Name = "t" + (i+1).ToString("D" + 3);
                 Faces.Add(t);
                 // create or find edges
                 for (int j = 0; j < t.E.Count; j++)
@@ -312,45 +313,25 @@ namespace Topology
                 else E0.Add(Edges[i]);
             }
         }
-        public TriangleMesh GetSplineData(Curve[] Start, Curve[] End, Curve[] Lines)
+        public List<EdgeConnector> GetEdgeConnectors(double Width, double PanelThickness, double PanelMinOffset)
         {
-            List<Edge> E = new List<Edge>(Start.Length);
-            List<Curve> Search = new List<Curve>(Lines);
-            Search.RemoveAll(c => Start.Contains(c));
-            Search.RemoveAll(c => End.Contains(c));
-            for (int i = 0; i < Search.Count; i++)
+            List<EdgeConnector> C = new List<EdgeConnector>(E2.Count+E3.Count);
+            E2.ForEach(e => C.Add(new EdgeConnector(e.E[0],e.E[1], Width, PanelThickness, PanelMinOffset)));
+            for (int i = 0; i < E3.Count; i++ )
             {
-                Edge e = GetEdgeAtLine(Search[i]);
-                HalfEdge h;
-                if (e.Equals(null))
-                {
-                    Vertex v1 = GetVertexAtPoint(Lines[i].StartPoint);
-                    Vertex v2 = GetVertexAtPoint(Lines[i].EndPoint);
-                    e = new Edge(new HashSet<HalfEdge> { new HalfEdge(v1, v2), new HalfEdge(v2, v1) });
-                    e.E[0].AddEdge(e);
-                    e.E[1].AddEdge(e);
-                    v1.Edges.Add(e);
-                    v2.Edges.Add(e);
-                }
-                E.Add(e);
-
+                C.Add(new EdgeConnector(E3[i].E[0], E3[i].E[1], Width, PanelThickness, PanelMinOffset));
+                C.Add(new EdgeConnector(E3[i].E[1], E3[i].E[2], Width, PanelThickness, PanelMinOffset));
             }
-            // case zero
-            for (int i = 0; i < Start.Length; i++)
+            return C;
+        }
+        public List<TrianglePanel> GetTrianglePanels(double Thickness, double MinEdgeOffset, double CornerRadius)
+        {
+            List<TrianglePanel> T = new List<TrianglePanel>(Faces.Count);
+            for (int i =0; i< Faces.Count; i++)
             {
-                List<Vertex> V = new List<Vertex>();
-                Edge e0 = GetEdgeAtLine(Start[i]);
-                V.Add(e0.E[0].V[0]);
-                V.Add(e0.E[0].V[1]);
-                HashSet<Edge> H = V[V.Count - 1].Edges;
-                H.IntersectWith(E);
-                V.Add(H.ElementAt(0).GetOtherVertex(V[V.Count - 1]));
-                E.Remove(H.ElementAt(0));
-
-
-
+                T.Add(TrianglePanelE.ByMeshFace(Faces[i],Thickness,MinEdgeOffset,CornerRadius));
             }
-            return this;
+            return T;
         }
 
         //**METHODS**IN PROGRESS
@@ -420,7 +401,46 @@ namespace Topology
             }
             return this;
         }
+        public TriangleMesh GetSplineData(Curve[] Start, Curve[] End, Curve[] Lines)
+        {
+            List<Edge> E = new List<Edge>(Start.Length);
+            List<Curve> Search = new List<Curve>(Lines);
+            Search.RemoveAll(c => Start.Contains(c));
+            Search.RemoveAll(c => End.Contains(c));
+            for (int i = 0; i < Search.Count; i++)
+            {
+                Edge e = GetEdgeAtLine(Search[i]);
+                HalfEdge h;
+                if (e.Equals(null))
+                {
+                    Vertex v1 = GetVertexAtPoint(Lines[i].StartPoint);
+                    Vertex v2 = GetVertexAtPoint(Lines[i].EndPoint);
+                    e = new Edge(new HashSet<HalfEdge> { new HalfEdge(v1, v2), new HalfEdge(v2, v1) });
+                    e.E[0].AddEdge(e);
+                    e.E[1].AddEdge(e);
+                    v1.Edges.Add(e);
+                    v2.Edges.Add(e);
+                }
+                E.Add(e);
 
+            }
+            // case zero
+            for (int i = 0; i < Start.Length; i++)
+            {
+                List<Vertex> V = new List<Vertex>();
+                Edge e0 = GetEdgeAtLine(Start[i]);
+                V.Add(e0.E[0].V[0]);
+                V.Add(e0.E[0].V[1]);
+                HashSet<Edge> H = V[V.Count - 1].Edges;
+                H.IntersectWith(E);
+                V.Add(H.ElementAt(0).GetOtherVertex(V[V.Count - 1]));
+                E.Remove(H.ElementAt(0));
+
+
+
+            }
+            return this;
+        }
 
         //**METHODS**DISPOSE
         public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }

@@ -10,7 +10,7 @@ using Text;
 
 namespace TriangleRigging
 {
-    public class TriangleEdgeComparer : IEqualityComparer<TriangleEdge>
+     class TriangleEdgeComparer : IEqualityComparer<TriangleEdge>
     {
         public bool Equals(TriangleEdge e1, TriangleEdge e2)
         {
@@ -22,7 +22,7 @@ namespace TriangleRigging
         }
     }
 
-    public class TriangleEdgeConnector
+     class TriangleEdgeConnector
     {
         double radius;
         double spacing;
@@ -75,7 +75,7 @@ namespace TriangleRigging
         }
     }
 
-    public class TriangleSpline
+     class TriangleSpline
     {
         //**PROPERTIES
         List<TriangleEdge> edges;
@@ -189,7 +189,7 @@ namespace TriangleRigging
         }
     }
 
-    public class TriangleVertex : IDisposable
+     class TriangleVertex : IDisposable
     {
         private List<Triangle> Triangles;
         private List<TriangleEdge> Edges;
@@ -252,7 +252,7 @@ namespace TriangleRigging
         }
     }
 
-    public class TriangleEdge : IDisposable
+     class TriangleEdge : IDisposable
     {
 
         IEqualityComparer<TriangleEdge> almostequal;
@@ -381,7 +381,7 @@ namespace TriangleRigging
 
     }
 
-    public class Triangle : IDisposable
+     class Triangle : IDisposable
     {
         //*PRIVATE**PROPERTIES
         public Dictionary<string, Object> Parameters;
@@ -635,7 +635,7 @@ namespace TriangleRigging
         }
     }
 
-    public class TriangleRigging : IDisposable
+     class TriangleRigging : IDisposable
     {
         //**GLOBAL**VARIABLES
         private Dictionary<Point, TriangleVertex> Vertices;
@@ -1084,6 +1084,5 @@ namespace TriangleRigging
 
 
     } // end class
-
 
 }

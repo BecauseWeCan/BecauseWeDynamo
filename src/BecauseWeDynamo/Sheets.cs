@@ -6,9 +6,8 @@ using Autodesk.DesignScript.Runtime;
 
 namespace Fabrication
 {
-    public class Sheets : IDisposable
+    public class Sheets
     {
-        bool disposed = false;
         public List<List<PolyCurve>> Curves { get; set; }
         public List<List<Circle>> Circles { get; set; }
         public List<CoordinateSystem> CoordinateSystem { get; set; }
@@ -103,33 +102,15 @@ namespace Fabrication
                     CS = Autodesk.DesignScript.Geometry.CoordinateSystem.ByOrigin(X * i, Y);
                     temp.Add((Circle)Circles[index[i]][j].Transform(CoordinateSystem[index[i]], CS));
                 }
+                result.Add(temp);
             }
             if (CS != null) CS.Dispose();
             return result;
         }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposed) return;
-            if (disposing)
-            {
-                if (Curves != null) Curves.ForEach(a => a.ForEach(c => c.Dispose()));
-                if (Circles != null) Circles.ForEach(a => a.ForEach(c => c.Dispose()));
-            }
-            disposed = true;
-        }
     }
 
-    public class Sheet<T> : IDisposable
-        where T : Curve
+    public class Sheet<T> where T : Curve
     {
-        bool disposed = false;
         public List<List<T>> Curves { get; set; }
         public List<CoordinateSystem> CoordinateSystem { get; set; }
 
@@ -148,13 +129,6 @@ namespace Fabrication
         /// <param name="CS">list of polycurves coordinate system</param>
         /// <returns>sheet object</returns>
         public static Sheet<T> ByCurvesAndCS(List<List<T>> Curves, List<CoordinateSystem> CS) { return new Sheet<T>(Curves, CS); }
-        public static Sheet<PolyCurve> ByCurvesAndCS(List<List<Curve>> Curves, List<CoordinateSystem> CS)
-        {
-            List<List<PolyCurve>> result = new List<List<PolyCurve>>(Curves.Count);
-            for (int i = 0; i < Curves.Count; i++) for (int j = 0; j < Curves[i].Count; j++)
-                    result[i][j] = PolyCurve.ByJoinedCurves(new List<Curve> { Curves[i][j] });
-            return new Sheet<PolyCurve>(result, CS);
-        }
 
         //**ACTIONS
         /// <summary>
@@ -168,30 +142,18 @@ namespace Fabrication
         {
             CoordinateSystem CS = null;
             List<List<T>> result = new List<List<T>>(index.Count);
-            for (int i = 0; i < index.Count; i++) for (int j = 0; j < Curves[index[i]].Count; j++)
+            for (int i = 0; i < index.Count; i++)
+            {
+                List<T> temp = new List<T>();
+                for (int j = 0; j < Curves[index[i]].Count; j++)
                 {
                     CS = Autodesk.DesignScript.Geometry.CoordinateSystem.ByOrigin(X * i, Y);
-                    result[i][j] = (T)Curves[index[i]][j].Transform(CoordinateSystem[index[i]], CS);
+                    temp.Add((T)Curves[index[i]][j].Transform(CoordinateSystem[index[i]], CS));
                 }
+                result.Add(temp);
+            }
             if (CS != null) CS.Dispose();
             return result;
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposed) return;
-            if (disposing)
-            {
-                Curves.ForEach(a => a.ForEach(c => c.Dispose()));
-                CoordinateSystem.ForEach(c => c.Dispose());
-            }
-            disposed = true;
         }
     }
 }

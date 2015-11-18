@@ -22,6 +22,7 @@ namespace Topology.Panelization
         public Triangle Triangle { get; private set; }
         public Point[][] ArcPoints { get; set; }
         public Vector[][] VertexVectors { get; private set; }
+        public List<Circle> Holes { get; set; }
 
         //**METHODS**CONSTRUCTOR
         internal TrianglePanel(Triangle Triangle, double Thickness, double MinEdgeOffset, int Direction)
@@ -30,6 +31,7 @@ namespace Topology.Panelization
             this.Thickness = Thickness;
             this.Direction = Direction;
             this.Triangle = Triangle;
+            Holes = new List<Circle>();
             // edge vectors indexed by triangle vertex
             VertexVectors = Triangle.VertexVectors;
         }
@@ -84,17 +86,37 @@ namespace Topology.Panelization
             for (int j = 0; j < Triangle.E.Count; j++)
             {
                 if (Triangle.E[j].Edge.E.Count == 1) continue;
-                Point m = Triangle.E[j].Edge.MidPoint;
-                Vector Y = Triangle.Normal.Cross(VertexVectors[j][0]);
+                Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
+                Vector Y = VertexVectors[j][0].Cross(Triangle.Normal);
                 Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, VertexVectors[j][0], Y);
                 labels.AddRange(w.display(Scale));
                 m.Dispose(); Y.Dispose(); w.Dispose();
             }
             return labels.ToArray();
         }
-        public Circle[] GetHoles()
+        public PolyCurve[] GetLabels(double Scale, PanelSystem P)
         {
-            return null;
+            List<PolyCurve> labels = new List<PolyCurve>();
+            for (int j = 0; j < Triangle.E.Count; j++)
+            {
+                if (!P.E.ContainsKey(Triangle.E[j].Edge)) continue;
+                Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
+                Vector Y = VertexVectors[j][0].Cross(Triangle.Normal);
+                m = m.Subtract(Y.Scale(P.E[Triangle.Edges[j]][0].Inset + 2 * P.E[Triangle.Edges[j]][0].Width));
+                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, VertexVectors[j][0], Y);
+                labels.AddRange(w.display(Scale));
+                m.Dispose(); Y.Dispose(); w.Dispose();
+            }
+            Point c = Triangle.Center;
+            Vector N = VertexVectors[0][0].Cross(Triangle.Normal);
+            Word W = Word.ByStringOriginVectors(Triangle.Name, c, VertexVectors[0][0], N);
+            labels.AddRange(W.display(2*Scale));
+            W.Dispose();
+            return labels.ToArray();
+        }
+        public void AddHoles(Point Point, double Radius)
+        {
+            Holes.Add(Circle.ByCenterPointRadiusNormal(Point, Radius, Triangle.Normal));
         }
         public void Dispose()
         {
@@ -108,6 +130,7 @@ namespace Topology.Panelization
             {
                 if (!ArcPoints.Equals(null)) ArcPoints.ForEach(p => p.ForEach(pt => pt.Dispose()));
                 if (!VertexVectors.Equals(null)) VertexVectors.ForEach(v => v.Dispose());
+                if (!Holes.Equals(null)) Holes.ForEach(h => h.Dispose());
             }
             disposed = true;
         }
@@ -230,26 +253,32 @@ namespace Topology.Panelization
                     if (Edge.E.IndexOf(e1) == 1) { N1 = N1.Reverse(); Z1 = Z1.Reverse(); }
                     if (Edge.E.IndexOf(e2) == 1) { N2 = N2.Reverse(); Z2 = Z2.Reverse(); }
                 }
-                double EdgeOffset = Math.Max(0.5 * PanelThickness / Math.Tan(Edge.Angle[i] * Math.PI / 360), PanelMinOffset / Math.Sin(Edge.Angle[i] * Math.PI / 360) - PanelThickness / Math.Tan(Edge.Angle[i] * Math.PI / 360));
-                Inset = Math.Max(Width / 2 + EdgeOffset, (PanelThickness / 2 + Width) / Math.Tan(Edge.Angle[i] * Math.PI / 360));
-                Vector eN = Edge.Normal[i];
+                double Angle = Edge.Angle[0];
+                Vector eN = Edge.Normal[i].Normalized();
+                if (Edge.E.Count > 2)
+                {
+                    Angle = Math.Min(Edge.Angle[0], Edge.Angle[1]);
+                    if (i==0) eN = eN.Reverse();
+                }
+                double EdgeOffset = Math.Max(0.5 * PanelThickness / Math.Tan(Angle * Math.PI / 360), PanelMinOffset / Math.Sin(Angle * Math.PI / 360) - PanelThickness / Math.Tan(Angle * Math.PI / 360));
+                Inset = Math.Max(Width / 2 + EdgeOffset, (PanelThickness / 2 + Width) / Math.Tan(Angle * Math.PI / 360));
 
                 List<Vector> P1 = new List<Vector>();
                 List<Vector> P2 = new List<Vector>();
-                P1.Add(eN.Scale(-PanelThickness / 2 / Math.Sin(Edge.Angle[0] * Math.PI / 360)));
-                P1.Add(P1[0].Add(N1.Cross(Z1).Normalized().Scale(Inset + 1.5 * Width)));
+                P1.Add(eN.Scale(-PanelThickness / 2 / Math.Sin(Edge.Angle[i] * Math.PI / 360)));
+                P1.Add(N1.Scale(-PanelThickness/2).Add(N1.Cross(Z1).Normalized().Scale(Inset + 1.5 * Width)));
                 P1.Add(P1[1].Add(N1.Scale(-Width / 2)));
                 P1.Add(P1[2].Add(Z1.Cross(N1).Normalized().Scale(Width / 2)));
-                if (Edge.Angle[0] < 180) P1.Add(P1[3].Add(eN.Scale(-Width / 2)));
+                if (Edge.Angle[i] < 180) P1.Add(P1[3].Add(eN.Scale(-Width / 2)));
                 else
                 {
                     P1.Add(P1[3].Add(N1.Scale(-Width / 2)));
-                    P1.Add(P1[0].Add(eN.Scale(-Width / Math.Sin(Edge.Angle[0] * Math.PI / 360))));
+                    P1.Add(P1[0].Add(eN.Scale(-Width / Math.Sin(Edge.Angle[i] * Math.PI / 360))));
                 }
-                P2.Add(P1[0].Add(N2.Cross(Z2).Scale(Inset + 1.5 * Width)));
+                P2.Add(N2.Scale(-PanelThickness / 2).Add(N2.Cross(Z2).Normalized().Scale(Inset + 1.5 * Width)));
                 P2.Add(P2[0].Add(N2.Scale(-Width / 2)));
-                P2.Add(P2[1].Add(Z2.Cross(N2).Scale(Width / 2)));
-                if (Edge.Angle[0] < 180) P2.Add(P2[2].Add(eN.Scale(-Width / 2)));
+                P2.Add(P2[1].Add(Z2.Cross(N2).Normalized().Scale(Width / 2)));
+                if (Edge.Angle[i] < 180) P2.Add(P2[2].Add(eN.Scale(-Width / 2)));
                 else P2.Add(P2[2].Add(N2.Scale(-Width / 2)));
                 P2.Reverse();
                 Profile.AddRange(P1);
@@ -266,6 +295,15 @@ namespace Topology.Panelization
 
         //**METHOD**CREATE
         public static EdgeConnector ByHalfEdge(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness, double PanelMinOffset) { return new EdgeConnector(e1, e2, Width, PanelThickness, PanelMinOffset); }
+        public static Object ByEdge(Edge e, double Width, double PanelThickness, double PanelMinOffset)
+        {
+            if (e.E.Count < 2) return null;
+            if (e.E.Count == 2) return new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset);
+            EdgeConnector[] result = {new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset),
+                                         new EdgeConnector(e.E[1], e.E[2], Width, PanelThickness, PanelMinOffset) };
+            return result;
+        }
+
 
         //**METHOD**ACTIONS
         public PolyCurve GetConnectorProfile(Point Point)
@@ -325,7 +363,7 @@ namespace Topology.Panelization
         public PolyCurve[] GetEdgeLabels(Point Point, double Scale = 1)
         {
             List<PolyCurve> labels = new List<PolyCurve>();
-            Vector X = Vectors[0].Cross(Vectors[1]).Normalized();
+            Vector X = Vectors[1].Cross(Vectors[0]).Normalized();
             Word w = Word.ByStringOriginVectors(Edge.Name, Point.Add(Profile[1].Subtract(Profile[0]).Scale(1 / 2)), X, Vectors[0]);
             labels.AddRange(w.display(Scale * Width / 32));
             X.Dispose(); w.Dispose();
@@ -354,9 +392,75 @@ namespace Topology.Panelization
         }
     }
 
-    public class Panelization
+    public class PanelSystem : IDisposable
     {
-        Mesh m;
+        //**FIELDS
+        bool disposed = false;
+        internal Dictionary<Triangle, TrianglePanel> T;
+        internal Dictionary<Edge, EdgeConnector[]> E;
+        internal TriangleMesh M;
 
+        //**PROPERTIES**QUERY
+        public List<TrianglePanel> Panels { get { return T.Values.ToList(); } }
+        public List<EdgeConnector[]> Connectors { get { return E.Values.ToList(); } }
+
+        //**CONSTRUCTOR
+        internal PanelSystem(TriangleMesh Mesh) { M = Mesh; }
+        internal PanelSystem(TriangleMesh Mesh, double Width, double Thickness, double MinEdgeOffset, double CornerRadius, double HoleRadius) : this(Mesh)
+        { GetEdgeConnectors(Width, Thickness, MinEdgeOffset); GetTrianglePanels(Thickness, MinEdgeOffset, CornerRadius, HoleRadius); }
+
+        //**METHODS**CREATE
+        public static PanelSystem ByMesh(TriangleMesh Mesh, double Width, double Thickness, double MinEdgeOffset, double CornerRadius, double HoleRadius) 
+        { return new PanelSystem(Mesh,Width,Thickness,MinEdgeOffset,CornerRadius,HoleRadius); }
+
+        public List<EdgeConnector[]> GetEdgeConnectors(double Width, double PanelThickness, double PanelMinOffset)
+        {
+            E = new Dictionary<Edge, EdgeConnector[]>(M.E2.Count + M.E3.Count);
+            M.E2.ForEach(e => E.Add(e, new EdgeConnector[] { new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset) }));
+            for (int i = 0; i < M.E3.Count; i++)
+                E.Add(M.E3[i], new EdgeConnector[]{
+                    new EdgeConnector(M.E3[i].E[0], M.E3[i].E[1], Width, PanelThickness, PanelMinOffset),
+                    new EdgeConnector(M.E3[i].E[1], M.E3[i].E[2], Width, PanelThickness, PanelMinOffset)});
+            return Connectors;
+        }
+        public List<TrianglePanel> GetTrianglePanels(double Thickness, double MinEdgeOffset, double CornerRadius, double HoleRadius)
+        {
+            T = new Dictionary<Triangle, TrianglePanel>(M.Faces.Count);
+            for (int i = 0; i < M.Faces.Count; i++)
+            {
+                TrianglePanel t = TrianglePanelE.ByMeshFace(M.Faces[i], Thickness, MinEdgeOffset, CornerRadius);
+                T.Add(M.Faces[i],t);
+                for (int j = 0; j < M.Faces[i].Edges.Length; j++)
+                    if (E.ContainsKey(M.Faces[i].Edges[j]))
+                    {
+                        Point p = M.Faces[i].Edges[j].MidPoint;
+                        Vector Y = M.Faces[i].Normal.Cross(M.Faces[i].E[j].GetVector()).Normalized();
+                        p = p.Add(Y.Scale(E[M.Faces[i].Edges[j]][0].Inset));
+                        t.AddHoles(p, HoleRadius);
+                        p = p.Add(Y.Scale(E[M.Faces[i].Edges[j]][0].Width));
+                        t.AddHoles(p, HoleRadius);
+                        p.Dispose();
+                        Y.Dispose();
+                    }
+            }
+            return Panels;
+        }
+
+        //**METHODS**DISPOSE
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                if (!Panels.Equals(null)) Panels.ForEach(t => t.Dispose());
+                if (!E.Equals(null)) E.Values.ToArray().ForEach(e => e.Dispose());
+            }
+            disposed = true;
+        }
     }
 }
