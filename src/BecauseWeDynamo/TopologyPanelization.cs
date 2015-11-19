@@ -420,23 +420,52 @@ namespace Topology.Panelization
             X.Dispose(); Y.Dispose(); w.Dispose();
             return label;
         }
+        public CoordinateSystem GetCS(Point Point)
+        {
+            if (!(Profile.Count > 8)) return null;
+            Point p4 = Point.Add(Profile[4]);
+            Point p5 = Point.Add(Profile[5]);
+            Point pt = p5;
+            if (Profile.Count == 9) pt = Point.ByCoordinates(p4.X / 2 + p5.X / 2, p4.Y / 2 + p5.Y / 2, p4.Z / 2 + p5.Z / 2);
+            Vector X = Vectors[3].Subtract(Vectors[0]).Normalized();
+            Vector Y = Vectors[6].Reverse().Normalized();
+            if (Angle > 180)
+            {
+                pt = Point.Add(Profile[0]);
+                X = X.Reverse();
+                Y = Y.Reverse();
+            }
+            CoordinateSystem CS = CoordinateSystem.ByOriginVectors(pt, X, Y);
+            p4.Dispose(); p5.Dispose(); pt.Dispose();
+            X.Dispose(); Y.Dispose();
+            return CS;
+        }
         public void AddPockets(Point Point, double Radius)
         {
-            double a = Angle;
-            if (Edge.Angle.Length > 1) a = Math.Min(Edge.Angle[0], Edge.Angle[1]);
+            int i = Edge.E.IndexOf(HalfEdges[0]) + Edge.E.IndexOf(HalfEdges[1]);
+            int j =0;
+            if (i>2) j=1;
+            double a = Edge.Angle[j];
             Point p1a = Point.Add(Profile[3]);
             Point p1b = p1a.Subtract(Vectors[1].Normalized().Scale(Width));
             Point p2a = Point.Add(Profile[Profile.Count - 3]);
             Point p2b = p2a.Subtract(Vectors[4].Normalized().Scale(Width));
-            if (a == Angle || Edge.Angle[1] == a)
+            if (a == Angle)
             {
                 Holes.Add(Circle.ByCenterPointRadiusNormal(p1a, Radius, Vectors[5]));
                 Holes.Add(Circle.ByCenterPointRadiusNormal(p1b, Radius, Vectors[5]));
+                Holes.Add(Circle.ByCenterPointRadiusNormal(p2a, Radius, Vectors[5]));
+                Holes.Add(Circle.ByCenterPointRadiusNormal(p2b, Radius, Vectors[5]));
             }
-            if (a == Angle || Edge.Angle[0] == a)
+            else if (j == 1)
             {
                 Holes.Add(Circle.ByCenterPointRadiusNormal(p2a, Radius, Vectors[5]));
                 Holes.Add(Circle.ByCenterPointRadiusNormal(p2b, Radius, Vectors[5]));
+            }
+            else if (j == 0)
+            {
+                Holes.Add(Circle.ByCenterPointRadiusNormal(p1a, Radius, Vectors[5]));
+                Holes.Add(Circle.ByCenterPointRadiusNormal(p1b, Radius, Vectors[5]));
             }
             p1a.Dispose(); p1b.Dispose(); p2a.Dispose(); p2b.Dispose();
         }
