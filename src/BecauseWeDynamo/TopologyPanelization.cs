@@ -414,10 +414,16 @@ namespace Topology.Panelization
                 X = X.Reverse();
                 Y = Y.Reverse();
             }
+            Surface s = GetConnectorSurface(Point);
+            CoordinateSystem cs = s.CoordinateSystemAtParameter(0.5, 0.5);
+            Vector Z1 = cs.ZAxis.Normalized();
+            Vector Z2 = X.Cross(Y).Normalized();
+            if (!Z1.IsAlmostEqualTo(Z2)) X = X.Reverse();
             Word w = Word.ByStringOriginVectors(Edge.Name, pt, X, Y);
             PolyCurve[] label = w.display(Scale * Width).ToArray();
             p4.Dispose(); p5.Dispose(); pt.Dispose();
-            X.Dispose(); Y.Dispose(); w.Dispose();
+            X.Dispose(); Y.Dispose(); Z1.Dispose(); Z2.Dispose();
+            s.Dispose(); cs.Dispose(); w.Dispose();
             return label;
         }
         public void AddPockets(Point Point, double Radius)

@@ -68,7 +68,7 @@ namespace Topology
                 vtx.ForEach(x => x.Dispose());
                 // create face based on vertices
                 Triangle t = new Triangle(v);
-                t.Name = "t" + (i+1).ToString("D" + 3);
+                t.Name = "t" + (i+1).ToString("D" + 4);
                 Faces.Add(t);
                 // create or find edges
                 for (int j = 0; j < t.E.Count; j++)
@@ -90,7 +90,7 @@ namespace Topology
                     if (!edgeFound)
                     {
                         Edge e = new Edge();
-                        e.Name = "e" + eCount.ToString("D" + 3);
+                        e.Name = eCount.ToString("D" + 3);
                         e.E.Add(t.E[j]);
                         t.E[j].AddEdge(e);
                         Edges.Add(e);
