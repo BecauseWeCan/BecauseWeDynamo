@@ -329,7 +329,7 @@ namespace Topology
             List<TrianglePanel> T = new List<TrianglePanel>(Faces.Count);
             for (int i =0; i< Faces.Count; i++)
             {
-                T.Add(TrianglePanelE.ByMeshFace(Faces[i],Thickness,MinEdgeOffset,CornerRadius));
+                T.Add(TrianglePanelMinEdgeGap.ByMeshFace(Faces[i],Thickness,MinEdgeOffset,CornerRadius));
             }
             return T;
         }

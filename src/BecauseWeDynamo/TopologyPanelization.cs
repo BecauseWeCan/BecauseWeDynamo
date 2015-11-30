@@ -19,9 +19,19 @@ namespace Topology.Panelization
         bool disposed = false;
 
         //**PROPERTIES**QUERY
+        /// <summary>
+        /// reference triangular face on mesh
+        /// </summary>
         public Triangle Triangle { get; private set; }
+        /// <summary>
+        /// point data for panel;
+        /// i: index that refers to the vertex
+        /// j: index of arc points at vertex with order inherited by triangle face (cc)
+        /// </summary>
         public Point[][] ArcPoints { get; set; }
-        public Vector[][] VertexVectors { get; private set; }
+        /// <summary>
+        /// hole information set by panelization of mesh
+        /// </summary>
         public List<Circle> Holes { get; set; }
 
         //**METHODS**CONSTRUCTOR
@@ -32,11 +42,13 @@ namespace Topology.Panelization
             this.Direction = Direction;
             this.Triangle = Triangle;
             Holes = new List<Circle>();
-            // edge vectors indexed by triangle vertex
-            VertexVectors = Triangle.VertexVectors;
         }
 
         //**METHODS**ACTION
+        /// <summary>
+        /// returns profile curve of panel as single Polycurve
+        /// </summary>
+        /// <returns>Polycurve based on Arcpoints</returns>
         public PolyCurve GetPanelProfile()
         {
             if (ArcPoints.Equals(null)) return null;
@@ -52,6 +64,10 @@ namespace Topology.Panelization
             Curves.ForEach(c => c.Dispose());
             return Profile;
         }
+        /// <summary>
+        /// returns flat panel on mesh face as single Surface
+        /// </summary>
+        /// <returns>Surface by Polycurve patch</returns>
         public Surface GetPanelSurface()
         {
             Curve c = GetPanelProfile();
@@ -60,6 +76,10 @@ namespace Topology.Panelization
             c.Dispose();
             return s;
         }
+        /// <summary>
+        /// returns solid panel based on panel profile as single Solid
+        /// </summary>
+        /// <returns>Solid by Polycurve sweep</returns>
         public Solid GetPanelSolid()
         {
             Curve c = GetPanelProfile();
@@ -80,25 +100,60 @@ namespace Topology.Panelization
             l.Dispose();
             return s;
         }
+        /// <summary>
+        /// returns solid panel with holes based on flat panel as single Solid
+        /// </summary>
+        /// <returns>Solid by Surface Thickening</returns>
         public Solid GetPanelSolidHole()
         {
             Surface s = GetPanelSurface();
-            Geometry[] G0 = s.Split(Holes[0]);
-            Geometry[] G1 = G0[1].Split(Holes[1]);
-            Geometry[] G2 = G1[1].Split(Holes[2]);
-            Geometry[] G3 = G2[1].Split(Holes[3]);
-            Geometry[] G4 = G3[1].Split(Holes[4]);
-            Geometry[] G5 = G4[1].Split(Holes[5]);
-            Solid S = (G5[1] as Surface).Thicken(Thickness);
-            s.Dispose();
-            G0.ForEach(g => g.Dispose());
-            G1.ForEach(g => g.Dispose());
-            G2.ForEach(g => g.Dispose());
-            G3.ForEach(g => g.Dispose());
-            G4.ForEach(g => g.Dispose());
-            G5.ForEach(g => g.Dispose());
+            Solid S = null;
+            if (Holes.Count > 5)
+            {
+                Geometry[] G0 = s.Split(Holes[0]);
+                Geometry[] G1 = G0[1].Split(Holes[1]);
+                Geometry[] G2 = G1[1].Split(Holes[2]);
+                Geometry[] G3 = G2[1].Split(Holes[3]);
+                Geometry[] G4 = G3[1].Split(Holes[4]);
+                Geometry[] G5 = G4[1].Split(Holes[5]);
+                S = (G5[1] as Surface).Thicken(Thickness);
+                s.Dispose();
+                G0.ForEach(g => g.Dispose());
+                G1.ForEach(g => g.Dispose());
+                G2.ForEach(g => g.Dispose());
+                G3.ForEach(g => g.Dispose());
+                G4.ForEach(g => g.Dispose());
+                G5.ForEach(g => g.Dispose());
+            }
+            else if (Holes.Count > 3)
+            {
+                Geometry[] G0 = s.Split(Holes[0]);
+                Geometry[] G1 = G0[1].Split(Holes[1]);
+                Geometry[] G2 = G1[1].Split(Holes[2]);
+                Geometry[] G3 = G2[1].Split(Holes[3]);
+                S = (G3[1] as Surface).Thicken(Thickness);
+                s.Dispose();
+                G0.ForEach(g => g.Dispose());
+                G1.ForEach(g => g.Dispose());
+                G2.ForEach(g => g.Dispose());
+                G3.ForEach(g => g.Dispose());
+            }
+            else if (Holes.Count > 1)
+            {
+                Geometry[] G0 = s.Split(Holes[0]);
+                Geometry[] G1 = G0[1].Split(Holes[1]);
+                S = (G1[1] as Surface).Thicken(Thickness);
+                s.Dispose();
+                G0.ForEach(g => g.Dispose());
+                G1.ForEach(g => g.Dispose());
+            }
             return S;
         }
+        /// <summary>
+        /// returns edge labels at edge on triangular mesh face backside as an Array of Polycurves
+        /// </summary>
+        /// <param name="Scale">Scale = (letter height)/4; in mesh units</param>
+        /// <returns>Array of Polycurves</returns>
         public PolyCurve[] GetEdgeLabels(double Scale)
         {
             List<PolyCurve> labels = new List<PolyCurve>();
@@ -106,47 +161,67 @@ namespace Topology.Panelization
             {
                 if (Triangle.E[j].Edge.E.Count == 1) continue;
                 Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
-                Vector Y = VertexVectors[j][0].Cross(Triangle.Normal);
-                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, VertexVectors[j][0], Y);
+                Vector Y = Triangle.VertexVectors[j][0].Cross(Triangle.Normal);
+                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, Triangle.VertexVectors[j][0], Y);
                 labels.AddRange(w.display(Scale));
                 m.Dispose(); Y.Dispose(); w.Dispose();
             }
             return labels.ToArray();
         }
-        public PolyCurve[] GetLabels(double Scale, PanelSystem P)
+        /// <summary>
+        /// returns edge labels at edge connector and triangle label at triangle center on triangular mesh face backside as an Array of Polycurves
+        /// </summary>
+        /// <param name="Scale">Scale = (letter height)/4; in mesh units</param>
+        /// <param name="PanelSystem">parent PanelSystem of Panel</param>
+        /// <returns>Array of Polycurve</returns>
+        public PolyCurve[] GetLabels(double Scale, PanelSystem PanelSystem)
         {
             List<PolyCurve> labels = new List<PolyCurve>();
             for (int j = 0; j < Triangle.E.Count; j++)
             {
-                if (!P.E.ContainsKey(Triangle.E[j].Edge)) continue;
+                if (!PanelSystem.E.ContainsKey(Triangle.E[j].Edge)) continue;
                 Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
-                Vector Y = VertexVectors[j][0].Cross(Triangle.Normal);
-                m = m.Subtract(Y.Scale(P.E[Triangle.Edges[j]][0].Inset + 2 * P.E[Triangle.Edges[j]][0].Width));
-                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, VertexVectors[j][0], Y);
+                Vector Y = Triangle.VertexVectors[j][0].Cross(Triangle.Normal);
+                m = m.Subtract(Y.Scale(PanelSystem.E[Triangle.Edges[j]][0].Inset + 2 * PanelSystem.E[Triangle.Edges[j]][0].Width));
+                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, Triangle.VertexVectors[j][0], Y);
                 labels.AddRange(w.display(Scale));
                 m.Dispose(); Y.Dispose(); w.Dispose();
             }
             Point c = Triangle.Center;
-            Vector N = VertexVectors[0][0].Cross(Triangle.Normal);
-            Word W = Word.ByStringOriginVectors(Triangle.Name, c, VertexVectors[0][0], N);
+            Vector N = Triangle.VertexVectors[0][0].Cross(Triangle.Normal);
+            Word W = Word.ByStringOriginVectors(Triangle.Name, c, Triangle.VertexVectors[0][0], N);
             labels.AddRange(W.display(2 * Scale));
             c.Dispose(); N.Dispose(); W.Dispose();
             return labels.ToArray();
         }
+        /// <summary>
+        /// returns triangle label at triangle center on triangular mesh face frontside as an Array of Polycurves
+        /// </summary>
+        /// <param name="Scale"></param>
+        /// <returns></returns>
         public PolyCurve[] GetTriangleLabel(double Scale)
         {
             List<PolyCurve> labels = new List<PolyCurve>();
             Point c = Triangle.Center;
-            Vector X = VertexVectors[0][0].Reverse();
-            Vector Y = VertexVectors[0][0].Cross(Triangle.Normal);
+            Vector X = Triangle.VertexVectors[0][0].Reverse();
+            Vector Y = Triangle.VertexVectors[0][0].Cross(Triangle.Normal);
             Word W = Word.ByStringOriginVectors(Triangle.Name, c, X, Y);
             labels.AddRange(W.display(Scale));
             c.Dispose(); X.Dispose(); Y.Dispose(); W.Dispose();
             return labels.ToArray();
         }
-        public void AddHoles(Point Point, double Radius)
+        /// <summary>
+        /// add hole with center at closest point on panel to input point with given radius
+        /// </summary>
+        /// <param name="Point">Point is center of hole</param>
+        /// <param name="Radius">Radius of hole</param>
+        public void AddHole(Point Point, double Radius)
         {
-            Holes.Add(Circle.ByCenterPointRadiusNormal(Point, Radius, Triangle.Normal));
+            Surface s = GetPanelSurface();
+            Point p = s.ClosestPointTo(Point);
+            Holes.Add(Circle.ByCenterPointRadiusNormal(p, Radius, Triangle.Normal));
+            s.Dispose();
+            p.Dispose();
         }
         public void Dispose()
         {
@@ -159,20 +234,19 @@ namespace Topology.Panelization
             if (disposing)
             {
                 if (!ArcPoints.Equals(null)) ArcPoints.ForEach(p => p.ForEach(pt => pt.Dispose()));
-                if (!VertexVectors.Equals(null)) VertexVectors.ForEach(v => v.Dispose());
                 if (!Holes.Equals(null)) Holes.ForEach(h => h.Dispose());
             }
             disposed = true;
         }
     }
 
-    public class TrianglePanelC : TrianglePanel
+    public class TrianglePanelEqualEdgeOffset : TrianglePanel
     {
         //PROPERTIES
         public double EdgeOffset { get; set; }
 
         //CONSTRUCTOR
-        internal TrianglePanelC(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinRadius, int Direction)
+        internal TrianglePanelEqualEdgeOffset(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinRadius, int Direction)
             : base(Triangle, Thickness, MinEdgeOffset, Direction)
         {
             // edge offsets indexed by triangle halfedge angles
@@ -195,9 +269,9 @@ namespace Topology.Panelization
             for (int i = 0; i < 3; i++)
             {
                 double rV = r[i] * Math.Tan(Triangle.Angles[i] / 2) - EdgeOffset / Math.Cos(Triangle.Angles[i] / 2);
-                Point a1 = Triangle.VertexPoints[i].Add(VertexVectors[i][2].Scale(r[i]));
-                Point a0 = a1.Add(VertexVectors[i][1].Scale(rV)).Subtract(VertexVectors[i][3].Scale(rV));
-                Point a2 = a1.Add(VertexVectors[i][0].Scale(rV)).Add(VertexVectors[i][3].Scale(rV));
+                Point a1 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][2].Scale(r[i]));
+                Point a0 = a1.Add(Triangle.VertexVectors[i][1].Scale(rV)).Subtract(Triangle.VertexVectors[i][3].Scale(rV));
+                Point a2 = a1.Add(Triangle.VertexVectors[i][0].Scale(rV)).Add(Triangle.VertexVectors[i][3].Scale(rV));
                 Point[] arc0 = new Point[] { a0, a1, a2 };
                 P.Add(arc0);
             }
@@ -205,26 +279,36 @@ namespace Topology.Panelization
         }
 
         //METHOD**CREATE
-        public static TrianglePanelC ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinRadius, int Direction = 0)
-        { return new TrianglePanelC(Triangle, Thickness, MinEdgeOffset, CornerOffset, MinRadius, Direction); }
+        /// <summary>
+        /// creates TrianglePanel with edge offset determined by face, with minimum 
+        /// </summary>
+        /// <param name="Triangle">reference triangular face on mesh</param>
+        /// <param name="Thickness">thickness of panel in mesh units</param>
+        /// <param name="MinEdgeOffset">minimum edge offset</param>
+        /// <param name="CornerOffset">offset of corner fillet from corner</param>
+        /// <param name="MinRadius">minimum radius of corner fillet</param>
+        /// <param name="Direction">direction of panel extrusion into a solid</param>
+        /// <returns>TrianglePanel</returns>
+        public static TrianglePanelEqualEdgeOffset ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinRadius, int Direction = 0)
+        { return new TrianglePanelEqualEdgeOffset(Triangle, Thickness, MinEdgeOffset, CornerOffset, MinRadius, Direction); }
     }
 
-    public class TrianglePanelE : TrianglePanel
+    public class TrianglePanelMinEdgeGap : TrianglePanel
     {
         //PROPERTIES**QUERY
         public double[] EdgeOffset { get; set; }
 
         //CONSTRUCTOR
-        internal TrianglePanelE(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction)
-            : base(Triangle, Thickness, MinEdgeOffset, Direction)
+        internal TrianglePanelMinEdgeGap(Triangle Triangle, double Thickness, double MinEdgeGap, double CornerRadius, int Direction)
+            : base(Triangle, Thickness, MinEdgeGap, Direction)
         {
             // edge offsets indexed by triangle halfedge angles
-            EdgeOffset = new double[] { MinEdgeOffset, MinEdgeOffset, MinEdgeOffset };
+            EdgeOffset = new double[] { MinEdgeGap, MinEdgeGap, MinEdgeGap };
             for (int i = 0; i < 3; i++)
             {
                 if (Triangle.E[i].Angle == 360) continue;
                 EdgeOffset[i] = 0.5 * Thickness / Math.Tan(Triangle.E[i].Angle * Math.PI / 360);
-                double OffsetAngle = MinEdgeOffset / Math.Sin(Triangle.E[i].Angle * Math.PI / 360) - 0.5 * Thickness / Math.Tan(Triangle.E[i].Angle * Math.PI / 360);
+                double OffsetAngle = MinEdgeGap / Math.Sin(Triangle.E[i].Angle * Math.PI / 360) - 0.5 * Thickness / Math.Tan(Triangle.E[i].Angle * Math.PI / 360);
                 if (EdgeOffset[i] < OffsetAngle) EdgeOffset[i] = OffsetAngle;
             }
             // corner arcs based on triangle vertex
@@ -235,9 +319,9 @@ namespace Topology.Panelization
                 double sinB = Math.Sin(Triangle.Angles[i] / 2);
                 double tanB = Math.Tan(Triangle.Angles[i] / 2);
                 int j = (i + 2) % 3;
-                Point a0 = Triangle.VertexPoints[i].Add(VertexVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(VertexVectors[i][0].Scale(EdgeOffset[j] / sinA));
-                Point a1 = Triangle.VertexPoints[i].Add(VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)).Add(VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
-                Point a2 = Triangle.VertexPoints[i].Add(VertexVectors[i][0].Scale(EdgeOffset[j] / sinA + CornerRadius / tanB)).Add(VertexVectors[i][1].Scale(EdgeOffset[i] / sinA));
+                Point a0 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(Triangle.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA));
+                Point a1 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(Triangle.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)).Add(Triangle.VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
+                Point a2 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA + CornerRadius / tanB)).Add(Triangle.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA));
                 Point[] arc = new Point[] { a0, a1, a2 };
                 P.Add(arc);
             }
@@ -245,8 +329,8 @@ namespace Topology.Panelization
         }
 
         //METHOD**CREATE
-        public static TrianglePanelE ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction = 0)
-        { return new TrianglePanelE(Triangle, Thickness, MinEdgeOffset, CornerRadius, Direction); }
+        public static TrianglePanelMinEdgeGap ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeGap, double CornerRadius, int Direction = 0)
+        { return new TrianglePanelMinEdgeGap(Triangle, Thickness, MinEdgeGap, CornerRadius, Direction); }
     }
 
     public class EdgeConnector : IDisposable
@@ -515,7 +599,7 @@ namespace Topology.Panelization
             T = new Dictionary<Triangle, TrianglePanel>(M.Faces.Count);
             for (int i = 0; i < M.Faces.Count; i++)
             {
-                TrianglePanel t = TrianglePanelE.ByMeshFace(M.Faces[i], Thickness, MinEdgeOffset, CornerRadius);
+                TrianglePanel t = TrianglePanelMinEdgeGap.ByMeshFace(M.Faces[i], Thickness, MinEdgeOffset, CornerRadius);
                 T.Add(M.Faces[i], t);
                 for (int j = 0; j < M.Faces[i].Edges.Length; j++)
                     if (E.ContainsKey(M.Faces[i].Edges[j]))
@@ -523,9 +607,9 @@ namespace Topology.Panelization
                         Point p = M.Faces[i].Edges[j].MidPoint;
                         Vector Y = M.Faces[i].Normal.Cross(M.Faces[i].E[j].GetVector()).Normalized();
                         p = p.Add(Y.Scale(E[M.Faces[i].Edges[j]][0].Inset));
-                        t.AddHoles(p, HoleRadius);
+                        t.AddHole(p, HoleRadius);
                         p = p.Add(Y.Scale(E[M.Faces[i].Edges[j]][0].Width));
-                        t.AddHoles(p, HoleRadius);
+                        t.AddHole(p, HoleRadius);
                         p.Dispose();
                         Y.Dispose();
                     }
