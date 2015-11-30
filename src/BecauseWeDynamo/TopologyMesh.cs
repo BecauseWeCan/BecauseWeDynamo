@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
-using Topology.Panelization;
+
 namespace Topology
 {
     public class TriangleMesh : IDisposable
@@ -313,6 +313,7 @@ namespace Topology
                 else E0.Add(Edges[i]);
             }
         }
+<<<<<<< HEAD
         public List<EdgeConnector> GetEdgeConnectors(double Width, double PanelThickness, double PanelMinOffset)
         {
             List<EdgeConnector> C = new List<EdgeConnector>(E2.Count+E3.Count);
@@ -333,6 +334,8 @@ namespace Topology
             }
             return T;
         }
+=======
+>>>>>>> refs/remotes/origin/master
 
         //**METHODS**IN PROGRESS
         private TriangleMesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
