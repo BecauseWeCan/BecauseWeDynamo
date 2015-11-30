@@ -130,7 +130,18 @@ namespace Topology.Panelization
             Vector N = VertexVectors[0][0].Cross(Triangle.Normal);
             Word W = Word.ByStringOriginVectors(Triangle.Name, c, VertexVectors[0][0], N);
             labels.AddRange(W.display(2 * Scale));
-            W.Dispose();
+            c.Dispose(); N.Dispose(); W.Dispose();
+            return labels.ToArray();
+        }
+        public PolyCurve[] GetTriangleLabel(double Scale)
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            Point c = Triangle.Center;
+            Vector X = VertexVectors[0][0].Reverse();
+            Vector Y = VertexVectors[0][0].Cross(Triangle.Normal);
+            Word W = Word.ByStringOriginVectors(Triangle.Name, c, X, Y);
+            labels.AddRange(W.display(Scale));
+            c.Dispose(); X.Dispose(); Y.Dispose(); W.Dispose();
             return labels.ToArray();
         }
         public void AddHoles(Point Point, double Radius)
