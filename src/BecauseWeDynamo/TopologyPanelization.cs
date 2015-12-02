@@ -357,6 +357,9 @@ namespace Topology.Panelization
         { return new TrianglePanelEdgeBased(Triangle, Thickness, MinEdgeOffset, CornerRadius, Direction); }
     }
 
+    /// <summary>
+    /// EdgeConnector: geometry wrapper for connectors based on halfedges at edge that returns connectors at given point
+    /// </summary>
     public class EdgeConnector : IDisposable
     {
         //**FIELDS
@@ -490,7 +493,7 @@ namespace Topology.Panelization
         /// <summary>
         /// returns profile curve of panel as single Polycurve
         /// </summary>
-        /// <param name="Point">origin point for connector</param>
+        /// <param name="Point">Point is origin of connector</param>
         /// <returns>Polycurve of joined Arcs and Lines</returns>
         public PolyCurve GetConnectorProfile(Point Point)
         {
@@ -527,7 +530,7 @@ namespace Topology.Panelization
         /// <summary>
         /// returns flat panel on mesh face as single Surface
         /// </summary>
-        /// <param name="Point">origin point for connector</param>
+        /// <param name="Point">Point is origin of connector</param>
         /// <returns>Surface by Polycurve patch</returns>
         public Surface GetConnectorSurface(Point Point)
         {
@@ -540,7 +543,7 @@ namespace Topology.Panelization
         /// <summary>
         /// returns solid panel based on panel profile as single Solid
         /// </summary>
-        /// <param name="Point">origin point for connector</param>
+        /// <param name="Point">Point is origin of connector</param>
         /// <returns>Solid by Polycurve sweep</returns>
         public Solid GetConnectorSolid(Point Point)
         {
@@ -559,7 +562,7 @@ namespace Topology.Panelization
         /// <summary>
         /// returns solid panel with holes based on flat panel as single Solid
         /// </summary>
-        /// <param name="Point">origin point for connector</param>
+        /// <param name="Point">Point is origin of connector</param>
         /// <returns>Solid by Surface Thickening</returns>
         public Solid GetConnectorSolidHoles(Point Point)
         {
@@ -591,9 +594,9 @@ namespace Topology.Panelization
         /// <summary>
         /// returns edge labels at edge on triangular mesh face backside as an Array of Polycurves
         /// </summary>
-        /// <param name="Point">origin point for connector</param>
-        /// <param name="Scale">Scale = (letter height)/4; unit is width</param>
-        /// <returns></returns>
+        /// <param name="Point">Point is origin of connector</param>
+        /// <param name="Scale">Scale = (letter height)/4; Scale is factor of width</param>
+        /// <returns>Polycurve Array</returns>
         public PolyCurve[] GetEdgeLabel(Point Point, double Scale = 1/32)
         {
             if (!(Profile.Count > 8)) return null;
@@ -621,6 +624,11 @@ namespace Topology.Panelization
             s.Dispose(); cs.Dispose(); w.Dispose();
             return label;
         }
+        /// <summary>
+        /// returns coordinate system for transformation of edge
+        /// </summary>
+        /// <param name="Point">Point is origin of connector</param>
+        /// <returns>CoordinateSystem</returns>
         public CoordinateSystem GetCS(Point Point)
         {
             if (!(Profile.Count > 8)) return null;
@@ -641,6 +649,11 @@ namespace Topology.Panelization
             X.Dispose(); Y.Dispose();
             return CS;
         }
+        /// <summary>
+        /// add pockets based on edge condition and inset with given radius
+        /// </summary>
+        /// <param name="Point">Point is origin of connector</param>
+        /// <param name="Radius">Radius of pocket</param>
         public void AddPockets(Point Point, double Radius)
         {
             int i = Edge.E.IndexOf(HalfEdges[0]) + Edge.E.IndexOf(HalfEdges[1]);
@@ -699,7 +712,13 @@ namespace Topology.Panelization
         internal TriangleMesh M;
 
         //**PROPERTIES**QUERY
+        /// <summary>
+        /// gets TrianglePanel List based on mesh
+        /// </summary>
         public List<TrianglePanel> Panels { get { return T.Values.ToList(); } }
+        /// <summary>
+        /// gets List of EdgeConnector Arrays based on mesh
+        /// </summary>
         public List<EdgeConnector[]> Connectors { get { return E.Values.ToList(); } }
 
         //**CONSTRUCTOR
