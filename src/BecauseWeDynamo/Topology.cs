@@ -9,16 +9,34 @@ using Autodesk.DesignScript.Runtime;
 
 namespace Topology
 {
+    /// <summary>
+    /// HalfEge: 
+    /// </summary>
     public class HalfEdge
     {
         //**FIELD
         internal Vertex[] V;
 
         //**PROPERTIES** //**QUERY**
+        /// <summary>
+        /// gets angle for halfedge at edge
+        /// </summary>
         public double Angle { get; set; }
+        /// <summary>
+        /// gets Length
+        /// </summary>
         public double Length { get { return Math.Sqrt(Math.Pow(V[0].X - V[1].X, 2) + Math.Pow(V[0].Y - V[1].Y, 2) + Math.Pow(V[0].Z - V[1].Z, 2)); } }
+        /// <summary>
+        /// get normal vector of halfedge face
+        /// </summary>
         public Vector Normal { get { return Face.Normal; } }
+        /// <summary>
+        /// gets Edge that contains this halfedge
+        /// </summary>
         public Edge Edge { get; private set; }
+        /// <summary>
+        /// get Face that contins this halfedge
+        /// </summary>
         public Face Face { get; private set; }
 
         //**CONSTRUCTOR**
@@ -36,6 +54,10 @@ namespace Topology
         { this.Edge = Edge; this.Face = Face; }
 
         //**METHODS** //**ACTION**
+        /// <summary>
+        /// returns halfedge as vector
+        /// </summary>
+        /// <returns>Vector</returns>
         public Vector GetVector()
         {
             Point A = V[0].Point;
@@ -44,17 +66,15 @@ namespace Topology
             A.Dispose(); B.Dispose();
             return output;
         }
-        public HalfEdge FlipDirection()
-        {
-            List<Vertex> temp = new List<Vertex>(V);
-            V[0] = temp[1];
-            V[1] = temp[0];
-            temp = null;
-            return this;
-        }
+        /// <summary>
+        /// adds reference edge if halfedge is part of edge
+        /// and adds edge to vertices
+        /// </summary>
+        /// <param name="Edge">Mesh Edge</param>
+        /// <returns>true if succeeded, false if failed</returns>
         public bool AddEdge(Edge Edge)
         {
-            if (this.Edge == null)
+            if (Edge.E.Contains(this))
             {
                 this.Edge = Edge;
                 V[0].AddEdge(Edge);
@@ -63,14 +83,33 @@ namespace Topology
             }
             return false;
         }
+        /// <summary>
+        /// adds reference face if halfedge is part of face
+        /// and adds face to vertices
+        /// </summary>
+        /// <param name="Face">Mesh Face</param>
+        /// <returns>>true if succeeded, false if failed</returns>
         public bool AddFace(Face Face)
         {
-            if (this.Face == null)
+            if (Face.E.Contains(this))
             {
                 this.Face = Face;
+                V[0].AddFace(Face);
+                V[1].AddFace(Face);
                 return true;
             }
             return false;
+        }
+        /// <summary>
+        /// flips direction of halfedge
+        /// ie used when fliping face normals
+        /// </summary>
+        public void FlipDirection()
+        {
+            List<Vertex> temp = new List<Vertex>(V);
+            V[0] = temp[1];
+            V[1] = temp[0];
+            temp = null;
         }
     }
 

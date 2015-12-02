@@ -21,6 +21,9 @@ namespace Topology
         internal List<Edge> E0;
 
         //**PROPERTIES**QUERY
+        /// <summary>
+        /// gets 
+        /// </summary>
         public List<Triangle> Faces { get; set; }
         public List<Edge> Edges { get; set; }
         public List<Edge> EdgesOuter { get { return E1; } }
