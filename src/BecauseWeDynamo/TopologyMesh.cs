@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
-using Autodesk.DesignScript.Interfaces;
-using Autodesk.DesignScript.Runtime;
 
 namespace Topology
 {
@@ -316,30 +312,6 @@ namespace Topology
                 else E0.Add(Edges[i]);
             }
         }
-<<<<<<< HEAD
-        public List<EdgeConnector> GetEdgeConnectors(double Width, double PanelThickness, double PanelMinOffset)
-        {
-            List<EdgeConnector> C = new List<EdgeConnector>(E2.Count+E3.Count);
-            E2.ForEach(e => C.Add(new EdgeConnector(e.E[0],e.E[1], Width, PanelThickness, PanelMinOffset)));
-            for (int i = 0; i < E3.Count; i++ )
-            {
-                C.Add(new EdgeConnector(E3[i].E[0], E3[i].E[1], Width, PanelThickness, PanelMinOffset));
-                C.Add(new EdgeConnector(E3[i].E[1], E3[i].E[2], Width, PanelThickness, PanelMinOffset));
-            }
-            return C;
-        }
-        public List<TrianglePanel> GetTrianglePanels(double Thickness, double MinEdgeOffset, double CornerRadius)
-        {
-            List<TrianglePanel> T = new List<TrianglePanel>(Faces.Count);
-            for (int i =0; i< Faces.Count; i++)
-            {
-                T.Add(TrianglePanelMinEdgeGap.ByMeshFace(Faces[i],Thickness,MinEdgeOffset,CornerRadius));
-            }
-            return T;
-        }
-=======
->>>>>>> refs/remotes/origin/master
-
         //**METHODS**IN PROGRESS
         private TriangleMesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
         {
