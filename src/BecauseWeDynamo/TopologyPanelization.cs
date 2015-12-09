@@ -11,6 +11,203 @@ using Topology;
 
 namespace Panelization
 {
+
+    public class Panel<T>: IDisposable where T: Topology.Face
+    {
+        //**FIELDS
+        bool disposed = false;
+        double Thickness;
+        double EdgeThickness;
+        double BevelAngle;
+
+
+        //**PROPERTIES**
+        public T Face { get; private set; }
+        /// <summary>
+        /// gets point data for panel;
+        /// i: index that refers to the vertex
+        /// j: index of arc points at vertex with order inherited by triangle face (cc)
+        /// </summary>
+        public Point[][] ArcPoints { get; set; }
+        public double[] EdgeOffset { get; set; }
+
+        //**METHODS**CONSTRUCTOR
+        internal Panel(T Face, double Thickness, double EdgeThickness, double MinEdgeOffset, double CornerRadius, double BevelAngle = 0)
+        {
+            // initialize
+            this.Thickness = Thickness;
+            this.Face = Face;
+            // edge offsets indexed by triangle halfedge angles
+            EdgeOffset = new double[Face.E.Count];
+            for (int i = 0; i < Face.E.Count; i++)
+            {
+                if (Face.E[i].Angle == 360) continue;
+                EdgeOffset[i] = 0.5 * Thickness / Math.Tan(Face.E[i].Angle * Math.PI / 360);
+                double OffsetAngle = MinEdgeOffset / Math.Sin(Face.E[i].Angle * Math.PI / 360) - 0.5 * Thickness / Math.Tan(Face.E[i].Angle * Math.PI / 360);
+                if (EdgeOffset[i] < OffsetAngle) EdgeOffset[i] = OffsetAngle;
+            }
+            // corner arcs based on triangle vertex
+            List<Point[]> P = new List<Point[]>(3);
+            for (int i = 0; i < 3; i++)
+            {
+                double sinA = Math.Sin(Face.Angles[i]);
+                double sinB = Math.Sin(Face.Angles[i] / 2);
+                double tanB = Math.Tan(Face.Angles[i] / 2);
+                int j = (i + 2) % 3;
+                Point a0 = Face.VertexPoints[i].Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA));
+                Point a1 = Face.VertexPoints[i].Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)).Add(Face.VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
+                Point a2 = Face.VertexPoints[i].Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA + CornerRadius / tanB)).Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA));
+                Point[] arc = new Point[] { a0, a1, a2 };
+                P.Add(arc);
+            }
+            ArcPoints = P.ToArray();
+        }
+
+        //**METHOD**CREATE
+        /// <summary>
+        /// creates TrianglePanel with unique edge offsets determined by angle at edge, with given corner radius
+        /// </summary>
+        /// <param name="Triangle">reference triangular face on mesh</param>
+        /// <param name="Thickness">thickness of panel in mesh units</param>
+        /// <param name="MinEdgeOffset">minimum edge offset</param>
+        /// <param name="CornerRadius">radius of corner fillet</param>
+        /// <param name="Direction">direction of panel extrusion into a solid</param>
+        /// <returns>TrianglePanel</returns>
+        public static TrianglePanelEdgeBased ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction = 0)
+        { return new TrianglePanelEdgeBased(Triangle, Thickness, MinEdgeOffset, CornerRadius, Direction); }
+    
+
+        //**METHODS**ACTION
+        /// <summary>
+        /// returns profile curve of panel as single Polycurve
+        /// </summary>
+        /// <returns>Polycurve of joined Arcs and Lines</returns>
+        public PolyCurve GetPanelProfile()
+        {
+            if (ArcPoints.Equals(null)) return null;
+            Curve[] Curves = {
+                          Arc.ByThreePoints(ArcPoints[0][0],ArcPoints[0][1], ArcPoints[0][2]),
+                          Line.ByStartPointEndPoint(ArcPoints[0][2], ArcPoints[1][0]),
+                          Arc.ByThreePoints(ArcPoints[1][0],ArcPoints[1][1], ArcPoints[1][2]),
+                          Line.ByStartPointEndPoint(ArcPoints[1][2], ArcPoints[2][0]),
+                          Arc.ByThreePoints(ArcPoints[2][0],ArcPoints[2][1], ArcPoints[2][2]),
+                          Line.ByStartPointEndPoint(ArcPoints[2][2], ArcPoints[0][0])
+                      };
+            PolyCurve Profile = PolyCurve.ByJoinedCurves(Curves);
+            Curves.ForEach(c => c.Dispose());
+            return Profile;
+        }
+        /// <summary>
+        /// returns flat panel on mesh face as single Surface
+        /// </summary>
+        /// <returns>Surface by Polycurve patch</returns>
+        public Surface GetPanelSurface()
+        {
+            Curve c = GetPanelProfile();
+            if (c.Equals(null)) { c.Dispose(); return null; }
+            Surface s = Surface.ByPatch(c);
+            c.Dispose();
+            return s;
+        }
+        /// <summary>
+        /// returns solid panel based on panel profile as single Solid
+        /// </summary>
+        /// <returns>Solid by Polycurve sweep</returns>
+        public Solid GetPanelSolid()
+        {
+            Curve c = GetPanelProfile();
+            if (c.Equals(null)) { c.Dispose(); return null; }
+            double Bevel = (EdgeThickness-Thickness) * Math.Tan(BevelAngle * Math.PI /360);
+            Vector In = Face.Normal.Cross(Face.E[0].GetVector().Normalized()).Normalized();
+            Point[] pts = new Point[]{c.StartPoint.Add(Face.Normal.Scale(EdgeThickness)),
+                              c.StartPoint,
+                              c.StartPoint.Add(Face.Normal.Scale(EdgeThickness-Thickness)).Add(In.Scale(Bevel))};
+            
+            Curve l = PolyCurve.ByPoints(pts);
+            Solid s = c.SweepAsSolid(l);
+            c.Dispose(); l.Dispose(); pts.ForEach(p => p.Dispose());
+            return s;
+        }
+        
+        /// <summary>
+        /// returns edge labels at edge on triangular mesh face backside as an Polycurve Array
+        /// </summary>
+        /// <param name="Scale">Scale = (letter height)/4; in mesh units</param>
+        /// <returns>Polycurve Array</returns>
+        public PolyCurve[] GetEdgeLabels(double Scale)
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            for (int j = 0; j < Face.E.Count; j++)
+            {
+                if (Face.E[j].Edge.E.Count == 1) continue;
+                Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
+                Vector Y = Face.VertexVectors[j][0].Cross(Face.Normal);
+                Word w = Word.ByStringOriginVectors(Face.E[j].Edge.Name, m, Face.VertexVectors[j][0], Y);
+                labels.AddRange(w.display(Scale));
+                m.Dispose(); Y.Dispose(); w.Dispose();
+            }
+            return labels.ToArray();
+        }
+        /// <summary>
+        /// returns edge labels at edge connector and triangle label at triangle center 
+        /// on triangular mesh face backside as an Polycurve Array
+        /// </summary>
+        /// <param name="Scale">Scale = (letter height)/4; in mesh units</param>
+        /// <param name="PanelSystem">parent PanelSystem of Panel</param>
+        /// <returns>Polycurve Array</returns>
+        public PolyCurve[] GetLabels(double Scale, PanelSystem PanelSystem)
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            for (int j = 0; j < Face.E.Count; j++)
+            {
+                if (!PanelSystem.E.ContainsKey(Face.E[j].Edge)) continue;
+                Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
+                Vector Y = Face.VertexVectors[j][0].Cross(Face.Normal);
+                m = m.Subtract(Y.Scale(PanelSystem.E[Face.Edges[j]][0].Inset + 2 * PanelSystem.E[Face.Edges[j]][0].Width));
+                Word w = Word.ByStringOriginVectors(Face.E[j].Edge.Name, m, Face.VertexVectors[j][0], Y);
+                labels.AddRange(w.display(Scale));
+                m.Dispose(); Y.Dispose(); w.Dispose();
+            }
+            Point c = Face.Center;
+            Vector N = Face.VertexVectors[0][0].Cross(Face.Normal);
+            Word W = Word.ByStringOriginVectors(Face.Name, c, Face.VertexVectors[0][0], N);
+            labels.AddRange(W.display(2 * Scale));
+            c.Dispose(); N.Dispose(); W.Dispose();
+            return labels.ToArray();
+        }
+        /// <summary>
+        /// returns triangle label at triangle center on triangular mesh face frontside as an Polycurve Array
+        /// </summary>
+        /// <param name="Scale"></param>
+        /// <returns></returns>
+        public PolyCurve[] GetTriangleLabel(double Scale)
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            Point c = Face.Center;
+            Vector X = Face.VertexVectors[0][0].Reverse();
+            Vector Y = Face.VertexVectors[0][0].Cross(Face.Normal);
+            Word W = Word.ByStringOriginVectors(Face.Name, c, X, Y);
+            labels.AddRange(W.display(Scale));
+            c.Dispose(); X.Dispose(); Y.Dispose(); W.Dispose();
+            return labels.ToArray();
+        }
+
+        //**METHODS**DISPOSE
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                if (!ArcPoints.Equals(null)) ArcPoints.ForEach(p => p.ForEach(pt => pt.Dispose()));
+            }
+            disposed = true;
+        }
+    }
     /// <summary>
     /// TrianglePanel: triangular panel base class with filleted edges based on existing triangular face with edge offsets, thickness, and extrusion direction
     /// </summary>

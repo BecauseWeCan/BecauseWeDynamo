@@ -274,7 +274,7 @@ namespace Topology
         public string Name { get; set; }
         public CoordinateSystem CS { get; set; }
         public Point Center { get { return CS.Origin; } }
-        public Vector Normal { get { return CS.ZAxis; } }
+        public Vector Normal { get { return CS.ZAxis.Normalized(); } }
         public Dictionary<string, Object> Parameters { get; set; }
         public List<HalfEdge> HalfEdges { get { return E; } }
         public Vertex[] Vertices
@@ -304,6 +304,11 @@ namespace Topology
                 return output;
             }
         }
+        /// <summary>
+        /// gets indexed vectors;
+        /// i: vertex index
+        /// j: cc vector, c vector, 
+        /// </summary>
         public Vector[][] VertexVectors
         {
             get
@@ -312,11 +317,39 @@ namespace Topology
                 for (int i = 0; i < 3; i++)
                 {
                     List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[(i + 2) % 3].GetVector().Normalized().Reverse() };
-                    V.Add(V[0].Add(V[1]).Normalized());
+                    V.Add(Normal.Cross(V[0]).Add(Normal.Cross(V[1])).Normalized());
                     V.Add(V[0].Subtract(V[1]).Normalized());
                     eV.Add(V.ToArray());
                 }
                 return eV.ToArray();
+            }
+        }
+        public double[] Angles
+        {
+            get
+            {
+                Point O = Point.ByCoordinates(0, 0, 0);
+                double[] angles = new double[E.Count];
+                for (int i = 0; i < E.Count; i++)
+                {
+                    Point A = O.Add(VertexVectors[i][1]);
+                    Point B = O.Add(VertexVectors[i][0]);
+                    Point M = O.Add(VertexVectors[i][2]);
+                    Arc arc = Arc.ByThreePoints(A, M, B);
+                    angles[i] = arc.SweepAngle - arc.StartAngle;
+                    A.Dispose(); B.Dispose(); M.Dispose(); arc.Dispose();
+                }
+                O.Dispose();
+                return angles;
+            }
+        }
+        public double MinEdgeAngle
+        {
+            get
+            {
+                double min = 360;
+                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
+                return min;
             }
         }
 
@@ -343,6 +376,9 @@ namespace Topology
             SetCS(Center);
             Center.Dispose();
         }
+
+        public static Face ByVertices(IEnumerable<Vertex> Vertices) { return new Face(Vertices); }
+
 
         //**METHODS** //**ACTION**
         public Face ReOrderVertices(Vertex Start)
@@ -407,27 +443,7 @@ namespace Topology
                 double X = E[1].Length * E[0].V[0].X + E[2].Length * E[1].V[0].X + E[0].Length * E[2].V[0].X;
                 double Y = E[1].Length * E[0].V[0].Y + E[2].Length * E[1].V[0].Y + E[0].Length * E[2].V[0].Y;
                 double Z = E[1].Length * E[0].V[0].Z + E[2].Length * E[1].V[0].Z + E[0].Length * E[2].V[0].Z;
-                return Point.ByCoordinates(X/D, Y/D, Z/D);
-            }
-        }
-        public double[] Angles
-        {
-            get
-            {
-                return new double[]{ 
-                                 Math.Acos((E[2].Length * E[2].Length + E[0].Length * E[0].Length - E[1].Length * E[1].Length) / (2 * E[2].Length * E[0].Length)), 
-                                 Math.Acos((E[0].Length * E[0].Length + E[1].Length * E[1].Length - E[2].Length * E[2].Length) / (2 * E[0].Length * E[1].Length)),
-                                 Math.Acos((E[1].Length * E[1].Length + E[2].Length * E[2].Length - E[0].Length * E[0].Length) / (2 * E[1].Length * E[2].Length))
-                             };
-            }
-        }
-        public double MinEdgeAngle
-        {
-            get
-            {
-                double min = 360;
-                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
-                return min;
+                return Point.ByCoordinates(X / D, Y / D, Z / D);
             }
         }
 
@@ -438,7 +454,7 @@ namespace Topology
             Point[] pts = { Vertices.ElementAt(0).Point, Vertices.ElementAt(1).Point, Vertices.ElementAt(2).Point };
             Circle c = Circle.ByBestFitThroughPoints(pts);
             Circumcenter = c.CenterPoint;
-            c.Dispose(); pts[0].Dispose(); pts[1].Dispose(); pts[2].Dispose(); pts = null;
+            c.Dispose(); pts.ForEach(p => p.Dispose());
         }
         public Vertex GetOtherVertex(Edge Edge)
         {
@@ -465,34 +481,10 @@ namespace Topology
 
     public class Polygon : Face
     {
-        //**PROPERTIES** //**QUERY**
-        public double[] Angles
-        {
-            get
-            {
-                return new double[]{ 
-                                 Math.Acos((E[2].Length * E[2].Length + E[0].Length * E[0].Length - E[1].Length * E[1].Length) / (2 * E[2].Length * E[0].Length)), 
-                                 Math.Acos((E[0].Length * E[0].Length + E[1].Length * E[1].Length - E[2].Length * E[2].Length) / (2 * E[0].Length * E[1].Length)),
-                                 Math.Acos((E[1].Length * E[1].Length + E[2].Length * E[2].Length - E[0].Length * E[0].Length) / (2 * E[1].Length * E[2].Length))
-                             };
-            }
-        }
-        public double MinEdgeAngle
-        {
-            get
-            {
-                double min = 360;
-                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
-                return min;
-            }
-        }
 
         //**CONSTRUCTOR**
         internal Polygon(IEnumerable<Vertex> Vertices)
-            : base(Vertices)
-        {
-            Point[] pts = { Vertices.ElementAt(0).Point, Vertices.ElementAt(1).Point, Vertices.ElementAt(2).Point };
-        }
+            : base(Vertices) { }
 
         //**METHODS**DISPOSE
         protected new virtual void Dispose(bool disposing)

@@ -432,4 +432,252 @@ namespace Topology
             disposed = true;
         }
     }
+
+    public class  PolygonMesh : IDisposable
+    {
+        //**FIELDS**
+        private bool disposed = false;
+        internal Dictionary<Point, Vertex> V;
+        internal Dictionary<string, Edge> E;
+        internal List<Edge> E1;
+        internal List<Edge> E2;
+        internal List<Edge> E3;
+        internal List<Edge> E0;
+
+        //**PROPERTIES**QUERY
+        /// <summary>
+        /// gets 
+        /// </summary>
+        public List<Polygon> Faces { get; set; }
+        public List<Edge> Edges { get; set; }
+        public List<Edge> EdgesOuter { get { return E1; } }
+        public List<Vertex> Vertices { get { return V.Values.ToList(); } }
+        public List<Spline> Splines { get; set; }
+        public Point[] Points { get; set; }
+
+        //**CONSTRUCTOR
+        internal PolygonMesh(Surface[] Surfaces, Point[] Points)
+        {
+            // initialize
+            Faces = new List<Polygon>(Surfaces.Length);
+            V = new Dictionary<Point, Vertex>(Points.Length);
+            E = new Dictionary<string, Edge>();
+            Edges = new List<Edge>();
+            E1 = new List<Edge>();
+            E2 = new List<Edge>();
+            E3 = new List<Edge>();
+            E0 = new List<Edge>();
+            Splines = new List<Spline>();
+
+            //**CONSTRUCT MESH
+            // create vertex lookup table from points
+            for (int i = 0; i < Points.Length; i++)
+            {
+                if (V.ContainsKey(Points[i])) continue;
+                V.Add(Points[i], new Vertex(Points[i]));
+            }
+            this.Points = V.Keys.ToArray();
+            // create faces from surfaces
+            int eCount = 1;
+            for (int i = 0; i < Surfaces.Length; i++)
+            {
+                // find face vertices in lookup table
+                Autodesk.DesignScript.Geometry.Vertex[] vtx = Surfaces[i].Vertices;
+                List<Vertex> v = new List<Vertex>(vtx.Length);
+                for (int j = 0; j < vtx.Length; j++)
+                {
+                    Point pt = vtx[j].PointGeometry;
+                    for (int k = 0; k < Points.Length; k++)
+                        if (pt.IsAlmostEqualTo(Points[k]))
+                        { v.Add(V[Points[k]]); break; }
+                    pt.Dispose();
+                }
+                vtx.ForEach(x => x.Dispose());
+                // create face based on vertices
+                Polygon f = new Polygon(v);
+                f.Name = "f" + (i + 1).ToString("D" + 4);
+                Faces.Add(f);
+                // create or find edges
+                for (int j = 0; j < f.E.Count; j++)
+                {
+                    bool edgeFound = false;
+                    if (Edges.Count > 0)
+                    {
+                        for (int k = 0; k < Edges.Count; k++)
+                        {
+                            if (Edges[k].Vertices.Contains(f.E[j].V[0]) && Edges[k].Vertices.Contains(f.E[j].V[1]))
+                            {
+                                Edges[k].E.Add(f.E[j]);
+                                f.E[j].AddEdge(Edges[k]);
+                                edgeFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!edgeFound)
+                    {
+                        Edge e = new Edge();
+                        e.Name = eCount.ToString("D" + 3);
+                        e.E.Add(f.E[j]);
+                        f.E[j].AddEdge(e);
+                        Edges.Add(e);
+                        eCount++;
+                    }
+                }
+            }
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
+            CalculateAngles();
+        }
+        internal PolygonMesh(Surface[] Surfaces)
+        {
+            // initialize
+            Faces = new List<Polygon>(Surfaces.Length);
+            V = new Dictionary<Point, Vertex>();
+            E = new Dictionary<string, Edge>();
+            Edges = new List<Edge>();
+            E1 = new List<Edge>();
+            E2 = new List<Edge>();
+            E3 = new List<Edge>();
+            E0 = new List<Edge>();
+            Splines = new List<Spline>();
+
+            //**CONSTRUCT MESH
+            // create faces from surfaces
+            int eCount = 1;
+            for (int i = 0; i < Surfaces.Length; i++)
+            {
+                // find face vertices in lookup table
+                Autodesk.DesignScript.Geometry.Vertex[] vtx = Surfaces[i].Vertices;
+                List<Vertex> v = new List<Vertex>(vtx.Length);
+                for (int j = 0; j < vtx.Length; j++)
+                {
+                    bool found = false;
+                    Point pt = vtx[j].PointGeometry;
+                    for (int k = 0; k < V.Keys.Count; k++)
+                        if (pt.IsAlmostEqualTo(V.Keys.ElementAt(k)))
+                        { v.Add(V[Points[k]]); found = true;  break; }
+                    if (!found)
+                    {
+                        V.Add(pt, new Vertex(pt));
+                        v.Add(V[pt]);
+                    }
+                    pt.Dispose();
+                }
+                vtx.ForEach(x => x.Dispose());
+                // create face based on vertices
+                Polygon f = new Polygon(v);
+                f.Name = "f" + (i + 1).ToString("D" + 4);
+                Faces.Add(f);
+                // create or find edges
+                for (int j = 0; j < f.E.Count; j++)
+                {
+                    bool edgeFound = false;
+                    if (Edges.Count > 0)
+                    {
+                        for (int k = 0; k < Edges.Count; k++)
+                        {
+                            if (Edges[k].Vertices.Contains(f.E[j].V[0]) && Edges[k].Vertices.Contains(f.E[j].V[1]))
+                            {
+                                Edges[k].E.Add(f.E[j]);
+                                f.E[j].AddEdge(Edges[k]);
+                                edgeFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!edgeFound)
+                    {
+                        Edge e = new Edge();
+                        e.Name = eCount.ToString("D" + 3);
+                        e.E.Add(f.E[j]);
+                        f.E[j].AddEdge(e);
+                        Edges.Add(e);
+                        eCount++;
+                    }
+                }
+            }
+            this.Points = V.Keys.ToArray();
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
+            CalculateAngles();
+        }
+
+        //**METHODS**CREATE
+        public static TriangleMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new TriangleMesh(Surfaces, Points); }
+        public static TriangleMesh ByMesh(Mesh Mesh) { return new TriangleMesh(Mesh); }
+
+        //**METHODS**ACTIONS
+        public Vertex GetVertexAtPoint(Point Point)
+        {
+            Vertex Result = null;
+            for (int k = 0; k < V.Keys.Count; k++) if (Point.IsAlmostEqualTo(Points[k])) { Result = V[Points[k]]; break; }
+            return Result;
+        }
+        public Edge GetEdgeAtLine(Curve Line)
+        {
+            Edge Result = null;
+            for (int k = 0; k < Edges.Count; k++) if (Edges[k].IsAtCurve(Line)) { Result = Edges[k]; break; }
+            return Result;
+        }
+        public void CalculateAngles()
+        {
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
+            for (int i = 0; i < Edges.Count; i++)
+            {
+                if (Edges[i].E.Count == 1) E1.Add(Edges[i]);
+                else if (Edges[i].E.Count == 2)
+                {
+                    double[] AngleNormal = Edges[i].GetAngleNormal(Edges[i].E.ElementAt(0), Edges[i].E.ElementAt(1));
+                    Edges[i].Angle = new double[] { AngleNormal[0] };
+                    Edges[i].N = new double[] { AngleNormal[1], AngleNormal[2], AngleNormal[3] };
+                    Edges[i].E.ElementAt(0).Angle = AngleNormal[0];
+                    Edges[i].E.ElementAt(1).Angle = AngleNormal[0];
+                    E2.Add(Edges[i]);
+                }
+                else if (Edges[i].E.Count == 3)
+                {
+                    Vertex A = Edges[i].Vertices[0];
+                    Vertex B = Edges[i].Vertices[1];
+                    List<HalfEdge> eA = new List<HalfEdge>(2);
+                    List<HalfEdge> eB = new List<HalfEdge>(2);
+                    for (int j = 0; j < 3; j++)
+                    {
+                        if (Edges[i].E.ElementAt(j).V[0].Equals(A)) eA.Add(Edges[i].E.ElementAt(j));
+                        else if (Edges[i].E.ElementAt(j).V[0].Equals(B)) eB.Add(Edges[i].E.ElementAt(j));
+                    }
+                    if (eA.Count + eB.Count != 3) continue;
+                    HalfEdge e0, e1, e2;
+                    List<HalfEdge> e;
+                    if (eA.Count == 1) { e0 = eA[0]; e = eB; } else { e0 = eB[0]; e = eA; }
+                    double[] n0 = Edges[i].GetAngleNormal(e0, e[0]);
+                    double[] n1 = Edges[i].GetAngleNormal(e0, e[1]);
+                    double[] a1, a2;
+                    if (n0[0] < n1[0]) { e1 = e[0]; e2 = e[1]; a1 = n0; a2 = n1; }
+                    else { e1 = e[1]; e2 = e[0]; a1 = n1; a2 = n0; }
+                    Vector e1N = e1.Face.Normal, e2N = e2.Face.Normal;
+                    double[] a3 = { e1N.X - e2N.X, e1N.Y - e2N.Y, e1N.Z - e2N.Z };
+                    e1N.Dispose(); e2N.Dispose();
+                    Edges[i].E = new List<HalfEdge> { e0, e1, e2 };
+                    Edges[i].Angle = new double[] { a1[0], a2[0] - a1[0], 360 - a2[0] };
+                    Edges[i].N = new double[] { -a1[1], -a1[2], -a1[3], -a3[0], -a3[1], -a3[2], a2[1], a2[2], a2[3] };
+                    Edges[i].E.ElementAt(0).Angle = a1[0];
+                    Edges[i].E.ElementAt(1).Angle = Math.Min(a1[0], a2[0] - a1[0]);
+                    Edges[i].E.ElementAt(2).Angle = a2[0] - a1[0];
+                    E3.Add(Edges[i]);
+                }
+                else E0.Add(Edges[i]);
+            }
+        }
+        
+        //**METHODS**DISPOSE
+        public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                Faces.ForEach(f => f.Dispose());
+            }
+            disposed = true;
+        }
+    }
 }
