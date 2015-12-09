@@ -399,7 +399,17 @@ namespace Topology
     {
         //**PROPERTIES** //**QUERY**
         public Point Circumcenter { get; private set; }
-        public Point Incenter { get; private set; }
+        public Point Incenter
+        {
+            get
+            {
+                double D = E[0].Length + E[1].Length + E[2].Length;
+                double X = E[1].Length * E[0].V[0].X + E[2].Length * E[1].V[0].X + E[0].Length * E[2].V[0].X;
+                double Y = E[1].Length * E[0].V[0].Y + E[2].Length * E[1].V[0].Y + E[0].Length * E[2].V[0].Y;
+                double Z = E[1].Length * E[0].V[0].Z + E[2].Length * E[1].V[0].Z + E[0].Length * E[2].V[0].Z;
+                return Point.ByCoordinates(X/D, Y/D, Z/D);
+            }
+        }
         public double[] Angles
         {
             get
@@ -453,9 +463,38 @@ namespace Topology
         }
     }
 
-    public class Quad : Face
+    public class Polygon : Face
     {
-        //**FIELDS**
+        //**PROPERTIES** //**QUERY**
+        public double[] Angles
+        {
+            get
+            {
+                return new double[]{ 
+                                 Math.Acos((E[2].Length * E[2].Length + E[0].Length * E[0].Length - E[1].Length * E[1].Length) / (2 * E[2].Length * E[0].Length)), 
+                                 Math.Acos((E[0].Length * E[0].Length + E[1].Length * E[1].Length - E[2].Length * E[2].Length) / (2 * E[0].Length * E[1].Length)),
+                                 Math.Acos((E[1].Length * E[1].Length + E[2].Length * E[2].Length - E[0].Length * E[0].Length) / (2 * E[1].Length * E[2].Length))
+                             };
+            }
+        }
+        public double MinEdgeAngle
+        {
+            get
+            {
+                double min = 360;
+                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
+                return min;
+            }
+        }
+
+        //**CONSTRUCTOR**
+        internal Polygon(IEnumerable<Vertex> Vertices)
+            : base(Vertices)
+        {
+            Point[] pts = { Vertices.ElementAt(0).Point, Vertices.ElementAt(1).Point, Vertices.ElementAt(2).Point };
+        }
+
+        //**METHODS**DISPOSE
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
