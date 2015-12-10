@@ -53,6 +53,8 @@ namespace Topology
             : this(Vertices)
         { this.Edge = Edge; this.Face = Face; }
 
+        public static HalfEdge ByVertices(IEnumerable<Vertex> Vertices) { return new HalfEdge(Vertices); }
+
         //**METHODS** //**ACTION**
         /// <summary>
         /// returns halfedge as vector
@@ -150,6 +152,8 @@ namespace Topology
             this.Faces = new HashSet<Face>(Faces);
         }
 
+        public static Vertex ByPoint(Point Point) { return new Vertex(Point); }
+
         //**METHODS** //**ACTION**
         [MultiReturn(new[] { "X", "Y", "Z" })]
         public Dictionary<string, double> GetCoordinates() { return new Dictionary<string, double> { { "X", X }, { "Y", Y }, { "Z", Z } }; }
@@ -221,6 +225,9 @@ namespace Topology
         internal Edge() { E = new List<HalfEdge>(); Name = ""; Angle = new double[] { 360 }; N = null; }
         internal Edge(IEnumerable<HalfEdge> HalfEdges) : this() { E = new List<HalfEdge>(HalfEdges); Vertices.ForEach(v => v.AddEdge(this)); }
         internal Edge(IEnumerable<HalfEdge> HalfEdges, string Name) : this(HalfEdges) { this.Name = Name; }
+
+        //**METHODS**CREATE
+        public static Edge ByHalfEdges(IEnumerable<HalfEdge> HalfEdges) { return new Edge(HalfEdges); }
 
         //**METHODS** //**ACTION**
         public Vertex GetOtherVertex(Vertex Vertex)
@@ -456,6 +463,9 @@ namespace Topology
             Circumcenter = c.CenterPoint;
             c.Dispose(); pts.ForEach(p => p.Dispose());
         }
+
+        public static Triangle ByVertices(IEnumerable<Vertex> Vertices) {return new Triangle(Vertices);}
+
         public Vertex GetOtherVertex(Edge Edge)
         {
             List<Vertex> V = new List<Vertex>(Vertices);
@@ -464,8 +474,7 @@ namespace Topology
             return V[0];
         }
 
-
-        //**METHODS** //**ACTION**
+        //**METHODS**DISPOSE**
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
@@ -479,12 +488,35 @@ namespace Topology
         }
     }
 
-    public class Polygon : Face
+    public class Quad : Face
     {
+        //**PROPERTIES** //**QUERY**
+        public int Diagonal { get; private set; }
 
         //**CONSTRUCTOR**
-        internal Polygon(IEnumerable<Vertex> Vertices)
-            : base(Vertices) { }
+        internal Quad(IEnumerable<Vertex> Vertices)
+            : base(Vertices) 
+        {
+            Diagonal = 0;
+            if (E[0].V[0].DistanceTo(E[2].V[0]) > E[1].V[0].DistanceTo(E[3].V[0])) Diagonal = 1;
+        }
+
+        //**METHODS**CREATE
+        public static Quad ByVertices(IEnumerable<Vertex> Vertices) { return new Quad(Vertices); }
+
+        //**METHODS**ACTION
+        public void FlipDiagonal()
+        {
+            Diagonal = (Diagonal+1)%2;
+        }
+        public Line GetDiagonal()
+        {
+            Point a = E[Diagonal].V[0].Point;
+            Point b = E[Diagonal+2].V[0].Point;
+            Line L = Line.ByStartPointEndPoint(a,b);
+            a.Dispose(); b.Dispose();
+            return L;
+        }
 
         //**METHODS**DISPOSE
         protected new virtual void Dispose(bool disposing)

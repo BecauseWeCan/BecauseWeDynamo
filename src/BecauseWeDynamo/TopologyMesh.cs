@@ -433,7 +433,7 @@ namespace Topology
         }
     }
 
-    public class  PolygonMesh : IDisposable
+    public class PolyMesh : IDisposable
     {
         //**FIELDS**
         private bool disposed = false;
@@ -448,7 +448,7 @@ namespace Topology
         /// <summary>
         /// gets 
         /// </summary>
-        public List<Polygon> Faces { get; set; }
+        public List<Face> Faces { get; set; }
         public List<Edge> Edges { get; set; }
         public List<Edge> EdgesOuter { get { return E1; } }
         public List<Vertex> Vertices { get { return V.Values.ToList(); } }
@@ -456,10 +456,10 @@ namespace Topology
         public Point[] Points { get; set; }
 
         //**CONSTRUCTOR
-        internal PolygonMesh(Surface[] Surfaces, Point[] Points)
+        internal PolyMesh(Surface[] Surfaces, Point[] Points)
         {
             // initialize
-            Faces = new List<Polygon>(Surfaces.Length);
+            Faces = new List<Face>(Surfaces.Length);
             V = new Dictionary<Point, Vertex>(Points.Length);
             E = new Dictionary<string, Edge>();
             Edges = new List<Edge>();
@@ -494,7 +494,7 @@ namespace Topology
                 }
                 vtx.ForEach(x => x.Dispose());
                 // create face based on vertices
-                Polygon f = new Polygon(v);
+                Face f = new Face(v);
                 f.Name = "f" + (i + 1).ToString("D" + 4);
                 Faces.Add(f);
                 // create or find edges
@@ -528,10 +528,10 @@ namespace Topology
             //**ITERATE THROUGH EDGES FOR ANGLE CALCS
             CalculateAngles();
         }
-        internal PolygonMesh(Surface[] Surfaces)
+        internal PolyMesh(Surface[] Surfaces)
         {
             // initialize
-            Faces = new List<Polygon>(Surfaces.Length);
+            Faces = new List<Face>(Surfaces.Length);
             V = new Dictionary<Point, Vertex>();
             E = new Dictionary<string, Edge>();
             Edges = new List<Edge>();
@@ -565,7 +565,7 @@ namespace Topology
                 }
                 vtx.ForEach(x => x.Dispose());
                 // create face based on vertices
-                Polygon f = new Polygon(v);
+                Face f = new Face(v);
                 f.Name = "f" + (i + 1).ToString("D" + 4);
                 Faces.Add(f);
                 // create or find edges
@@ -602,8 +602,8 @@ namespace Topology
         }
 
         //**METHODS**CREATE
-        public static TriangleMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new TriangleMesh(Surfaces, Points); }
-        public static TriangleMesh ByMesh(Mesh Mesh) { return new TriangleMesh(Mesh); }
+        public static PolyMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new PolyMesh(Surfaces, Points); }
+        public static PolyMesh BySurfacesPoints(Surface[] Surfaces) { return new PolyMesh(Surfaces); }
 
         //**METHODS**ACTIONS
         public Vertex GetVertexAtPoint(Point Point)

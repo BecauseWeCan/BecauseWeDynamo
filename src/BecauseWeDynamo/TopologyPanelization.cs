@@ -12,7 +12,7 @@ using Topology;
 namespace Panelization
 {
 
-    public class Panel<T>: IDisposable where T: Topology.Face
+    public class PanelBevel: IDisposable
     {
         //**FIELDS
         bool disposed = false;
@@ -22,7 +22,7 @@ namespace Panelization
 
 
         //**PROPERTIES**
-        public T Face { get; private set; }
+        public Topology.Face Face { get; private set; }
         /// <summary>
         /// gets point data for panel;
         /// i: index that refers to the vertex
@@ -32,7 +32,7 @@ namespace Panelization
         public double[] EdgeOffset { get; set; }
 
         //**METHODS**CONSTRUCTOR
-        internal Panel(T Face, double Thickness, double EdgeThickness, double MinEdgeOffset, double CornerRadius, double BevelAngle = 0)
+        internal PanelBevel(Topology.Face Face, double Thickness, double EdgeThickness, double MinEdgeOffset, double CornerRadius, double BevelAngle = 0)
         {
             // initialize
             this.Thickness = Thickness;
@@ -73,8 +73,8 @@ namespace Panelization
         /// <param name="CornerRadius">radius of corner fillet</param>
         /// <param name="Direction">direction of panel extrusion into a solid</param>
         /// <returns>TrianglePanel</returns>
-        public static TrianglePanelEdgeBased ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction = 0)
-        { return new TrianglePanelEdgeBased(Triangle, Thickness, MinEdgeOffset, CornerRadius, Direction); }
+        public static PanelBevel ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction = 0)
+        { return new PanelBevel(Triangle, Thickness, MinEdgeOffset, CornerRadius, Direction); }
     
 
         //**METHODS**ACTION
@@ -208,6 +208,7 @@ namespace Panelization
             disposed = true;
         }
     }
+
     /// <summary>
     /// TrianglePanel: triangular panel base class with filleted edges based on existing triangular face with edge offsets, thickness, and extrusion direction
     /// </summary>
