@@ -1048,6 +1048,22 @@ namespace Topology.Test.Panelization
         }
     }
 
+    public class PanelOfFaces : Panel<Face>
+    {
+        internal PanelOfFaces(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
+            : base(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle){}
+        public static PanelOfFaces ByFace(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle = 0)
+        {return new PanelOfFaces(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle);}
+    }
+
+    public class PanelOfTriangles : Panel<Triangle>
+    {
+        internal PanelOfTriangles(Triangle Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
+            : base(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle){}
+        public static PanelOfTriangles ByFace(Triangle Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle = 0)
+        { return new PanelOfTriangles(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); }
+    }
+
     public class PanelHole<T> : Panel<T> where T : Topology.Face, new()
     {
         public List<Circle> Holes { get; set; }
@@ -1453,4 +1469,19 @@ namespace Topology.Test.Panelization
         }
     }
 
+    public class PanelSystemOfFaces: PanelSystem<Face>
+    {
+        internal PanelSystemOfFaces(Mesh<Face> Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
+            : base(Mesh, Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle) {}
+        public static PanelSystemOfFaces ByMeshParameters(Mesh<Face> Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
+        { return new PanelSystemOfFaces(Mesh, Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); }
+    }
+
+    public class PanelSystemOfTriangles : PanelSystem<Triangle>
+    {
+        internal PanelSystemOfTriangles(Mesh<Triangle> Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
+            : base(Mesh, Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle) { }
+        public static PanelSystemOfTriangles ByMeshParameters(Mesh<Triangle> Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
+        { return new PanelSystemOfTriangles(Mesh, Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); }
+    }
 }

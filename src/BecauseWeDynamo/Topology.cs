@@ -357,8 +357,8 @@ namespace Topology
         }
 
         //**CONSTRUCTOR**
-        internal Face() { Name = ""; Parameters = new Dictionary<string, object>(); }
-        internal Face(IEnumerable<Vertex> Vertices)
+        public Face() { Name = ""; Parameters = new Dictionary<string, object>(); }
+        public Face(IEnumerable<Vertex> Vertices)
             : this()
         {
             E = new List<HalfEdge>(Vertices.ToList().Count);
@@ -437,8 +437,8 @@ namespace Topology
     public class Triangle : Face
     {
         //**CONSTRUCTOR**
-        internal Triangle() : base() { }
-        internal Triangle(IEnumerable<Vertex> Vertices) : base(Vertices) {}
+        public Triangle() : base() { }
+        public Triangle(IEnumerable<Vertex> Vertices) : base(Vertices) { }
 
         public static Triangle ByVertices(IEnumerable<Vertex> Vertices) {return new Triangle(Vertices);}
 

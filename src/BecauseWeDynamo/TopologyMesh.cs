@@ -1022,4 +1022,20 @@ namespace Topology.Test.Mesh
             disposed = true;
         }
     }
+
+    public class MeshOfFaces: Mesh<Face>
+    {
+        internal MeshOfFaces(Point[] Points, Surface[] Surfaces) : base(Points, Surfaces) { }
+        internal MeshOfFaces(Surface[] Surfaces) : base(Surfaces) { }
+        public static MeshOfFaces BySurfacesPoints(Point[] Points, Surface[] Surfaces) { return new MeshOfFaces(Points, Surfaces); }
+        public static MeshOfFaces BySurfaces(Surface[] Surfaces) { return new MeshOfFaces(Surfaces); }
+    }
+
+    public class MeshOfTriangles: Mesh<Triangle>
+    {
+        internal MeshOfTriangles(Point[] Points, Surface[] Surfaces) : base(Points, Surfaces) { }
+        internal MeshOfTriangles(Surface[] Surfaces) : base( Surfaces) { }
+        public static MeshOfTriangles BySurfacesPoints(Point[] Points, Surface[] Surfaces) { return new MeshOfTriangles(Points, Surfaces); }
+        public static MeshOfTriangles BySurfaces(Surface[] Surfaces) { return new MeshOfTriangles(Surfaces); }
+    }
 }
