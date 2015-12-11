@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.DesignScript.Geometry;
+using Topology;
 
 namespace Topology
 {
@@ -603,7 +604,7 @@ namespace Topology
 
         //**METHODS**CREATE
         public static PolyMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new PolyMesh(Surfaces, Points); }
-        public static PolyMesh BySurfacesPoints(Surface[] Surfaces) { return new PolyMesh(Surfaces); }
+        public static PolyMesh BySurfaces(Surface[] Surfaces) { return new PolyMesh(Surfaces); }
 
         //**METHODS**ACTIONS
         public Vertex GetVertexAtPoint(Point Point)
@@ -682,9 +683,9 @@ namespace Topology
     }
 }
 
-namespace Topology.MeshTest
+namespace Topology.Test.Mesh
 {
-    public class Mesh<T>: IDisposable where T: Face
+    public class Mesh<T>: IDisposable where T: Face, new()
     {
         //**FIELDS**
         private bool disposed = false;
@@ -703,6 +704,7 @@ namespace Topology.MeshTest
         public List<Spline> Splines { get; set; }
         public Point[] Points { get; set; }
 
+        //**CONSTRUCTOR**
         internal Mesh()
         {
             V = new Dictionary<Point, Vertex>();
@@ -714,7 +716,7 @@ namespace Topology.MeshTest
             E0 = new List<Edge>();
             Splines = new List<Spline>();
         }
-        internal Mesh(Point[] Points): base()
+        internal Mesh(Point[] Points): this()
         {
             V = new Dictionary<Point, Vertex>(Points.Length);
             // create vertex lookup table from points
@@ -725,10 +727,63 @@ namespace Topology.MeshTest
             }
             this.Points = V.Keys.ToArray();
         }
-        internal Mesh(Point[]Points, Surface[] Surfaces)
+        internal Mesh(Point[] Points, Surface[] Surfaces) : this(Points)
         {
-
+            // initialize
+            Faces = new List<T>(Surfaces.Length);
+            //**CONSTRUCT MESH
+            // create faces from surfaces
+            int eCount = 1;
+            for (int i = 0; i < Surfaces.Length; i++)
+            {
+                // find face vertices in lookup table
+                // create face based on vertices
+                T f = new T();
+                if (f is Triangle)
+                {
+                    f = new Triangle(FindFaceVertices(Surfaces[i])) as T;
+                    f.Name = "t" + (i + 1).ToString("D" + 4);
+                }
+                else
+                {
+                    f = new Face(FindFaceVertices(Surfaces[i])) as T;
+                    f.Name = "f" + (i + 1).ToString("D" + 4);
+                }
+                Faces.Add(f as T);
+                // create or find edges
+                eCount = FindEdges(f, eCount);
+            }
+            this.Points = V.Keys.ToArray();
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
+            CalculateAngles();
         }
+        internal Mesh(Surface[] Surfaces): this()
+        {
+            // initialize
+            Faces = new List<T>(Surfaces.Length);
+            //**CONSTRUCT MESH
+            // create faces from surfaces
+            int eCount = 1;
+            for (int i = 0; i < Surfaces.Length; i++)
+            {
+                // find face vertices in lookup table
+                // create face based on vertices
+                T f = new Face(FindFaceVertices(Surfaces[i])) as T;
+                f.Name = "f" + (i + 1).ToString("D" + 4);
+                Faces.Add(f);
+                // create or find edges
+                eCount = FindEdges(f, eCount);
+            }
+            this.Points = V.Keys.ToArray();
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
+            CalculateAngles();
+        }
+
+        //**METHODS**CREATE
+        
+        public static Mesh<T> BySurfacesPoints(Point[] Points, Surface[] Surfaces){return new Mesh<T>(Points, Surfaces);}
+        public static Mesh<T> BySurfaces(Surface[] Surfaces) { return new Mesh<T>(Surfaces); }
+
         //**METHODS**ACTIONS
         public Vertex GetVertexAtPoint(Point Point)
         {
@@ -794,7 +849,7 @@ namespace Topology.MeshTest
                 else E0.Add(Edges[i]);
             }
         }
-        internal int FindEdges(Face f, int EdgeCount)
+        public int FindEdges(Face f, int EdgeCount)
         {
             int eCount = EdgeCount;
             for (int j = 0; j < f.E.Count; j++)
@@ -825,7 +880,7 @@ namespace Topology.MeshTest
             }
             return eCount;
         }
-        internal List<Vertex> FindFaceVertices(Surface s)
+        public List<Vertex> FindFaceVertices(Surface s)
         {
             Autodesk.DesignScript.Geometry.Vertex[] vtx = s.Vertices;
             List<Vertex> v = new List<Vertex>(vtx.Length);
@@ -966,129 +1021,5 @@ namespace Topology.MeshTest
             }
             disposed = true;
         }
-    }
-
-    public class TriangleMesh : Mesh<Triangle>
-    {
-        //**CONSTRUCTOR
-        internal TriangleMesh(Surface[] Surfaces,Point[] Points) : base(Points)
-        {
-            // initialize
-            Faces = new List<Triangle>(Surfaces.Length);
-            int eCount = 1;
-            // create faces from surfaces
-            for (int i = 0; i < Surfaces.Length; i++)
-            {
-                // find face vertices in lookup table
-                // create face based on vertices
-                Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
-                t.Name = "t" + (i+1).ToString("D" + 4);
-                Faces.Add(t);
-                // create or find edges
-                eCount = FindEdges(t, eCount);
-            }
-            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
-            CalculateAngles();
-        }
-        internal TriangleMesh(Mesh Mesh) : base(Mesh.VertexPositions)
-        {
-            // initialize
-            Faces = new List<Triangle>(Mesh.FaceIndices.Length);
-            int eCount = 1;
-            // create faces from surfaces
-            for (int i = 0; i < Mesh.FaceIndices.Length; i++)
-            {
-                // find face vertices in lookup table
-                // create face based on vertices
-                IndexGroup iF = Mesh.FaceIndices[i];
-                if (iF.Count == 3)
-                {
-                    Vertex[] v = new Vertex[]{Vertices[(int)iF.A],Vertices[(int)iF.B],Vertices[(int)iF.C]};
-                    Triangle t = new Triangle(v);
-                    Faces.Add(t);
-                    // create or find edges
-                    eCount = FindEdges(t, eCount);
-                }
-                else
-                {
-                    bool flipDiagonal = false;
-                    if (Vertices[(int)iF.A].DistanceTo(Vertices[(int)iF.C]) > Vertices[(int)iF.B].DistanceTo(Vertices[(int)iF.D]))
-                        flipDiagonal = true;
-                    Vertex[] v1;
-                    Vertex[] v2;
-                    if (!flipDiagonal)
-                    {
-                        v1 = new Vertex[]{Vertices[(int)iF.A], Vertices[(int)iF.B],Vertices[(int)iF.C]};
-                        v2 = new Vertex[]{Vertices[(int)iF.C], Vertices[(int)iF.D],Vertices[(int)iF.A]};
-                    }
-                    else
-                    {
-                        v1 = new Vertex[]{Vertices[(int)iF.B], Vertices[(int)iF.C],Vertices[(int)iF.D]};
-                        v2 = new Vertex[]{Vertices[(int)iF.D], Vertices[(int)iF.A],Vertices[(int)iF.B]};
-                    }
-                    // create face based on vertices
-                    Triangle t1 = new Triangle(v1);
-                    Triangle t2 = new Triangle(v2);
-                    Faces.Add(t1);
-                    Faces.Add(t2);
-                    eCount = FindEdges(t1, eCount);
-                    eCount = FindEdges(t2, eCount);
-                }
-            }
-            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
-            CalculateAngles();
-        }
-
-        //**METHODS**CREATE
-        public static TriangleMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new TriangleMesh(Surfaces, Points); }
-        public static TriangleMesh ByMesh(Mesh Mesh) { return new TriangleMesh(Mesh); }        
-    }
-
-    public class PolyMesh : Mesh<Face>
-    {
-        //**CONSTRUCTOR
-        internal PolyMesh(Surface[] Surfaces, Point[] Points)
-            : base(Points)
-        {
-            Faces = new List<Face>(Surfaces.Length);
-            int eCount = 1;
-            for (int i = 0; i < Surfaces.Length; i++)
-            {
-                // find face vertices in lookup table
-                // create face based on vertices
-                Face f = new Face(FindFaceVertices(Surfaces[i]));
-                f.Name = "f" + (i + 1).ToString("D" + 4);
-                Faces.Add(f);
-                // create or find edges
-                eCount = FindEdges(f, eCount);
-            }
-            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
-            CalculateAngles();
-        }
-        internal PolyMesh(Surface[] Surfaces) : base()
-        {
-            // initialize
-            Faces = new List<Face>(Surfaces.Length);
-            //**CONSTRUCT MESH
-            // create faces from surfaces
-            int eCount = 1;
-            for (int i = 0; i < Surfaces.Length; i++)
-            {
-                // find face vertices in lookup table
-                // create face based on vertices
-                Face f = new Face(FindFaceVertices(Surfaces[i]));
-                f.Name = "f" + (i + 1).ToString("D" + 4);
-                Faces.Add(f);
-                // create or find edges
-                eCount = FindEdges(f, eCount);
-            }
-            this.Points = V.Keys.ToArray();
-            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
-            CalculateAngles();
-        }
-
-        //**METHODS**CREATE
-        public static PolyMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new PolyMesh(Surfaces, Points); }
-        public static PolyMesh BySurfaces(Surface[] Surfaces) { return new PolyMesh(Surfaces); }
     }
 }

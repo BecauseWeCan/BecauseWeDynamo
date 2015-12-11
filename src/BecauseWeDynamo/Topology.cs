@@ -311,11 +311,6 @@ namespace Topology
                 return output;
             }
         }
-        /// <summary>
-        /// gets indexed vectors;
-        /// i: vertex index
-        /// j: cc vector, c vector, 
-        /// </summary>
         public Vector[][] VertexVectors
         {
             get
@@ -342,7 +337,7 @@ namespace Topology
                 {
                     Point A = O.Add(VertexVectors[i][1]);
                     Point B = O.Add(VertexVectors[i][0]);
-                    Point M = O.Add(VertexVectors[i][2]);
+                    Point M = O.Add(VertexVectors[i][4]);
                     Arc arc = Arc.ByThreePoints(A, M, B);
                     angles[i] = arc.SweepAngle - arc.StartAngle;
                     A.Dispose(); B.Dispose(); M.Dispose(); arc.Dispose();
@@ -385,8 +380,8 @@ namespace Topology
             Center.Dispose();
         }
 
+        //**METHODS**CREATE
         public static Face ByVertices(IEnumerable<Vertex> Vertices) { return new Face(Vertices); }
-
 
         //**METHODS** //**ACTION**
         public Face ReOrderVertices(Vertex Start)
@@ -441,51 +436,34 @@ namespace Topology
 
     public class Triangle : Face
     {
-        //**PROPERTIES** //**QUERY**
-        public Point Circumcenter { get; private set; }
-        public Point Incenter
-        {
-            get
-            {
-                double D = E[0].Length + E[1].Length + E[2].Length;
-                double X = E[1].Length * E[0].V[0].X + E[2].Length * E[1].V[0].X + E[0].Length * E[2].V[0].X;
-                double Y = E[1].Length * E[0].V[0].Y + E[2].Length * E[1].V[0].Y + E[0].Length * E[2].V[0].Y;
-                double Z = E[1].Length * E[0].V[0].Z + E[2].Length * E[1].V[0].Z + E[0].Length * E[2].V[0].Z;
-                return Point.ByCoordinates(X / D, Y / D, Z / D);
-            }
-        }
-
         //**CONSTRUCTOR**
-        internal Triangle(IEnumerable<Vertex> Vertices)
-            : base(Vertices)
-        {
-            Point[] pts = { Vertices.ElementAt(0).Point, Vertices.ElementAt(1).Point, Vertices.ElementAt(2).Point };
-            Circle c = Circle.ByBestFitThroughPoints(pts);
-            Circumcenter = c.CenterPoint;
-            c.Dispose(); pts.ForEach(p => p.Dispose());
-        }
+        internal Triangle() : base() { }
+        internal Triangle(IEnumerable<Vertex> Vertices) : base(Vertices) {}
 
         public static Triangle ByVertices(IEnumerable<Vertex> Vertices) {return new Triangle(Vertices);}
 
+        public Point GetCircumcenter()
+        {
+            Point[] pts = { Vertices.ElementAt(0).Point, Vertices.ElementAt(1).Point, Vertices.ElementAt(2).Point };
+            Circle c = Circle.ByBestFitThroughPoints(pts);
+            Point Circumcenter = c.CenterPoint;
+            c.Dispose(); pts.ForEach(p => p.Dispose());
+            return Circumcenter;
+        }
+        public Point GetIncenter()
+        {
+            double D = E[0].Length + E[1].Length + E[2].Length;
+            double X = E[1].Length * E[0].V[0].X + E[2].Length * E[1].V[0].X + E[0].Length * E[2].V[0].X;
+            double Y = E[1].Length * E[0].V[0].Y + E[2].Length * E[1].V[0].Y + E[0].Length * E[2].V[0].Y;
+            double Z = E[1].Length * E[0].V[0].Z + E[2].Length * E[1].V[0].Z + E[0].Length * E[2].V[0].Z;
+            return Point.ByCoordinates(X / D, Y / D, Z / D);
+        }
         public Vertex GetOtherVertex(Edge Edge)
         {
             List<Vertex> V = new List<Vertex>(Vertices);
             V.RemoveAll(v => Edge.Vertices.Contains(v));
             if (V.Count > 1) return null;
             return V[0];
-        }
-
-        //**METHODS**DISPOSE**
-        protected new virtual void Dispose(bool disposing)
-        {
-            if (disposed) return;
-            if (disposing)
-            {
-                if (Circumcenter != null) Circumcenter.Dispose();
-                if (Incenter != null) Incenter.Dispose();
-                base.Dispose();
-            }
-            disposed = true;
         }
     }
 
@@ -495,8 +473,7 @@ namespace Topology
         public int Diagonal { get; private set; }
 
         //**CONSTRUCTOR**
-        internal Quad(IEnumerable<Vertex> Vertices)
-            : base(Vertices) 
+        internal Quad(IEnumerable<Vertex> Vertices) : base(Vertices) 
         {
             Diagonal = 0;
             if (E[0].V[0].DistanceTo(E[2].V[0]) > E[1].V[0].DistanceTo(E[3].V[0])) Diagonal = 1;
@@ -517,17 +494,6 @@ namespace Topology
             Line L = Line.ByStartPointEndPoint(a,b);
             a.Dispose(); b.Dispose();
             return L;
-        }
-
-        //**METHODS**DISPOSE
-        protected new virtual void Dispose(bool disposing)
-        {
-            if (disposed) return;
-            if (disposing)
-            {
-                base.Dispose();
-            }
-            disposed = true;
         }
     }
 }
