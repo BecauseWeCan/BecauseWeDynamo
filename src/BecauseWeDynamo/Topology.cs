@@ -10,7 +10,7 @@ using Autodesk.DesignScript.Runtime;
 namespace Topology
 {
     /// <summary>
-    /// HalfEge: 
+    /// HalfEdge: 
     /// </summary>
     public class HalfEdge
     {
