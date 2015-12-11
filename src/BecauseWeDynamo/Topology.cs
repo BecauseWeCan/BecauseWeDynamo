@@ -324,8 +324,9 @@ namespace Topology
                 for (int i = 0; i < 3; i++)
                 {
                     List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[(i + 2) % 3].GetVector().Normalized().Reverse() };
-                    V.Add(Normal.Cross(V[0]).Add(Normal.Cross(V[1])).Normalized());
-                    V.Add(V[0].Subtract(V[1]).Normalized());
+                    V.Add((V[0].Add(V[1])).Normalized());
+                    V.Add((V[0].Subtract(V[1])).Normalized());
+                    V.Add( ( (Normal.Cross(V[0]).Normalized()) .Add ((V[1].Cross(Normal)).Normalized()) ).Normalized() );
                     eV.Add(V.ToArray());
                 }
                 return eV.ToArray();
