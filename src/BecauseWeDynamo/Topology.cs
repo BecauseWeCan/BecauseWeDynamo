@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
-using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
 
 namespace Topology
@@ -315,10 +312,11 @@ namespace Topology
         {
             get
             {
-                List<Vector[]> eV = new List<Vector[]>(3);
-                for (int i = 0; i < 3; i++)
+                List<Vector[]> eV = new List<Vector[]>(E.Count);
+                for (int i = 0; i < E.Count; i++)
                 {
-                    List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[(i + 2) % 3].GetVector().Normalized().Reverse() };
+                    int j = (i + E.Count - 1) % E.Count;
+                    List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[j].GetVector().Normalized().Reverse() };
                     V.Add((V[0].Add(V[1])).Normalized());
                     V.Add((V[0].Subtract(V[1])).Normalized());
                     V.Add( ( (Normal.Cross(V[0]).Normalized()) .Add ((V[1].Cross(Normal)).Normalized()) ).Normalized() );
@@ -351,15 +349,14 @@ namespace Topology
             get
             {
                 double min = 360;
-                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
+                for (int i = 0; i < E.Count; i++) if (min > E[i].Angle) min = E[i].Angle;
                 return min;
             }
         }
 
         //**CONSTRUCTOR**
         public Face() { Name = ""; Parameters = new Dictionary<string, object>(); }
-        public Face(IEnumerable<Vertex> Vertices)
-            : this()
+        public Face(IEnumerable<Vertex> Vertices) : this()
         {
             E = new List<HalfEdge>(Vertices.ToList().Count);
             for (int i = 0; i < Vertices.Count(); i++)
@@ -438,7 +435,7 @@ namespace Topology
     {
         //**CONSTRUCTOR**
         public Triangle() : base() { }
-        public Triangle(IEnumerable<Vertex> Vertices) : base(Vertices) { }
+        public Triangle(IEnumerable<Vertex> Vertices) : base(Vertices.Take(3)) { }
 
         public static Triangle ByVertices(IEnumerable<Vertex> Vertices) {return new Triangle(Vertices);}
 
@@ -473,7 +470,7 @@ namespace Topology
         public int Diagonal { get; private set; }
 
         //**CONSTRUCTOR**
-        internal Quad(IEnumerable<Vertex> Vertices) : base(Vertices) 
+        internal Quad(IEnumerable<Vertex> Vertices) : base(Vertices.Take(4)) 
         {
             Diagonal = 0;
             if (E[0].V[0].DistanceTo(E[2].V[0]) > E[1].V[0].DistanceTo(E[3].V[0])) Diagonal = 1;
