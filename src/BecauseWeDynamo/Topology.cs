@@ -9,16 +9,34 @@ using Autodesk.DesignScript.Runtime;
 
 namespace Topology
 {
+    /// <summary>
+    /// HalfEge: 
+    /// </summary>
     public class HalfEdge
     {
         //**FIELD
         internal Vertex[] V;
 
         //**PROPERTIES** //**QUERY**
+        /// <summary>
+        /// gets angle for halfedge at edge
+        /// </summary>
         public double Angle { get; set; }
+        /// <summary>
+        /// gets Length
+        /// </summary>
         public double Length { get { return Math.Sqrt(Math.Pow(V[0].X - V[1].X, 2) + Math.Pow(V[0].Y - V[1].Y, 2) + Math.Pow(V[0].Z - V[1].Z, 2)); } }
+        /// <summary>
+        /// get normal vector of halfedge face
+        /// </summary>
         public Vector Normal { get { return Face.Normal; } }
+        /// <summary>
+        /// gets Edge that contains this halfedge
+        /// </summary>
         public Edge Edge { get; private set; }
+        /// <summary>
+        /// get Face that contins this halfedge
+        /// </summary>
         public Face Face { get; private set; }
 
         //**CONSTRUCTOR**
@@ -35,7 +53,13 @@ namespace Topology
             : this(Vertices)
         { this.Edge = Edge; this.Face = Face; }
 
+        public static HalfEdge ByVertices(IEnumerable<Vertex> Vertices) { return new HalfEdge(Vertices); }
+
         //**METHODS** //**ACTION**
+        /// <summary>
+        /// returns halfedge as vector
+        /// </summary>
+        /// <returns>Vector</returns>
         public Vector GetVector()
         {
             Point A = V[0].Point;
@@ -44,17 +68,15 @@ namespace Topology
             A.Dispose(); B.Dispose();
             return output;
         }
-        public HalfEdge FlipDirection()
-        {
-            List<Vertex> temp = new List<Vertex>(V);
-            V[0] = temp[1];
-            V[1] = temp[0];
-            temp = null;
-            return this;
-        }
+        /// <summary>
+        /// adds reference edge if halfedge is part of edge
+        /// and adds edge to vertices
+        /// </summary>
+        /// <param name="Edge">Mesh Edge</param>
+        /// <returns>true if succeeded, false if failed</returns>
         public bool AddEdge(Edge Edge)
         {
-            if (this.Edge == null)
+            if (Edge.E.Contains(this))
             {
                 this.Edge = Edge;
                 V[0].AddEdge(Edge);
@@ -63,14 +85,33 @@ namespace Topology
             }
             return false;
         }
+        /// <summary>
+        /// adds reference face if halfedge is part of face
+        /// and adds face to vertices
+        /// </summary>
+        /// <param name="Face">Mesh Face</param>
+        /// <returns>>true if succeeded, false if failed</returns>
         public bool AddFace(Face Face)
         {
-            if (this.Face == null)
+            if (Face.E.Contains(this))
             {
                 this.Face = Face;
+                V[0].AddFace(Face);
+                V[1].AddFace(Face);
                 return true;
             }
             return false;
+        }
+        /// <summary>
+        /// flips direction of halfedge
+        /// ie used when fliping face normals
+        /// </summary>
+        public void FlipDirection()
+        {
+            List<Vertex> temp = new List<Vertex>(V);
+            V[0] = temp[1];
+            V[1] = temp[0];
+            temp = null;
         }
     }
 
@@ -110,6 +151,8 @@ namespace Topology
             this.Edges = new HashSet<Edge>(Edges);
             this.Faces = new HashSet<Face>(Faces);
         }
+
+        public static Vertex ByPoint(Point Point) { return new Vertex(Point); }
 
         //**METHODS** //**ACTION**
         [MultiReturn(new[] { "X", "Y", "Z" })]
@@ -183,6 +226,9 @@ namespace Topology
         internal Edge(IEnumerable<HalfEdge> HalfEdges) : this() { E = new List<HalfEdge>(HalfEdges); Vertices.ForEach(v => v.AddEdge(this)); }
         internal Edge(IEnumerable<HalfEdge> HalfEdges, string Name) : this(HalfEdges) { this.Name = Name; }
 
+        //**METHODS**CREATE
+        public static Edge ByHalfEdges(IEnumerable<HalfEdge> HalfEdges) { return new Edge(HalfEdges); }
+
         //**METHODS** //**ACTION**
         public Vertex GetOtherVertex(Vertex Vertex)
         {
@@ -235,7 +281,7 @@ namespace Topology
         public string Name { get; set; }
         public CoordinateSystem CS { get; set; }
         public Point Center { get { return CS.Origin; } }
-        public Vector Normal { get { return CS.ZAxis; } }
+        public Vector Normal { get { return CS.ZAxis.Normalized(); } }
         public Dictionary<string, Object> Parameters { get; set; }
         public List<HalfEdge> HalfEdges { get { return E; } }
         public Vertex[] Vertices
@@ -265,6 +311,11 @@ namespace Topology
                 return output;
             }
         }
+        /// <summary>
+        /// gets indexed vectors;
+        /// i: vertex index
+        /// j: cc vector, c vector, 
+        /// </summary>
         public Vector[][] VertexVectors
         {
             get
@@ -273,11 +324,39 @@ namespace Topology
                 for (int i = 0; i < 3; i++)
                 {
                     List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[(i + 2) % 3].GetVector().Normalized().Reverse() };
-                    V.Add(V[0].Add(V[1]).Normalized());
+                    V.Add(Normal.Cross(V[0]).Add(Normal.Cross(V[1])).Normalized());
                     V.Add(V[0].Subtract(V[1]).Normalized());
                     eV.Add(V.ToArray());
                 }
                 return eV.ToArray();
+            }
+        }
+        public double[] Angles
+        {
+            get
+            {
+                Point O = Point.ByCoordinates(0, 0, 0);
+                double[] angles = new double[E.Count];
+                for (int i = 0; i < E.Count; i++)
+                {
+                    Point A = O.Add(VertexVectors[i][1]);
+                    Point B = O.Add(VertexVectors[i][0]);
+                    Point M = O.Add(VertexVectors[i][2]);
+                    Arc arc = Arc.ByThreePoints(A, M, B);
+                    angles[i] = arc.SweepAngle - arc.StartAngle;
+                    A.Dispose(); B.Dispose(); M.Dispose(); arc.Dispose();
+                }
+                O.Dispose();
+                return angles;
+            }
+        }
+        public double MinEdgeAngle
+        {
+            get
+            {
+                double min = 360;
+                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
+                return min;
             }
         }
 
@@ -304,6 +383,9 @@ namespace Topology
             SetCS(Center);
             Center.Dispose();
         }
+
+        public static Face ByVertices(IEnumerable<Vertex> Vertices) { return new Face(Vertices); }
+
 
         //**METHODS** //**ACTION**
         public Face ReOrderVertices(Vertex Start)
@@ -360,25 +442,15 @@ namespace Topology
     {
         //**PROPERTIES** //**QUERY**
         public Point Circumcenter { get; private set; }
-        public Point Incenter { get; private set; }
-        public double[] Angles
+        public Point Incenter
         {
             get
             {
-                return new double[]{ 
-                                 Math.Acos((E[2].Length * E[2].Length + E[0].Length * E[0].Length - E[1].Length * E[1].Length) / (2 * E[2].Length * E[0].Length)), 
-                                 Math.Acos((E[0].Length * E[0].Length + E[1].Length * E[1].Length - E[2].Length * E[2].Length) / (2 * E[0].Length * E[1].Length)),
-                                 Math.Acos((E[1].Length * E[1].Length + E[2].Length * E[2].Length - E[0].Length * E[0].Length) / (2 * E[1].Length * E[2].Length))
-                             };
-            }
-        }
-        public double MinEdgeAngle
-        {
-            get
-            {
-                double min = 360;
-                for (int i = 0; i < 3; i++) if (min > E[i].Angle) min = E[i].Angle;
-                return min;
+                double D = E[0].Length + E[1].Length + E[2].Length;
+                double X = E[1].Length * E[0].V[0].X + E[2].Length * E[1].V[0].X + E[0].Length * E[2].V[0].X;
+                double Y = E[1].Length * E[0].V[0].Y + E[2].Length * E[1].V[0].Y + E[0].Length * E[2].V[0].Y;
+                double Z = E[1].Length * E[0].V[0].Z + E[2].Length * E[1].V[0].Z + E[0].Length * E[2].V[0].Z;
+                return Point.ByCoordinates(X / D, Y / D, Z / D);
             }
         }
 
@@ -389,8 +461,11 @@ namespace Topology
             Point[] pts = { Vertices.ElementAt(0).Point, Vertices.ElementAt(1).Point, Vertices.ElementAt(2).Point };
             Circle c = Circle.ByBestFitThroughPoints(pts);
             Circumcenter = c.CenterPoint;
-            c.Dispose(); pts[0].Dispose(); pts[1].Dispose(); pts[2].Dispose(); pts = null;
+            c.Dispose(); pts.ForEach(p => p.Dispose());
         }
+
+        public static Triangle ByVertices(IEnumerable<Vertex> Vertices) {return new Triangle(Vertices);}
+
         public Vertex GetOtherVertex(Edge Edge)
         {
             List<Vertex> V = new List<Vertex>(Vertices);
@@ -399,8 +474,7 @@ namespace Topology
             return V[0];
         }
 
-
-        //**METHODS** //**ACTION**
+        //**METHODS**DISPOSE**
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
@@ -416,7 +490,35 @@ namespace Topology
 
     public class Quad : Face
     {
-        //**FIELDS**
+        //**PROPERTIES** //**QUERY**
+        public int Diagonal { get; private set; }
+
+        //**CONSTRUCTOR**
+        internal Quad(IEnumerable<Vertex> Vertices)
+            : base(Vertices) 
+        {
+            Diagonal = 0;
+            if (E[0].V[0].DistanceTo(E[2].V[0]) > E[1].V[0].DistanceTo(E[3].V[0])) Diagonal = 1;
+        }
+
+        //**METHODS**CREATE
+        public static Quad ByVertices(IEnumerable<Vertex> Vertices) { return new Quad(Vertices); }
+
+        //**METHODS**ACTION
+        public void FlipDiagonal()
+        {
+            Diagonal = (Diagonal+1)%2;
+        }
+        public Line GetDiagonal()
+        {
+            Point a = E[Diagonal].V[0].Point;
+            Point b = E[Diagonal+2].V[0].Point;
+            Line L = Line.ByStartPointEndPoint(a,b);
+            a.Dispose(); b.Dispose();
+            return L;
+        }
+
+        //**METHODS**DISPOSE
         protected new virtual void Dispose(bool disposing)
         {
             if (disposed) return;
