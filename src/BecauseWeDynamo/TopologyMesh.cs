@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.DesignScript.Geometry;
+using Topology;
 
 namespace Topology
 {
@@ -67,7 +68,7 @@ namespace Topology
                 vtx.ForEach(x => x.Dispose());
                 // create face based on vertices
                 Triangle t = new Triangle(v);
-                t.Name = "t" + (i+1).ToString("D" + 4);
+                t.Name = "t" + (i + 1).ToString("D" + 4);
                 Faces.Add(t);
                 // create or find edges
                 for (int j = 0; j < t.E.Count; j++)
@@ -100,7 +101,7 @@ namespace Topology
             //**ITERATE THROUGH EDGES FOR ANGLE CALCS
             CalculateAngles();
         }
-        internal TriangleMesh(Mesh Mesh)
+        internal TriangleMesh(Autodesk.DesignScript.Geometry.Mesh Mesh)
         {
             // initialize
             Faces = new List<Triangle>(Mesh.FaceIndices.Length);
@@ -248,7 +249,7 @@ namespace Topology
 
         //**METHODS**CREATE
         public static TriangleMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new TriangleMesh(Surfaces, Points); }
-        public static TriangleMesh ByMesh(Mesh Mesh) { return new TriangleMesh(Mesh); }
+        public static TriangleMesh ByMesh(Autodesk.DesignScript.Geometry.Mesh Mesh) { return new TriangleMesh(Mesh); }
 
         //**METHODS**ACTIONS
         public Vertex GetVertexAtPoint(Point Point)
@@ -433,7 +434,7 @@ namespace Topology
         }
     }
 
-    public class PolyMesh : IDisposable
+    public class Mesh : IDisposable
     {
         //**FIELDS**
         private bool disposed = false;
@@ -445,9 +446,6 @@ namespace Topology
         internal List<Edge> E0;
 
         //**PROPERTIES**QUERY
-        /// <summary>
-        /// gets 
-        /// </summary>
         public List<Face> Faces { get; set; }
         public List<Edge> Edges { get; set; }
         public List<Edge> EdgesOuter { get { return E1; } }
@@ -455,83 +453,9 @@ namespace Topology
         public List<Spline> Splines { get; set; }
         public Point[] Points { get; set; }
 
-        //**CONSTRUCTOR
-        internal PolyMesh(Surface[] Surfaces, Point[] Points)
+        //**CONSTRUCTOR**
+        internal Mesh()
         {
-            // initialize
-            Faces = new List<Face>(Surfaces.Length);
-            V = new Dictionary<Point, Vertex>(Points.Length);
-            E = new Dictionary<string, Edge>();
-            Edges = new List<Edge>();
-            E1 = new List<Edge>();
-            E2 = new List<Edge>();
-            E3 = new List<Edge>();
-            E0 = new List<Edge>();
-            Splines = new List<Spline>();
-
-            //**CONSTRUCT MESH
-            // create vertex lookup table from points
-            for (int i = 0; i < Points.Length; i++)
-            {
-                if (V.ContainsKey(Points[i])) continue;
-                V.Add(Points[i], new Vertex(Points[i]));
-            }
-            this.Points = V.Keys.ToArray();
-            // create faces from surfaces
-            int eCount = 1;
-            for (int i = 0; i < Surfaces.Length; i++)
-            {
-                // find face vertices in lookup table
-                Autodesk.DesignScript.Geometry.Vertex[] vtx = Surfaces[i].Vertices;
-                List<Vertex> v = new List<Vertex>(vtx.Length);
-                for (int j = 0; j < vtx.Length; j++)
-                {
-                    Point pt = vtx[j].PointGeometry;
-                    for (int k = 0; k < Points.Length; k++)
-                        if (pt.IsAlmostEqualTo(Points[k]))
-                        { v.Add(V[Points[k]]); break; }
-                    pt.Dispose();
-                }
-                vtx.ForEach(x => x.Dispose());
-                // create face based on vertices
-                Face f = new Face(v);
-                f.Name = "f" + (i + 1).ToString("D" + 4);
-                Faces.Add(f);
-                // create or find edges
-                for (int j = 0; j < f.E.Count; j++)
-                {
-                    bool edgeFound = false;
-                    if (Edges.Count > 0)
-                    {
-                        for (int k = 0; k < Edges.Count; k++)
-                        {
-                            if (Edges[k].Vertices.Contains(f.E[j].V[0]) && Edges[k].Vertices.Contains(f.E[j].V[1]))
-                            {
-                                Edges[k].E.Add(f.E[j]);
-                                f.E[j].AddEdge(Edges[k]);
-                                edgeFound = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!edgeFound)
-                    {
-                        Edge e = new Edge();
-                        e.Name = eCount.ToString("D" + 3);
-                        e.E.Add(f.E[j]);
-                        f.E[j].AddEdge(e);
-                        Edges.Add(e);
-                        eCount++;
-                    }
-                }
-            }
-            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
-            CalculateAngles();
-        }
-        internal PolyMesh(Surface[] Surfaces)
-        {
-            // initialize
-            Faces = new List<Face>(Surfaces.Length);
             V = new Dictionary<Point, Vertex>();
             E = new Dictionary<string, Edge>();
             Edges = new List<Edge>();
@@ -540,60 +464,74 @@ namespace Topology
             E3 = new List<Edge>();
             E0 = new List<Edge>();
             Splines = new List<Spline>();
-
+        }
+        internal Mesh(Point[] Points)
+            : this()
+        {
+            V = new Dictionary<Point, Vertex>(Points.Length);
+            // create vertex lookup table from points
+            for (int i = 0; i < Points.Length; i++)
+            {
+                if (V.ContainsKey(Points[i])) continue;
+                V.Add(Points[i], new Vertex(Points[i]));
+            }
+            this.Points = V.Keys.ToArray();
+        }
+        internal Mesh(Point[] Points, Surface[] Surfaces)
+            : this(Points)
+        {
+            // initialize
+            Faces = new List<Face>(Surfaces.Length);
             //**CONSTRUCT MESH
             // create faces from surfaces
             int eCount = 1;
             for (int i = 0; i < Surfaces.Length; i++)
             {
                 // find face vertices in lookup table
-                Autodesk.DesignScript.Geometry.Vertex[] vtx = Surfaces[i].Vertices;
-                List<Vertex> v = new List<Vertex>(vtx.Length);
-                for (int j = 0; j < vtx.Length; j++)
-                {
-                    bool found = false;
-                    Point pt = vtx[j].PointGeometry;
-                    for (int k = 0; k < V.Keys.Count; k++)
-                        if (pt.IsAlmostEqualTo(V.Keys.ElementAt(k)))
-                        { v.Add(V[Points[k]]); found = true;  break; }
-                    if (!found)
-                    {
-                        V.Add(pt, new Vertex(pt));
-                        v.Add(V[pt]);
-                    }
-                    pt.Dispose();
-                }
-                vtx.ForEach(x => x.Dispose());
                 // create face based on vertices
-                Face f = new Face(v);
-                f.Name = "f" + (i + 1).ToString("D" + 4);
-                Faces.Add(f);
-                // create or find edges
-                for (int j = 0; j < f.E.Count; j++)
+                if (Surfaces[i].Vertices.Length == 3)
                 {
-                    bool edgeFound = false;
-                    if (Edges.Count > 0)
-                    {
-                        for (int k = 0; k < Edges.Count; k++)
-                        {
-                            if (Edges[k].Vertices.Contains(f.E[j].V[0]) && Edges[k].Vertices.Contains(f.E[j].V[1]))
-                            {
-                                Edges[k].E.Add(f.E[j]);
-                                f.E[j].AddEdge(Edges[k]);
-                                edgeFound = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!edgeFound)
-                    {
-                        Edge e = new Edge();
-                        e.Name = eCount.ToString("D" + 3);
-                        e.E.Add(f.E[j]);
-                        f.E[j].AddEdge(e);
-                        Edges.Add(e);
-                        eCount++;
-                    }
+                    Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
+                    t.Name = "t" + (i + 1).ToString("D" + 4);
+                    Faces.Add(t);
+                    eCount = FindEdges(t, eCount);
+                }
+                else
+                {
+                    Face f = new Face(FindFaceVertices(Surfaces[i]));
+                    f.Name = "f" + (i + 1).ToString("D" + 4);
+                    Faces.Add(f);
+                    eCount = FindEdges(f, eCount);
+                }
+            }
+            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
+            CalculateAngles();
+        }
+        internal Mesh(Surface[] Surfaces)
+            : this()
+        {
+            // initialize
+            Faces = new List<Face>(Surfaces.Length);
+            //**CONSTRUCT MESH
+            // create faces from surfaces
+            int eCount = 1;
+            for (int i = 0; i < Surfaces.Length; i++)
+            {
+                // find face vertices in lookup table
+                // create face based on vertices
+                if (Surfaces[i].Vertices.Length == 3)
+                {
+                    Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
+                    t.Name = "t" + (i + 1).ToString("D" + 4);
+                    Faces.Add(t);
+                    eCount = FindEdges(t, eCount);
+                }
+                else
+                {
+                    Face f = new Face(FindFaceVertices(Surfaces[i]));
+                    f.Name = "f" + (i + 1).ToString("D" + 4);
+                    Faces.Add(f);
+                    eCount = FindEdges(f, eCount);
                 }
             }
             this.Points = V.Keys.ToArray();
@@ -602,8 +540,8 @@ namespace Topology
         }
 
         //**METHODS**CREATE
-        public static PolyMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new PolyMesh(Surfaces, Points); }
-        public static PolyMesh BySurfacesPoints(Surface[] Surfaces) { return new PolyMesh(Surfaces); }
+        public static Mesh BySurfacesPoints(Point[] Points, Surface[] Surfaces) { return new Mesh(Points, Surfaces); }
+        public static Mesh BySurfaces(Surface[] Surfaces) { return new Mesh(Surfaces); }
 
         //**METHODS**ACTIONS
         public Vertex GetVertexAtPoint(Point Point)
@@ -623,7 +561,9 @@ namespace Topology
             //**ITERATE THROUGH EDGES FOR ANGLE CALCS
             for (int i = 0; i < Edges.Count; i++)
             {
+                // case 0: is OuterEdge
                 if (Edges[i].E.Count == 1) E1.Add(Edges[i]);
+                // case 1: is toplogically consistent edge
                 else if (Edges[i].E.Count == 2)
                 {
                     double[] AngleNormal = Edges[i].GetAngleNormal(Edges[i].E.ElementAt(0), Edges[i].E.ElementAt(1));
@@ -633,6 +573,7 @@ namespace Topology
                     Edges[i].E.ElementAt(1).Angle = AngleNormal[0];
                     E2.Add(Edges[i]);
                 }
+                // case 2: topologically inconsistent
                 else if (Edges[i].E.Count == 3)
                 {
                     Vertex A = Edges[i].Vertices[0];
@@ -667,7 +608,173 @@ namespace Topology
                 else E0.Add(Edges[i]);
             }
         }
-        
+        public int FindEdges(Face f, int EdgeCount)
+        {
+            int eCount = EdgeCount;
+            for (int j = 0; j < f.E.Count; j++)
+            {
+                bool edgeFound = false;
+                if (Edges.Count > 0)
+                {
+                    for (int k = 0; k < Edges.Count; k++)
+                    {
+                        if (Edges[k].Vertices.Contains(f.E[j].V[0]) && Edges[k].Vertices.Contains(f.E[j].V[1]))
+                        {
+                            Edges[k].E.Add(f.E[j]);
+                            f.E[j].AddEdge(Edges[k]);
+                            edgeFound = true;
+                            break;
+                        }
+                    }
+                }
+                if (!edgeFound)
+                {
+                    Edge e = new Edge();
+                    e.Name = eCount.ToString("D" + 3);
+                    e.E.Add(f.E[j]);
+                    f.E[j].AddEdge(e);
+                    Edges.Add(e);
+                    eCount++;
+                }
+            }
+            return eCount;
+        }
+        public List<Vertex> FindFaceVertices(Surface s)
+        {
+            Autodesk.DesignScript.Geometry.Vertex[] vtx = s.Vertices;
+            List<Vertex> v = new List<Vertex>(vtx.Length);
+            for (int j = 0; j < vtx.Length; j++)
+            {
+                Point pt = vtx[j].PointGeometry;
+                Vertex search = GetVertexAtPoint(pt);
+                if (!search.Equals(null))
+                {
+                    v.Add(search);
+                    pt.Dispose();
+                }
+                else
+                {
+                    V.Add(pt, new Vertex(pt));
+                    v.Add(GetVertexAtPoint(pt));
+                }
+            }
+            vtx.ForEach(x => x.Dispose());
+            return v;
+        }
+        public Mesh FlipFaceNormals()
+        {
+            Faces.ForEach(f => f.E.ForEach(e => e.FlipDirection()));
+            return this;
+        }
+
+        //**METHODS**IN PROGRESS
+        private Mesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
+        {
+            // find start point
+            Vertex v = GetVertexAtPoint(Point);
+            if (v.Equals(null)) return null;
+            List<Edge> E0 = new List<Edge>(Edges);
+            Spline S0 = new Spline(); S0.Vertices.Add(v);
+            HashSet<Edge> vE = new HashSet<Edge>(v.Edges); vE.IntersectWith(E1);
+            HalfEdge e = null;
+            for (int i = 0; i < vE.Count; i++) if (vE.ElementAt(i).E.ElementAt(0).V[0].Equals(v)) e = vE.ElementAt(i).E.ElementAt(0);
+            if (e.Equals(null)) return null;
+            int s = 0;
+            int sN = 1;
+            while (vE.Count > 0)
+            {
+                if (sN > 1) e = vE.ElementAt(0).E.ElementAt(0);
+                e.Face.ReOrderVertices(S0.Vertices[sN - 1]);
+                e.Edge.Name = "s" + s.ToString("D" + SplineCount) + "-" + sN.ToString("D" + EdgeCount);
+                E.Add(e.Edge.Name, e.Edge);
+                E0.Remove(e.Edge);
+                S0.Edges.Add(e.Edge);
+                Vertex vS = e.Edge.GetOtherVertex(S0.Vertices[sN - 1]);
+                if (!S0.Vertices.Contains(vS)) S0.Vertices.Add(vS);
+                vE = new HashSet<Edge>(S0.Vertices[sN].Edges);
+                vE.IntersectWith(E1);
+                vE.IntersectWith(E0);
+                sN++;
+            }
+            Splines.Add(S0);
+            s++;
+            // splines
+            while (E0.Count > 0 && this.E.Count < Edges.Count)
+            {
+                for (int i = 0; i < Splines[s].Edges.Count; i++)
+                {
+                    Spline S = new Spline();
+                    sN = 1;
+                    int eN = 1;
+                    int tN = 1;
+                    List<Face> T0 = Splines[s].Edges[i].Faces.FindAll(f => f.Name.Equals(""));
+                    if (T0.Count > 1) { }
+                    S.Vertices.Add(T0[0].Vertices[2]);
+                    for (int j = T0[0].E.Count - 1; j > 0; j--) if (T0[0].E[i].Edge.Name.Equals(""))
+                        {
+                            T0[0].E[i].Edge.Name = "e" + s.ToString("D" + SplineCount) + (s + 1).ToString("D" + SplineCount) + "-" + eN.ToString("D" + EdgeCount);
+                            E.Add(T0[0].E[i].Edge.Name, T0[0].E[i].Edge);
+                            E0.Remove(T0[0].E[i].Edge);
+                            eN++;
+                        }
+                    T0[0].Name = "t" + s.ToString("D" + SplineCount) + (s + 1).ToString("D" + SplineCount) + "-" + tN.ToString("D" + EdgeCount);
+                    tN++;
+                    List<Face> T1 = T0[0].E[1].Edge.Faces.FindAll(f => f.Name.Equals(""));
+                    if (T0.Count > 1) { }
+                    Vertex v0 = (T1[0] as Triangle).GetOtherVertex(T0[0].E[1].Edge);
+                    T1[0].ReOrderVertices(v0);
+                    T1[0].E[0].Edge.Name = "s" + s.ToString("D" + SplineCount) + "-" + sN.ToString("D" + EdgeCount);
+                    E.Add(T1[0].E[0].Edge.Name, T1[0].E[0].Edge);
+                    E0.Remove(T1[0].E[0].Edge);
+                    S.Edges.Add(T1[0].E[0].Edge);
+                    S.Vertices.Add(e.Edge.GetOtherVertex(S.Vertices[sN - 1]));
+                    sN++;
+                }
+
+            }
+            return this;
+        }
+        private Mesh GetSplineData(Curve[] Start, Curve[] End, Curve[] Lines)
+        {
+            List<Edge> E = new List<Edge>(Start.Length);
+            List<Curve> Search = new List<Curve>(Lines);
+            Search.RemoveAll(c => Start.Contains(c));
+            Search.RemoveAll(c => End.Contains(c));
+            for (int i = 0; i < Search.Count; i++)
+            {
+                Edge e = GetEdgeAtLine(Search[i]);
+                HalfEdge h;
+                if (e.Equals(null))
+                {
+                    Vertex v1 = GetVertexAtPoint(Lines[i].StartPoint);
+                    Vertex v2 = GetVertexAtPoint(Lines[i].EndPoint);
+                    e = new Edge(new HashSet<HalfEdge> { new HalfEdge(v1, v2), new HalfEdge(v2, v1) });
+                    e.E[0].AddEdge(e);
+                    e.E[1].AddEdge(e);
+                    v1.Edges.Add(e);
+                    v2.Edges.Add(e);
+                }
+                E.Add(e);
+
+            }
+            // case zero
+            for (int i = 0; i < Start.Length; i++)
+            {
+                List<Vertex> V = new List<Vertex>();
+                Edge e0 = GetEdgeAtLine(Start[i]);
+                V.Add(e0.E[0].V[0]);
+                V.Add(e0.E[0].V[1]);
+                HashSet<Edge> H = V[V.Count - 1].Edges;
+                H.IntersectWith(E);
+                V.Add(H.ElementAt(0).GetOtherVertex(V[V.Count - 1]));
+                E.Remove(H.ElementAt(0));
+
+
+
+            }
+            return this;
+        }
+
         //**METHODS**DISPOSE
         public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
         protected virtual void Dispose(bool disposing)
