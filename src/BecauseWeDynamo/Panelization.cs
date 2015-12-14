@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.DesignScript.Geometry;
+using Autodesk.DesignScript.Runtime;
 using Text;
 using Topology;
 
@@ -82,27 +83,28 @@ namespace Topology.Panelization
             c.Dispose();
             return s;
         }
-        public Surface[] GetPanelSolid()
+        public Solid[] GetPanelSolid()
         {
-            Curve c1 = GetPanelProfile();
-            if (c1.Equals(null)) { c1.Dispose(); return null; }
-            Surface[] s = new Surface[4];
-            s[0] = GetPanelSurface().Translate(Face.Normal, Thickness[0]) as Surface;
-            Point[] pts1 = new Point[] { c1.StartPoint, c1.StartPoint.Add(Face.Normal.Scale(Thickness[0])) };
-            Line L = Line.ByStartPointEndPoint(pts1[0],pts1[1]);
-            s[1] = c1.SweepAsSurface(L);
-            List<Point> pts2 = new List<Point>(Face.E.Count);
+            Curve[] C = new Curve[4];
+            C[0] = GetPanelProfile();
+            if (C[0].Equals(null)) { C[0].Dispose(); return null; }
+            Solid[] S = new Solid[2];
+            Point[] P1 = new Point[] { C[0].StartPoint, C[0].StartPoint.Add(Face.Normal.Scale(Thickness[0])) };
+            C[1] = Line.ByStartPointEndPoint(P1[0], P1[1]);
+            S[0] = C[0].SweepAsSolid(C[1]);
+            List<Point> P2 = new List<Point>(Face.E.Count);
             for (int i = 0; i < Face.E.Count; i++)
             {
                 Arc arc = Arc.ByThreePoints(ArcPoints[i][0], ArcPoints[i][1], ArcPoints[i][2]);
-                pts2.Add(arc.CenterPoint.Add(Face.VertexVectors[i][4].Scale((Thickness[1] * Math.Tan(BevelAngle * Math.PI / 180) - arc.Radius) / Math.Sin(Face.Angles[i] * Math.PI / 360))));
+                P2.Add(arc.CenterPoint.Add(Face.VertexVectors[i][4].Scale((Thickness[1] * Math.Tan(BevelAngle * Math.PI / 180) - arc.Radius) / Math.Sin(Face.Angles[i] * Math.PI / 360))));
                 arc.Dispose();
             }
-            Curve[] C = {c1, Polygon.ByPoints(pts2)};
-            s[2] = Surface.ByLoft(C);
-            s[3] = Surface.ByPatch(C[1]).Translate(Face.Normal, -Thickness[1]) as Surface;
-            L.Dispose(); pts1.ForEach(p => p.Dispose()); pts2.ForEach(p => p.Dispose()); C.ForEach(p => p.Dispose());
-            return s;
+            C[2] = Polygon.ByPoints(P2);
+            P2.Add(P2[0].Add(Face.Normal.Scale(-Thickness[1])));
+            C[3] = Line.ByStartPointEndPoint(P2[0], P2[P2.Count-1]);
+            S[1] = C[2].SweepAsSolid(C[3]);
+            P1.ForEach(p => p.Dispose()); P2.ForEach(p => p.Dispose()); C.ForEach(p => p.Dispose());
+            return S;
         }
         public PolyCurve[] GetEdgeLabels(double Scale)
         {
@@ -236,14 +238,17 @@ namespace Topology.Panelization
     public class EdgeConnector : IDisposable
     {
         //**FIELDS
+        internal int iAngle;
+        internal double BevelAngle;
         internal Dictionary<char, double> Dim;
         bool disposed = false;
+        internal double EdgeOffset;
 
         //**PROPERTIES
         /// <summary>
         /// gets reference edge in mesh
         /// </summary>
-        public Topology.Edge Edge { get; private set; }
+        public Edge Edge { get; private set; }
         /// <summary>
         /// gets halfedges of faces being connected by connector
         /// </summary>
@@ -266,16 +271,17 @@ namespace Topology.Panelization
         /// </summary>
         public Vector[] Vectors { get; private set; }
 
-        internal EdgeConnector(HalfEdge e1, HalfEdge e2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset)
+        internal EdgeConnector(HalfEdge e1, HalfEdge e2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
         {
             // initialize properties
+            this.BevelAngle = BevelAngle;
             Profile = new List<Vector>();
             HalfEdges = new HalfEdge[] { e1, e2 };
             Edge = e1.Edge;
             Dim = new Dictionary<char, double>();
             Dim.Add('H', Height); Dim.Add('D', Depth); Dim.Add('S', Spacing);
             // initial index for edge normal
-            int i = 0;
+            iAngle = 0;
             // determine HalfEdge index ( 0 - 1 - 2)
             int i1 = Edge.E.IndexOf(e1);
             int i2 = Edge.E.IndexOf(e2);
@@ -298,7 +304,7 @@ namespace Topology.Panelization
                 if (i1 + i2 == 3)
                 {
                     // edge normal is set to 1 which references normal between halfedge1 and halfedge2 
-                    i = 1;
+                    iAngle = 1;
                     // change orthonormal coordinate system to front face based for halfedge with index 1
                     if (Edge.E.IndexOf(e1) == 1) { X1 = X1.Reverse(); Z1 = Z1.Reverse(); }
                     if (Edge.E.IndexOf(e2) == 1) { X2 = X2.Reverse(); Z2 = Z2.Reverse(); }
@@ -308,42 +314,47 @@ namespace Topology.Panelization
                 // case halfedge count is two, edge normal array has one element that is average of face normals
                 // case halfedge count is three, edge normal array has inverse average of face normals (0,1), (1,2), (2,0)
                 // vector eN is edge normal vector pertinent to connector
-                Vector eN = Edge.Normal[i].Normalized();
+                Vector eN = Edge.Normal[iAngle].Normalized();
                 // case where halfedge count is three
                 if (Edge.E.Count > 2)
                 {
-                    // set inset calculation based on smallest angle pertinent to edgeconnectors at edge
-                    InsetAngle = Math.Min(Edge.Angle[0], Edge.Angle[1]);
                     // reverse normal
-                    if (i == 0) eN = eN.Reverse();
+                    if (iAngle == 0) eN = eN.Reverse();
                 }
                 // calculate inset distance based on inset angle and panel offsets based on inset angle
-                double EdgeOffset = Math.Max(ThicknessBack / Math.Tan(InsetAngle * Math.PI / 360), PanelMinOffset / Math.Sin(InsetAngle * Math.PI / 360) - ThicknessFront / Math.Tan(InsetAngle * Math.PI / 360));
+                // check clearance in back
+                EdgeOffset = 0;
+                if (InsetAngle == 360 || InsetAngle == 180) EdgeOffset = PanelMinOffset;
+                if (InsetAngle < 2 * (90 - BevelAngle))
+                    EdgeOffset = ThicknessBack / Math.Tan(InsetAngle * Math.PI / 360) - ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
+                // check clearance in front
+                double OffsetAngle = PanelMinOffset / Math.Sin(InsetAngle * Math.PI / 360) - ThicknessFront / Math.Tan(InsetAngle * Math.PI / 360);
+                if (EdgeOffset < OffsetAngle) EdgeOffset = OffsetAngle;
                 Inset = Math.Max(Dim['H'] / 2 + EdgeOffset, (ThicknessBack + Dim['H']) / Math.Tan(InsetAngle * Math.PI / 360));
                 // initialize Vector Lists to store affine geometry information
                 List<Vector> P1 = new List<Vector>();
                 List<Vector> P2 = new List<Vector>();
                 // v0: point closest to edge
-                P1.Add(eN.Scale(-ThicknessBack / Math.Sin(Edge.Angle[i] * Math.PI / 360)));
+                P1.Add(eN.Scale(-ThicknessBack / Math.Sin(Edge.Angle[iAngle] * Math.PI / 360)));
                 // v1: farthest point in first halfedge face direction (inset + 1.5 spacing)
                 P1.Add(X1.Scale(-ThicknessBack).Add(Y1.Scale(Inset + Dim['S'] + Dim['H'] / 2)));
                 // v2: point to create square edge with face and beginning of fillet arc
-                P1.Add(P1[1].Add(X1.Scale(-Dim['H'] / 2)));
+                P1.Add(P1[1].Add(X1.Scale(CornerRadius-Dim['H'])));
                 // v3: center of fillet arc
-                P1.Add(P1[2].Add(Y1.Scale(-Dim['H'] / 2)));
+                P1.Add(P1[2].Add(Y1.Scale(-CornerRadius)));
                 // v4: end of fillet arc;
-                P1.Add(P1[3].Add(X1.Scale(-Dim['H'] / 2)));
+                P1.Add(P1[3].Add(X1.Scale(-CornerRadius)));
                 // v5: point where two sides of the connector meet; line (v0,v5) is line of symmetry
-                P1.Add(P1[0].Add(eN.Scale(-Dim['H'] / Math.Sin(Edge.Angle[i] * Math.PI / 360))));
+                P1.Add(P1[0].Add(eN.Scale(-Dim['H'] / Math.Sin(Edge.Angle[iAngle] * Math.PI / 360))));
 
                 // w0: farthest point in second halfedge face direction (inset + 1.5 spacing)
                 P2.Add(X2.Scale(-ThicknessBack).Add(Y2.Scale(Inset + Dim['S'] + Dim['H'] / 2)));
                 // w1: point to create square edge with face and beginning of fillet arc
-                P2.Add(P2[0].Add(X2.Scale(-Dim['H'] / 2)));
+                P2.Add(P2[0].Add(X2.Scale(CornerRadius-Dim['H'])));
                 // w2: center of fillet arc
-                P2.Add(P2[1].Add(Y2.Scale(-Dim['H'] / 2)));
+                P2.Add(P2[1].Add(Y2.Scale(-CornerRadius)));
                 // w3: end of fillet arc
-                P2.Add(P2[2].Add(X2.Scale(-Dim['H'] / 2)));
+                P2.Add(P2[2].Add(X2.Scale(-CornerRadius)));
 
                 // reverse order of vectors generated by halfedge2 orthonormal coordinate system and combine vectors
                 // to create a list of vectors in the direction from halfedge1 to halfedge2
@@ -356,14 +367,14 @@ namespace Topology.Panelization
         }
 
         //**METHOD**CREATE
-        public static EdgeConnector ByHalfEdgeAndHeightDepth(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Height, double Depth, double ThicknessFront, double ThicknessBack, double PanelMinOffset)
-        { return new EdgeConnector(HalfEdge1, HalfEdge2, Height, Depth, Height, ThicknessFront, ThicknessBack, PanelMinOffset); }
-        public static EdgeConnector ByHalfEdge(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset)
-        { return new EdgeConnector(HalfEdge1, HalfEdge2, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset); }
-        public static EdgeConnector ByEdge(Topology.Edge e, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset)
+        public static EdgeConnector ByHalfEdgeHeight(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Height, double Depth, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
+        { return new EdgeConnector(HalfEdge1, HalfEdge2, Height, Depth, Height, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle); }
+        public static EdgeConnector ByHalfEdge(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
+        { return new EdgeConnector(HalfEdge1, HalfEdge2, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle); }
+        public static EdgeConnector ByEdge(Topology.Edge e, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
         {
             if (e.E.Count < 2) return null;
-            return new EdgeConnector(e.E[0], e.E[1], Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset);
+            return new EdgeConnector(e.E[0], e.E[1], Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle);
         }
 
 
@@ -396,18 +407,16 @@ namespace Topology.Panelization
             // dispose unmanaged resources
             Points.ForEach(p => p.Dispose()); Curves.ForEach(c => c.Dispose());
             return Result;
-        }
+        }  
         /// <summary>
         /// returns flat panel on mesh face as single Surface
         /// </summary>
         /// <param name="Point">Point is origin of connector</param>
         /// <returns>Surface by Polycurve patch</returns>
-        public Surface GetConnectorSurface(Point Point)
+        public Surface GetConnectorSurface(PolyCurve Profile)
         {
-            Curve c = GetConnectorProfile(Point);
-            if (c.Equals(null)) { c.Dispose(); return null; }
-            Surface s = Surface.ByPatch(c);
-            c.Dispose();
+            if (Profile.Equals(null) || !Profile.IsClosed || !Profile.IsPlanar) return null; 
+            Surface s = Surface.ByPatch(Profile);
             return s;
         }
         /// <summary>
@@ -415,15 +424,13 @@ namespace Topology.Panelization
         /// </summary>
         /// <param name="Point">Point is origin of connector</param>
         /// <returns>Solid by Polycurve sweep</returns>
-        public Solid GetConnectorSolid(Point Point)
+        public Solid GetConnectorSolid(PolyCurve Profile)
         {
-            Curve c = GetConnectorProfile(Point);
-            if (c.Equals(null)) { c.Dispose(); return null; }
-            Point a = c.StartPoint.Add(Vectors[2].Scale(Dim['D'] / 2));
-            Point b = c.StartPoint.Add(Vectors[5].Scale(Dim['D'] / 2));
+            if (Profile.Equals(null) || !Profile.IsClosed || !Profile.IsPlanar) return null; 
+            Point a = Profile.StartPoint.Add(Vectors[2].Scale(Dim['D'] / 2));
+            Point b = Profile.StartPoint.Add(Vectors[5].Scale(Dim['D'] / 2));
             Line l = Line.ByStartPointEndPoint(a, b);
-            Solid s = c.SweepAsSolid(l);
-            c.Dispose();
+            Solid s = Profile.SweepAsSolid(l);
             a.Dispose();
             b.Dispose();
             l.Dispose();
@@ -435,39 +442,88 @@ namespace Topology.Panelization
         /// <param name="Point">Point is origin of connector</param>
         /// <param name="Scale">Scale = (letter height)/4; Scale is in project units</param>
         /// <returns>Polycurve Array</returns>
-        public PolyCurve[] GetEdgeLabel(Point Point, double Scale = 1/32)
+        public PolyCurve[] GetEdgeLabel(Point Point, double Scale, string LabelPrefix = "")
         {
             if (!(Profile.Count > 8)) return null;
-            Point p4 = Point.Add(Profile[4]);
-            Point p5 = Point.Add(Profile[5]);
-            Point pt = p5;
-            if (Profile.Count == 9) pt = Point.ByCoordinates(p4.X / 2 + p5.X / 2, p4.Y / 2 + p5.Y / 2, p4.Z / 2 + p5.Z / 2);
+            Point pt = Point.Add(Profile[5]);
             Vector X = Vectors[3].Subtract(Vectors[0]);
             Vector Y = Vectors[6].Reverse();
-            if (InsetAngle > 180)
-            {
-                pt = Point.Add(Profile[0]);
-                X = X.Reverse();
-                Y = Y.Reverse();
-            }
-            Surface s = GetConnectorSurface(Point);
+            if (Edge.Angle[iAngle] > 179.9999 && Edge.Angle[iAngle] < 180.0001) X = Profile[1].Subtract(Profile[0]);
+            if (Edge.Angle[iAngle] > 180) { pt = Point.Add(Profile[0]); X = X.Reverse(); Y = Y.Reverse(); }
+            Surface s = GetConnectorSurface(GetConnectorProfile(Point));
             CoordinateSystem cs = s.CoordinateSystemAtParameter(0.5, 0.5);
             Vector Z1 = cs.ZAxis.Normalized();
             Vector Z2 = X.Cross(Y).Normalized();
             if (!Z1.IsAlmostEqualTo(Z2)) X = X.Reverse();
-            Word w = Word.ByStringOriginVectors(Edge.Name, pt, X, Y);
-            PolyCurve[] label = w.display(Scale).ToArray();
-            p4.Dispose(); p5.Dispose(); pt.Dispose();
+            Word w = Word.ByStringOriginVectors(LabelPrefix+Edge.Name, pt, X, Y);
+            List<PolyCurve> label = w.display(Scale);
+            pt.Dispose();
             X.Dispose(); Y.Dispose(); Z1.Dispose(); Z2.Dispose();
             s.Dispose(); cs.Dispose(); w.Dispose();
-            return label;
+            return label.ToArray();
         }
-        public CoordinateSystem GetCS(Point Point)
+        public CoordinateSystem GetCS(Point Point) {
+            Surface s = GetConnectorSurface(GetConnectorProfile(Point));
+            CoordinateSystem cs = s.CoordinateSystemAtParameter(0.5, 0.5);
+            s.Dispose();
+            return cs; 
+        }
+
+
+        //**MODS
+        public PolyCurve GetConnectorProfileBevel(Point Point)
         {
-            Surface S = GetConnectorSurface(Point);
-            CoordinateSystem CS = S.CoordinateSystemAtParameter();
-            S.Dispose();
-            return CS;
+            // return default for angles smaller than 
+            if (Edge.Angle[iAngle] <= 2 * (90 - BevelAngle)) return GetConnectorProfile(Point);
+            // initialize and generate Point List using EdgeConnector geometry data at given point
+            List<Point> Points = new List<Point>(Profile.Count + 7);
+            double ThicknessBack = Profile[0].Length * Math.Sin(Edge.Angle[iAngle] * Math.PI / 360);
+            double BevelInset = ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
+            //double DogBoneBevel = 2 * ToolRadius * Math.Sin(Math.PI / 4 - BevelAngle * Math.PI / 2);
+            //double DogBoneChord = 2 * ToolRadius / Math.Sin(Math.PI / 4 + BevelAngle * Math.PI / 2);
+            for (int i = 1; i < Profile.Count; i++) Points.Add(Point.Add(Profile[i]));
+            //Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset + 2 * ToolRadius)).Add(Vectors[3].Scale(-ThicknessBack)));
+            //Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset + ToolRadius)).Add(Vectors[3].Scale(-ThicknessBack - ToolRadius)));
+            Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset)).Add(Vectors[3].Scale(-ThicknessBack)));
+            if (Edge.Angle[iAngle] == 2 * (180 - BevelAngle)) {}
+            else if (Edge.Angle[iAngle] < 2 * (180 - BevelAngle))
+            {
+                Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[3].Scale(-ThicknessBack / 2)));
+                Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[0].Scale(-ThicknessBack / 2)));
+            }
+            else if (Edge.Angle[iAngle] > 2 * (180 - BevelAngle))
+            {
+                //hyp = o/(sin(e/2)*tan(b) + cos(e/2))
+                Points.Add(Point.Add(Vectors[6].Scale(EdgeOffset / (Math.Sin(Edge.Angle[iAngle] / 2) * Math.Tan(BevelAngle) + Math.Cos(Edge.Angle[iAngle] / 2)))));
+            }
+            Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset)).Add(Vectors[0].Scale(-ThicknessBack)));
+            //Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset + ToolRadius)).Add(Vectors[0].Scale(-ThicknessBack - ToolRadius)));
+            //Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset + 2 * ToolRadius)).Add(Vectors[0].Scale(-ThicknessBack)));
+            // initialize Curves for Profile
+            /*List<Curve> Curves = new List<Curve> {
+                Arc.ByThreePoints(Points[Points.Count-3],Points[Points.Count-2],Points[Points.Count-1]),
+                Line.ByStartPointEndPoint(Points[Points.Count-1], Points[0]),
+                Line.ByStartPointEndPoint(Points[0], Points[1]),
+                Arc.ByCenterPointStartPointEndPoint(Points[2],Points[1],Points[3]),
+                Line.ByStartPointEndPoint(Points[3], Points[4]),
+                Line.ByStartPointEndPoint(Points[4], Points[5]),
+                Arc.ByCenterPointStartPointEndPoint(Points[6],Points[5],Points[7]),
+                Line.ByStartPointEndPoint(Points[7],Points[8]),
+                Line.ByStartPointEndPoint(Points[8],Points[9]),
+                Arc.ByThreePoints(Points[9],Points[10],Points[11])};
+            for (int j = 11; j < Points.Count-3; j++) Curves.Add(Line.ByStartPointEndPoint(Points[j], Points[j + 1]));*/
+            List<Curve> Curves = new List<Curve> {
+                Line.ByStartPointEndPoint(Points[0], Points[1]),
+                Arc.ByCenterPointStartPointEndPoint(Points[2],Points[1],Points[3]),
+                Line.ByStartPointEndPoint(Points[3], Points[4]),
+                Line.ByStartPointEndPoint(Points[4], Points[5]),
+                Arc.ByCenterPointStartPointEndPoint(Points[6],Points[5],Points[7])};
+            for (int j = 7; j < Points.Count; j++) Curves.Add(Line.ByStartPointEndPoint(Points[j], Points[(j + 1)%Points.Count]));
+            // create closed polycurve from curves
+            PolyCurve Result = PolyCurve.ByJoinedCurves(Curves);
+            // dispose unmanaged resources
+            Points.ForEach(p => p.Dispose()); Curves.ForEach(c => c.Dispose());
+            return Result;
         }
 
         //**METHODS**DISPOSE
@@ -493,7 +549,7 @@ namespace Topology.Panelization
         //**FIELDS
         bool disposed = false;
         internal Dictionary<Face, Panel> F;
-        internal Dictionary<Topology.Edge, EdgeConnector> E;
+        internal Dictionary<Edge, EdgeConnector> E;
         internal Mesh M;
 
         //**PROPERTIES**QUERY
@@ -504,7 +560,7 @@ namespace Topology.Panelization
         internal PanelSystem(Mesh Mesh) { M = Mesh; }
         internal PanelSystem(Mesh Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
             : this(Mesh)
-        { GenerateEdgeConnectors(Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset); GeneratePanels(ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); }
+        { GenerateEdgeConnectors(Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); GeneratePanels(ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); }
 
         //**METHODS**CREATE
         public static PanelSystem ByMesh(Mesh Mesh) { return new PanelSystem(Mesh); }
@@ -512,13 +568,13 @@ namespace Topology.Panelization
         { return new PanelSystem(Mesh, Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); }
 
         //**METHODS**ACTIONS
-        public void GenerateEdgeConnectors(double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset)
+        public void GenerateEdgeConnectors(double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
         {
             // initialize mesh edge to edge connector dictionary
             E = new Dictionary<Topology.Edge, EdgeConnector>(M.E2.Count + M.E3.Count);
             // generate EdgeConnector
-            M.E2.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset)));
-            M.E3.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset)));
+            M.E2.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle)));
+            M.E3.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle)));
         }
 
         public bool GeneratePanels(double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
