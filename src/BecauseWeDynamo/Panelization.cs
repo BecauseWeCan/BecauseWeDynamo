@@ -106,7 +106,7 @@ namespace Topology.Panelization
             P1.ForEach(p => p.Dispose()); P2.ForEach(p => p.Dispose()); C.ForEach(p => p.Dispose());
             return S;
         }
-        public PolyCurve[] GetEdgeLabels(double Scale)
+        public PolyCurve[] GetEdgeLabels(double Scale, double Offset=0, string LabelPrefix = "")
         {
             List<PolyCurve> labels = new List<PolyCurve>();
             for (int i = 0; i < Face.E.Count; i++)
@@ -115,16 +115,17 @@ namespace Topology.Panelization
                 int j = (i + 1) % Face.E.Count;
                 Point m = Point.ByCoordinates(ArcPoints[i][2].X / 2 + ArcPoints[j][0].X / 2, ArcPoints[i][2].Y / 2 + ArcPoints[j][0].Y / 2, ArcPoints[i][2].Z / 2 + ArcPoints[j][0].Z / 2);
                 Vector Y = Face.VertexVectors[i][0].Cross(Face.Normal);
-                Word w = Word.ByStringOriginVectors(Face.E[i].Edge.Name, m, Face.VertexVectors[i][0], Y);
+                if (Offset > 0) m = m.Add(Y.Normalized().Scale(-Offset));
+                Word w = Word.ByStringOriginVectors(LabelPrefix + Face.E[i].Edge.Name, m, Face.VertexVectors[i][0], Y);
                 labels.AddRange(w.display(Scale));
                 m.Dispose(); Y.Dispose(); w.Dispose();
             }
             return labels.ToArray();
         }
-        public PolyCurve[] GetLabels(double Scale)
+        public PolyCurve[] GetLabels(double Scale, double Offset = 0, string LabelPrefix = "")
         {
             List<PolyCurve> labels = new List<PolyCurve>();
-            labels.AddRange(GetEdgeLabels(Scale));
+            labels.AddRange(GetEdgeLabels(Scale,Offset,LabelPrefix));
             Point c = Face.Center;
             Vector N = Face.VertexVectors[0][0].Cross(Face.Normal);
             Word W = Word.ByStringOriginVectors(Face.Name, c, Face.VertexVectors[0][0], N);
@@ -141,6 +142,16 @@ namespace Topology.Panelization
             Word W = Word.ByStringOriginVectors(Face.Name, c, X, Y);
             labels.AddRange(W.display(Scale));
             c.Dispose(); X.Dispose(); Y.Dispose(); W.Dispose();
+            return labels.ToArray();
+        }
+        public PolyCurve[] GetFaceLabelBack(double Scale, string LabelPrefix = "")
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            Point c = Face.Center;
+            Vector N = Face.VertexVectors[0][0].Cross(Face.Normal);
+            Word W = Word.ByStringOriginVectors(LabelPrefix + Face.Name, c, Face.VertexVectors[0][0], N);
+            labels.AddRange(W.display(Scale));
+            c.Dispose(); N.Dispose(); W.Dispose();
             return labels.ToArray();
         }
 
