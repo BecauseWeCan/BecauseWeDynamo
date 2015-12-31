@@ -47,7 +47,8 @@ namespace Topology.Panelization
                 double sinA = Math.Sin(Face.Angles[i] * Math.PI / 180);
                 double sinB = Math.Sin(Face.Angles[i] * Math.PI / 360);
                 double tanB = Math.Tan(Face.Angles[i] * Math.PI / 360);
-                int j = (i + 2) % Face.E.Count;
+                int j = (i + Face.E.Count - 1) % Face.E.Count;
+
                 Point a0 = Face.VertexPoints[i].Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA));
                 Point a1 = Face.VertexPoints[i].Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)).Add(Face.VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
                 Point a2 = Face.VertexPoints[i].Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA + CornerRadius / tanB)).Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA));
