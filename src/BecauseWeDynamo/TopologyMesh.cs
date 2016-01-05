@@ -444,6 +444,8 @@ namespace Topology
         internal List<Edge> E2;
         internal List<Edge> E3;
         internal List<Edge> E0;
+        internal int Df = 0;
+        internal int De = 0;
 
         //**PROPERTIES**QUERY
         public List<Face> Faces { get; set; }
@@ -468,6 +470,7 @@ namespace Topology
         internal Mesh(Point[] Points)
             : this()
         {
+            De = Points.Length;
             V = new Dictionary<Point, Vertex>(Points.Length);
             // create vertex lookup table from points
             for (int i = 0; i < Points.Length; i++)
@@ -480,6 +483,8 @@ namespace Topology
         internal Mesh(Point[] Points, Surface[] Surfaces)
             : this(Points)
         {
+            Df = Surfaces.Length.ToString().Length;
+            De = (Surfaces.Length+Points.Length).ToString().Length;
             // initialize
             Faces = new List<Face>(Surfaces.Length);
             //**CONSTRUCT MESH
@@ -492,14 +497,14 @@ namespace Topology
                 if (Surfaces[i].Vertices.Length == 3)
                 {
                     Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
-                    t.Name = "t" + (i + 1).ToString("D" + 4);
+                    t.Name = "t" + (i + 1).ToString("D" + Df);
                     Faces.Add(t);
                     eCount = FindEdges(t, eCount);
                 }
                 else
                 {
                     Face f = new Face(FindFaceVertices(Surfaces[i]));
-                    f.Name = "f" + (i + 1).ToString("D" + 4);
+                    f.Name = "f" + (i + 1).ToString("D" + Df);
                     Faces.Add(f);
                     eCount = FindEdges(f, eCount);
                 }
@@ -510,6 +515,8 @@ namespace Topology
         internal Mesh(Surface[] Surfaces)
             : this()
         {
+            Df = Surfaces.Length.ToString().Length;
+            De = (2*Surfaces.Length).ToString().Length;
             // initialize
             Faces = new List<Face>(Surfaces.Length);
             //**CONSTRUCT MESH
@@ -522,14 +529,14 @@ namespace Topology
                 if (Surfaces[i].Vertices.Length == 3)
                 {
                     Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
-                    t.Name = "t" + (i + 1).ToString("D" + 4);
+                    t.Name = "t" + (i + 1).ToString("D" + Df);
                     Faces.Add(t);
                     eCount = FindEdges(t, eCount);
                 }
                 else
                 {
                     Face f = new Face(FindFaceVertices(Surfaces[i]));
-                    f.Name = "f" + (i + 1).ToString("D" + 4);
+                    f.Name = "f" + (i + 1).ToString("D" + Df);
                     Faces.Add(f);
                     eCount = FindEdges(f, eCount);
                 }
@@ -630,7 +637,7 @@ namespace Topology
                 if (!edgeFound)
                 {
                     Edge e = new Edge();
-                    e.Name = eCount.ToString("D" + 3);
+                    e.Name = eCount.ToString("D" + De);
                     e.E.Add(f.E[j]);
                     f.E[j].AddEdge(e);
                     Edges.Add(e);
