@@ -307,9 +307,11 @@ namespace Topology.Panelization
                 Vector X1 = e1.Face.Normal;
                 Vector Z1 = e1.GetVector().Normalized();
                 Vector Y1 = X1.Cross(Z1).Normalized();
+                X1 = Z1.Cross(Y1).Normalized();
                 Vector X2 = e2.Face.Normal;
                 Vector Z2 = e2.GetVector().Normalized();
                 Vector Y2 = X2.Cross(Z2).Normalized();
+                X2 = Z2.Cross(Y2).Normalized();
                 // case where there are three half edges to an edge
                 // and where it is a front face to a back face connection
                 // ie. halfedge1 and halfedge2
@@ -327,6 +329,9 @@ namespace Topology.Panelization
                 // case halfedge count is three, edge normal array has inverse average of face normals (0,1), (1,2), (2,0)
                 // vector eN is edge normal vector pertinent to connector
                 Vector eN = Edge.Normal[iAngle].Normalized();
+                Vector eY = eN.Cross(Z1).Normalized();
+                eN = Z1.Cross(eY).Normalized();
+                eY.Dispose();
                 // case where halfedge count is three
                 if (Edge.E.Count > 2)
                 {
@@ -427,7 +432,7 @@ namespace Topology.Panelization
         /// <returns>Surface by Polycurve patch</returns>
         public Surface GetConnectorSurface(PolyCurve Profile)
         {
-            if (Profile.Equals(null) || !Profile.IsClosed || !Profile.IsPlanar) return null; 
+            if (Profile.Equals(null) || !Profile.IsClosed || !Profile.IsPlanar) return null;
             Surface s = Surface.ByPatch(Profile);
             return s;
         }
@@ -456,22 +461,20 @@ namespace Topology.Panelization
         /// <returns>Polycurve Array</returns>
         public PolyCurve[] GetEdgeLabel(Point Point, double Scale, string LabelPrefix = "")
         {
-            if (!(Profile.Count > 8)) return null;
             Point pt = Point.Add(Profile[5]);
             Vector X = Vectors[3].Subtract(Vectors[0]);
             Vector Y = Vectors[6].Reverse();
-            if (Edge.Angle[iAngle] > 179.9999 && Edge.Angle[iAngle] < 180.0001) X = Profile[1].Subtract(Profile[0]);
+            if (Edge.Angle[iAngle] > 179.999 && Edge.Angle[iAngle] < 180.001) X = Profile[1].Subtract(Profile[0]);
             if (Edge.Angle[iAngle] > 180) { pt = Point.Add(Profile[0]); X = X.Reverse(); Y = Y.Reverse(); }
-            Surface s = GetConnectorSurface(GetConnectorProfile(Point));
-            CoordinateSystem cs = s.CoordinateSystemAtParameter(0.5, 0.5);
+            CoordinateSystem cs = GetCS(Point);
             Vector Z1 = cs.ZAxis.Normalized();
             Vector Z2 = X.Cross(Y).Normalized();
             if (!Z1.IsAlmostEqualTo(Z2)) X = X.Reverse();
-            Word w = Word.ByStringOriginVectors(LabelPrefix+Edge.Name, pt, X, Y);
+            Word w = Word.ByStringOriginVectors(LabelPrefix+Edge.Name, pt, X.Normalized(), Y.Normalized());
             List<PolyCurve> label = w.display(Scale);
             pt.Dispose();
             X.Dispose(); Y.Dispose(); Z1.Dispose(); Z2.Dispose();
-            s.Dispose(); cs.Dispose(); w.Dispose();
+            cs.Dispose(); w.Dispose();
             return label.ToArray();
         }
         public CoordinateSystem GetCS(Point Point) {
