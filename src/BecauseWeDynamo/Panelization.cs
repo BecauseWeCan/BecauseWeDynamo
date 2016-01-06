@@ -123,6 +123,22 @@ namespace Topology.Panelization
             }
             return labels.ToArray();
         }
+        public PolyCurve[] GetEdgeLabelsFront(double Scale, double Offset = 0, string LabelPrefix = "")
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            for (int i = 0; i < Face.E.Count; i++)
+            {
+                if (Face.E[i].Edge.E.Count == 1) continue;
+                int j = (i + 1) % Face.E.Count;
+                Point m = Point.ByCoordinates(ArcPoints[i][2].X / 2 + ArcPoints[j][0].X / 2, ArcPoints[i][2].Y / 2 + ArcPoints[j][0].Y / 2, ArcPoints[i][2].Z / 2 + ArcPoints[j][0].Z / 2);
+                Vector Y = Face.VertexVectors[i][0].Cross(Face.Normal);
+                if (Offset > 0) m = m.Add(Y.Normalized().Scale(-Offset));
+                Word w = Word.ByStringOriginVectors(LabelPrefix + Face.E[i].Edge.Name, m, Face.VertexVectors[i][0].Reverse(), Y);
+                labels.AddRange(w.display(Scale));
+                m.Dispose(); Y.Dispose(); w.Dispose();
+            }
+            return labels.ToArray();
+        }
         public PolyCurve[] GetLabels(double Scale, double Offset = 0, string LabelPrefix = "")
         {
             List<PolyCurve> labels = new List<PolyCurve>();
