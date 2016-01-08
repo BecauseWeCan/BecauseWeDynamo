@@ -446,6 +446,7 @@ namespace Topology
         internal List<Edge> E0;
         internal int Df = 0;
         internal int De = 0;
+        internal double MinFaceAngle = 180;
 
         //**PROPERTIES**QUERY
         public List<Face> Faces { get; set; }
@@ -484,7 +485,7 @@ namespace Topology
             : this(Points)
         {
             Df = Surfaces.Length.ToString().Length;
-            De = (Surfaces.Length+Points.Length).ToString().Length;
+            De = (Surfaces.Length + Points.Length).ToString().Length;
             // initialize
             Faces = new List<Face>(Surfaces.Length);
             //**CONSTRUCT MESH
@@ -499,6 +500,7 @@ namespace Topology
                     Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
                     t.Name = "t" + (i + 1).ToString("D" + Df);
                     Faces.Add(t);
+                    for (int j = 0; j < t.Angles.Length; j++) if (t.Angles[j] < MinFaceAngle) MinFaceAngle = t.Angles[j];
                     eCount = FindEdges(t, eCount);
                 }
                 else
@@ -506,6 +508,7 @@ namespace Topology
                     Face f = new Face(FindFaceVertices(Surfaces[i]));
                     f.Name = "f" + (i + 1).ToString("D" + Df);
                     Faces.Add(f);
+                    for (int j = 0; j < f.Angles.Length; j++) if (f.Angles[j] < MinFaceAngle) MinFaceAngle = f.Angles[j];
                     eCount = FindEdges(f, eCount);
                 }
             }
@@ -516,7 +519,7 @@ namespace Topology
             : this()
         {
             Df = Surfaces.Length.ToString().Length;
-            De = (2*Surfaces.Length).ToString().Length;
+            De = (2 * Surfaces.Length).ToString().Length;
             // initialize
             Faces = new List<Face>(Surfaces.Length);
             //**CONSTRUCT MESH

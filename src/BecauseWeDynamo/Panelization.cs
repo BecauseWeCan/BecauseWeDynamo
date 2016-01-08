@@ -20,7 +20,7 @@ namespace Topology.Panelization
         public double[] EdgeOffset { get; set; }
 
         //**CONSTRUCTOR
-        internal Panel(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
+        internal Panel(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double MinCornerRadius, double MinFaceAngle, double BevelAngle)
         {
             // initialize
             this.Face = Face;
@@ -46,7 +46,9 @@ namespace Topology.Panelization
             {
                 double sinA = Math.Sin(Face.Angles[i] * Math.PI / 180);
                 double sinB = Math.Sin(Face.Angles[i] * Math.PI / 360);
-                double tanB = Math.Tan(Face.Angles[i] * Math.PI / 360);
+                double tanB = Math.Abs(Math.Tan(Face.Angles[i] * Math.PI / 360));
+                double MinOffset = MinCornerRadius / Math.Tan(MinFaceAngle * Math.PI / 360);
+                double CornerRadius = MinOffset * tanB;
                 int j = (i + Face.E.Count - 1) % Face.E.Count;
 
                 Point a0 = Face.VertexPoints[i].Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA));
@@ -59,8 +61,8 @@ namespace Topology.Panelization
         }
 
         //**CREATE
-        public static Panel ByFaceAndParameters(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle = 0)
-        { return new Panel(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle); }
+        public static Panel ByFaceAndParameters(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double MinCornerRadius, double MinFaceAngle, double BevelAngle = 0)
+        { return new Panel(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, MinCornerRadius, MinFaceAngle, BevelAngle); }
 
         public PolyCurve GetPanelProfile()
         {
@@ -195,8 +197,8 @@ namespace Topology.Panelization
         public List<Circle> Holes { get; set; }
 
         //**METHODS**CONSTRUCTOR
-        internal PanelHole(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius)
-            : base(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, 0)
+        internal PanelHole(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double MinCornerRadius, double MinFaceAngle)
+            : base(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, MinCornerRadius, MinFaceAngle, 0)
         {
             // initialize
             Holes = new List<Circle>();
@@ -617,9 +619,9 @@ namespace Topology.Panelization
             for (int i = 0; i < M.Faces.Count; i++)
             {
                 // generate triangle panel with input values at given face
-                Panel t = Panel.ByFaceAndParameters(M.Faces[i], ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, BevelAngle);
+                Panel panel = Panel.ByFaceAndParameters(M.Faces[i], ThicknessFront, ThicknessBack, MinEdgeOffset, CornerRadius, M.MinFaceAngle, BevelAngle);
                 // add face/panel pair to dictionary
-                F.Add(M.Faces[i], t);
+                F.Add(M.Faces[i], panel);
                 // iterate through edges and add holes based on edge connector calculations
                 for (int j = 0; j < M.Faces[i].Edges.Length; j++)
                     if (E.ContainsKey(M.Faces[i].Edges[j]))
