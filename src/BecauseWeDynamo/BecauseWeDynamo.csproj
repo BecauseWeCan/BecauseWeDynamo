@@ -32,15 +32,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MeshToolkit">
-      <HintPath>..\..\..\..\..\AppData\Roaming\Dynamo\0.9\packages\MeshToolkit\bin\MeshToolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="ProtoGeometry, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="MeshToolkit, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\MeshToolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="ProtoGeometry">
       <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoGeometry.dll</HintPath>
     </Reference>
-    <Reference Include="ProtoInterface, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="ProtoInterface">
       <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoInterface.dll</HintPath>
     </Reference>
     <Reference Include="System" />
