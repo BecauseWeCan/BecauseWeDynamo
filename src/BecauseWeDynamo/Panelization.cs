@@ -81,7 +81,7 @@ namespace Topology.Panelization
         public Surface GetPanelSurface()
         {
             Curve c = GetPanelProfile();
-            if (c.Equals(null)) { c.Dispose(); return null; }
+            if (c.Equals(null) || !c.IsPlanar || !c.IsClosed) { c.Dispose(); return null; }
             Surface s = Surface.ByPatch(c);
             c.Dispose();
             return s;
@@ -609,7 +609,6 @@ namespace Topology.Panelization
             M.E2.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle)));
             M.E3.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle)));
         }
-
         public bool GeneratePanels(double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerRadius, double BevelAngle)
         {
             if (!(E.Count > 0)) return false;
@@ -631,6 +630,16 @@ namespace Topology.Panelization
                         // orthogonal vector to edge that is on the plane of triangle face with direction towards center of face
                         Vector Y = M.Faces[i].Normal.Cross(M.Faces[i].E[j].GetVector()).Normalized();
                     }
+            }
+            return true;
+        }
+        public bool CheckPanels()
+        {
+            for (int i=0; i <Panels.Length; i++)
+            {
+                Surface s = Panels[i].GetPanelSurface();
+                if (s.Equals(null)) { s.Dispose(); return false; }
+                s.Dispose();
             }
             return true;
         }
