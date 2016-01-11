@@ -319,7 +319,7 @@ namespace Topology
                     List<Vector> V = new List<Vector> { E[i].GetVector().Normalized(), E[j].GetVector().Normalized().Reverse() };
                     V.Add((V[0].Add(V[1])).Normalized());
                     V.Add((V[0].Subtract(V[1])).Normalized());
-                    V.Add( ( (Normal.Cross(V[0]).Normalized()) .Add ((V[1].Cross(Normal)).Normalized()) ).Normalized() );
+                    V.Add(((Normal.Cross(V[0]).Normalized()).Add((V[1].Cross(Normal)).Normalized())).Normalized());
                     eV.Add(V.ToArray());
                 }
                 return eV.ToArray();
@@ -356,7 +356,8 @@ namespace Topology
 
         //**CONSTRUCTOR**
         public Face() { Name = ""; Parameters = new Dictionary<string, object>(); }
-        public Face(IEnumerable<Vertex> Vertices) : this()
+        public Face(IEnumerable<Vertex> Vertices,Vector Normal)
+            : this()
         {
             E = new List<HalfEdge>(Vertices.ToList().Count);
             for (int i = 0; i < Vertices.Count(); i++)
@@ -373,12 +374,12 @@ namespace Topology
                 xyz[2] += Vertices.ElementAt(i).Z / E.Count;
             }
             Point Center = Point.ByCoordinates(xyz[0], xyz[1], xyz[2]);
-            SetCS(Center);
+            SetCS(Center, Normal);
             Center.Dispose();
         }
 
         //**METHODS**CREATE
-        public static Face ByVertices(IEnumerable<Vertex> Vertices) { return new Face(Vertices); }
+        public static Face ByVertices(IEnumerable<Vertex> Vertices, Vector Normal) { return new Face(Vertices, Normal); }
 
         //**METHODS** //**ACTION**
         public Face ReOrderVertices(Vertex Start)
@@ -390,7 +391,7 @@ namespace Topology
             for (int i = 1; i < E.Count; i++) if (E[i].Equals(Start)) { index = i; break; }
             for (int i = 0; i < E.Count; i++) E[i] = temp[(index + 1) % E.Count];
             temp = null;
-            SetCS(CS.Origin);
+            SetCS(CS.Origin, CS.ZAxis);
             return this;
         }
         public void AddParameter(string Name, Object Object)
@@ -404,12 +405,12 @@ namespace Topology
         }
 
         //**METHODS**INTERNAL
-        internal void SetCS(Point Center)
+        internal void SetCS(Point Center, Vector Normal)
         {
-            Vector Y = E[E.Count - 1].GetVector().Reverse();
+            Vector Z = Normal;
             Vector X = E[0].GetVector();
-            Vector Z = X.Cross(Y);
-            Y = Z.Cross(X);
+            Vector Y = Z.Cross(X);
+            X = Y.Cross(Z);
             CS = CoordinateSystem.ByOriginVectors(Center, X, Y);
             X.Dispose(); Y.Dispose(); Z.Dispose();
         }
@@ -435,9 +436,17 @@ namespace Topology
     {
         //**CONSTRUCTOR**
         public Triangle() : base() { }
-        public Triangle(IEnumerable<Vertex> Vertices) : base(Vertices.Take(3)) { }
+        public Triangle(IEnumerable<Vertex> Vertices, Vector Normal) : base(Vertices.Take(3), Normal) { }
 
-        public static Triangle ByVertices(IEnumerable<Vertex> Vertices) {return new Triangle(Vertices);}
+        public static Triangle ByVerticesNormal(IEnumerable<Vertex> Vertices, Vector Normal) { return new Triangle(Vertices, Normal); }
+        public static Triangle ByVertices(IEnumerable<Vertex> Vertices) 
+        { 
+            Vector X = Vector.ByTwoPoints(Vertices.ElementAt(0).Point,Vertices.ElementAt(1).Point);
+            Vector Y = Vector.ByTwoPoints(Vertices.ElementAt(0).Point,Vertices.ElementAt(2).Point);
+            Vector N = X.Cross(Y);
+            X.Dispose(); Y.Dispose();
+            return new Triangle(Vertices, N);
+        }
 
         public Point GetCircumcenter()
         {
@@ -470,25 +479,26 @@ namespace Topology
         public int Diagonal { get; private set; }
 
         //**CONSTRUCTOR**
-        internal Quad(IEnumerable<Vertex> Vertices) : base(Vertices.Take(4)) 
+        internal Quad(IEnumerable<Vertex> Vertices, Vector Normal)
+            : base(Vertices.Take(4), Normal)
         {
             Diagonal = 0;
             if (E[0].V[0].DistanceTo(E[2].V[0]) > E[1].V[0].DistanceTo(E[3].V[0])) Diagonal = 1;
         }
 
         //**METHODS**CREATE
-        public static Quad ByVertices(IEnumerable<Vertex> Vertices) { return new Quad(Vertices); }
+        public static Quad ByVertices(IEnumerable<Vertex> Vertices, Vector Normal) { return new Quad(Vertices, Normal); }
 
         //**METHODS**ACTION
         public void FlipDiagonal()
         {
-            Diagonal = (Diagonal+1)%2;
+            Diagonal = (Diagonal + 1) % 2;
         }
         public Line GetDiagonal()
         {
             Point a = E[Diagonal].V[0].Point;
-            Point b = E[Diagonal+2].V[0].Point;
-            Line L = Line.ByStartPointEndPoint(a,b);
+            Point b = E[Diagonal + 2].V[0].Point;
+            Line L = Line.ByStartPointEndPoint(a, b);
             a.Dispose(); b.Dispose();
             return L;
         }

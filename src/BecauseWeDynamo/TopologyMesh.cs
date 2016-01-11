@@ -54,6 +54,8 @@ namespace Topology
             int eCount = 1;
             for (int i = 0; i < Surfaces.Length; i++)
             {
+                // 
+
                 // find face vertices in lookup table
                 Autodesk.DesignScript.Geometry.Vertex[] vtx = Surfaces[i].Vertices;
                 List<Vertex> v = new List<Vertex>(vtx.Length);
@@ -67,7 +69,7 @@ namespace Topology
                 }
                 vtx.ForEach(x => x.Dispose());
                 // create face based on vertices
-                Triangle t = new Triangle(v);
+                Triangle t = new Triangle(v, Surfaces[i].NormalAtParameter(0.5, 0.5));
                 t.Name = "t" + (i + 1).ToString("D" + 4);
                 Faces.Add(t);
                 // create or find edges
@@ -135,7 +137,7 @@ namespace Topology
                     v.Add(Vertices[(int)iF.B]);
                     v.Add(Vertices[(int)iF.C]);
                     // create face based on vertices
-                    Triangle t = new Triangle(v);
+                    Triangle t = Triangle.ByVertices(v);
                     Faces.Add(t);
                     // create or find edges
                     for (int j = 0; j < t.E.Count; j++)
@@ -189,8 +191,8 @@ namespace Topology
                         v2.Add(Vertices[(int)iF.B]);
                     }
                     // create face based on vertices
-                    Triangle t1 = new Triangle(v1);
-                    Triangle t2 = new Triangle(v2);
+                    Triangle t1 = Triangle.ByVertices(v1);
+                    Triangle t2 = Triangle.ByVertices(v2);
                     Faces.Add(t1);
                     Faces.Add(t2);
                     for (int j = 0; j < t1.E.Count; j++)
@@ -497,18 +499,16 @@ namespace Topology
                 // create face based on vertices
                 if (Surfaces[i].Vertices.Length == 3)
                 {
-                    Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
+                    Triangle t = new Triangle(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5, 0.5));
                     t.Name = "t" + (i + 1).ToString("D" + Df);
                     Faces.Add(t);
-                    for (int j = 0; j < t.Angles.Length; j++) if (t.Angles[j] < MinFaceAngle) MinFaceAngle = t.Angles[j];
                     eCount = FindEdges(t, eCount);
                 }
                 else
                 {
-                    Face f = new Face(FindFaceVertices(Surfaces[i]));
+                    Face f = new Face(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5,0.5));
                     f.Name = "f" + (i + 1).ToString("D" + Df);
                     Faces.Add(f);
-                    for (int j = 0; j < f.Angles.Length; j++) if (f.Angles[j] < MinFaceAngle) MinFaceAngle = f.Angles[j];
                     eCount = FindEdges(f, eCount);
                 }
             }
@@ -531,14 +531,14 @@ namespace Topology
                 // create face based on vertices
                 if (Surfaces[i].Vertices.Length == 3)
                 {
-                    Triangle t = new Triangle(FindFaceVertices(Surfaces[i]));
+                    Triangle t = new Triangle(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5, 0.5));
                     t.Name = "t" + (i + 1).ToString("D" + Df);
                     Faces.Add(t);
                     eCount = FindEdges(t, eCount);
                 }
                 else
                 {
-                    Face f = new Face(FindFaceVertices(Surfaces[i]));
+                    Face f = new Face(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5,0.5));
                     f.Name = "f" + (i + 1).ToString("D" + Df);
                     Faces.Add(f);
                     eCount = FindEdges(f, eCount);

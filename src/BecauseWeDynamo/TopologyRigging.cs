@@ -37,7 +37,7 @@ namespace Topology.Rigging
                     }
                     TriangleV.Add(V[SolidPoints[i][j]]);
                 }
-                Triangle t = new Triangle(TriangleV);
+                Triangle t = Triangle.ByVertices(TriangleV);
                 t.Name = "t" + (i + 1).ToString("D" + 4);
                 t.AddParameter("panel", Solids[i]);
                 Faces.Add(t);

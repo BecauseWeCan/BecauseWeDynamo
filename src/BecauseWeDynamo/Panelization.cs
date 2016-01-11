@@ -89,27 +89,14 @@ namespace Topology.Panelization
             c.Dispose();
             return s;
         }
-        public Solid[] GetPanelSolid()
+        public Solid GetPanelSolid()
         {
-            Curve[] C = new Curve[4];
-            C[0] = GetPanelProfile();
-            if (C[0].Equals(null)) { C[0].Dispose(); return null; }
-            Solid[] S = new Solid[2];
-            Point[] P1 = new Point[] { C[0].StartPoint, C[0].StartPoint.Add(Face.Normal.Scale(Thickness[0])) };
-            C[1] = Line.ByStartPointEndPoint(P1[0], P1[1]);
-            S[0] = C[0].SweepAsSolid(C[1]);
-            List<Point> P2 = new List<Point>(Face.E.Count);
-            for (int i = 0; i < Face.E.Count; i++)
-            {
-                Arc arc = Arc.ByThreePoints(ArcPoints[i][0], ArcPoints[i][1], ArcPoints[i][2]);
-                P2.Add(arc.CenterPoint.Add(Face.VertexVectors[i][4].Scale((Thickness[1] * Math.Tan(BevelAngle * Math.PI / 180) - arc.Radius) / Math.Sin(Face.Angles[i] * Math.PI / 360))));
-                arc.Dispose();
-            }
-            C[2] = Polygon.ByPoints(P2);
-            P2.Add(P2[0].Add(Face.Normal.Scale(-Thickness[1])));
-            C[3] = Line.ByStartPointEndPoint(P2[0], P2[P2.Count - 1]);
-            S[1] = C[2].SweepAsSolid(C[3]);
-            P1.ForEach(p => p.Dispose()); P2.ForEach(p => p.Dispose()); C.ForEach(p => p.Dispose());
+            Plane P = Plane.ByBestFitThroughPoints(Face.VertexPoints);
+            Line L = Line.ByStartPointDirectionLength(Face.Center, Face.Normal, Thickness[0]);
+            PolyCurve C = GetPanelProfile();
+            Curve M = C.PullOntoPlane(P);
+            Solid S = Solid.BySweep(M, L);
+            P.Dispose(); L.Dispose(); C.Dispose(); M.Dispose();
             return S;
         }
         public PolyCurve[] GetEdgeLabels(double Scale, double Offset = 0, string LabelPrefix = "")
