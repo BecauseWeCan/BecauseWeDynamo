@@ -9,7 +9,7 @@ using Topology.Panelization;
 
 namespace Topology.Rigging
 {
-    public class Rigging: Mesh
+    internal class Rigging: Mesh
     {
         //**PROPERTIES - **QUERY**
         public List<List<Vertex>> Splines { get; set; }
