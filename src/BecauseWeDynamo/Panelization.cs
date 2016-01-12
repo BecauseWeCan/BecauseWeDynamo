@@ -30,17 +30,19 @@ namespace Topology.Panelization
             EdgeOffset = new double[Face.E.Count];
             for (int i = 0; i < Face.E.Count; i++)
             {
-                // check clearance in back
                 EdgeOffset[i] = MinEdgeOffset;
+                // check flat or outer edge
                 if (Face.E[i].Angle == 360 || Face.E[i].Angle == 180) continue;
                 EdgeOffset[i] = 0;
+                //check clearance in back
                 if (Face.E[i].Angle < 2 * (90 - BevelAngle))
                     EdgeOffset[i] = ThicknessBack / Math.Tan(Face.E[i].Angle * Math.PI / 360) - ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
                 // check clearance in front
-                double OffsetAngle = MinEdgeOffset / Math.Sin(Face.E[i].Angle * Math.PI / 360) - ThicknessFront / Math.Tan(Face.E[i].Angle * Math.PI / 360);
-                if (EdgeOffset[i] < OffsetAngle) EdgeOffset[i] = OffsetAngle;
+                double AngleOffset = MinEdgeOffset / Math.Sin(Face.E[i].Angle * Math.PI / 360) - ThicknessFront / Math.Tan(Face.E[i].Angle * Math.PI / 360);
+                if (EdgeOffset[i] < AngleOffset) EdgeOffset[i] = AngleOffset;
             }
             // corner arcs based on triangle vertex
+            // CornerRadius is arc radius at right angle
             List<Point[]> P = new List<Point[]>(Face.E.Count);
             for (int i = 0; i < Face.E.Count; i++)
             {
@@ -260,6 +262,7 @@ namespace Topology.Panelization
         //**FIELDS
         internal int iAngle;
         internal double BevelAngle;
+        internal double[] Thickness;
         internal Dictionary<char, double> Dim;
         bool disposed = false;
         internal double EdgeOffset;
@@ -295,6 +298,7 @@ namespace Topology.Panelization
         {
             // initialize properties
             this.BevelAngle = BevelAngle;
+            Thickness = new double[]{ThicknessFront, ThicknessBack};
             Profile = new List<Vector>();
             HalfEdges = new HalfEdge[] { e1, e2 };
             Edge = e1.Edge;
@@ -347,14 +351,14 @@ namespace Topology.Panelization
                     if (iAngle == 0) eN = eN.Reverse();
                 }
                 // calculate inset distance based on inset angle and panel offsets based on inset angle
-                // check clearance in back
                 EdgeOffset = 0;
                 if (InsetAngle == 360 || InsetAngle == 180) EdgeOffset = PanelMinOffset;
+                // check clearance in back
                 if (InsetAngle < 2 * (90 - BevelAngle))
                     EdgeOffset = ThicknessBack / Math.Tan(InsetAngle * Math.PI / 360) - ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
                 // check clearance in front
-                double OffsetAngle = PanelMinOffset / Math.Sin(InsetAngle * Math.PI / 360) - ThicknessFront / Math.Tan(InsetAngle * Math.PI / 360);
-                if (EdgeOffset < OffsetAngle) EdgeOffset = OffsetAngle;
+                double AngleOffset = PanelMinOffset / Math.Sin(InsetAngle * Math.PI / 360) - ThicknessFront / Math.Tan(InsetAngle * Math.PI / 360);
+                if (EdgeOffset < AngleOffset) EdgeOffset = AngleOffset;
                 Inset = Math.Max(Dim['H'] / 2 + EdgeOffset, (ThicknessBack + Dim['H']) / Math.Tan(InsetAngle * Math.PI / 360));
                 // initialize Vector Lists to store affine geometry information
                 List<Vector> P1 = new List<Vector>();
@@ -501,6 +505,43 @@ namespace Topology.Panelization
             if (Edge.Angle[iAngle] <= 2 * (90 - BevelAngle)) return GetConnectorProfile(Point);
             // initialize and generate Point List using EdgeConnector geometry data at given point
             List<Point> Points = new List<Point>(Profile.Count + 7);
+            double BevelInset = Thickness[1] * Math.Tan(BevelAngle * Math.PI / 180);
+            for (int i = 1; i < Profile.Count; i++) Points.Add(Point.Add(Profile[i]));
+            Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset)).Add(Vectors[3].Scale(-Thickness[1])));
+            if (Edge.Angle[iAngle] == 2 * (180 - BevelAngle)) { }
+            else if (Edge.Angle[iAngle] < 2 * (180 - BevelAngle))
+            {
+                Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[3].Scale(-Thickness[1] / 2)));
+                Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[0].Scale(-Thickness[1] / 2)));
+            }
+            else if (Edge.Angle[iAngle] > 2 * (180 - BevelAngle))
+            {
+                // using sine law to solve for distance d: d/sin(90-bevelangle) = edgeoffset/sin(bevelangle + edgeangle/2 - 90)
+                double d = - EdgeOffset * Math.Cos(BevelAngle * Math.PI / 180) / Math.Cos(BevelAngle * Math.PI / 180 + Edge.Angle[iAngle] * Math.PI / 360);
+                Points.Add(Point.Add(Vectors[6].Scale(d)));
+            }
+            Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset)).Add(Vectors[0].Scale(-Thickness[1])));
+            // initialize Curves for Profile
+            List<Curve> Curves = new List<Curve> {
+                Line.ByStartPointEndPoint(Points[0], Points[1]),
+                Arc.ByCenterPointStartPointEndPoint(Points[2],Points[1],Points[3]),
+                Line.ByStartPointEndPoint(Points[3], Points[4]),
+                Line.ByStartPointEndPoint(Points[4], Points[5]),
+                Arc.ByCenterPointStartPointEndPoint(Points[6],Points[5],Points[7])};
+            for (int j = 7; j < Points.Count; j++) Curves.Add(Line.ByStartPointEndPoint(Points[j], Points[(j + 1) % Points.Count]));
+            // create closed polycurve from curves
+            PolyCurve Result = PolyCurve.ByJoinedCurves(Curves);
+            // dispose unmanaged resources
+            Points.ForEach(p => p.Dispose()); Curves.ForEach(c => c.Dispose());
+            return Result;
+        }
+
+        internal PolyCurve GetConnectorProfileBevelDogBone(Point Point)
+        {
+            // return default for angles smaller than 
+            if (Edge.Angle[iAngle] <= 2 * (90 - BevelAngle)) return GetConnectorProfile(Point);
+            // initialize and generate Point List using EdgeConnector geometry data at given point
+            List<Point> Points = new List<Point>(Profile.Count + 7);
             double ThicknessBack = Profile[0].Length * Math.Sin(Edge.Angle[iAngle] * Math.PI / 360);
             double BevelInset = ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
             //double DogBoneBevel = 2 * ToolRadius * Math.Sin(Math.PI / 4 - BevelAngle * Math.PI / 2);
@@ -517,8 +558,12 @@ namespace Topology.Panelization
             }
             else if (Edge.Angle[iAngle] > 2 * (180 - BevelAngle))
             {
-                //hyp = o/(sin(e/2)*tan(b) + cos(e/2))
-                Points.Add(Point.Add(Vectors[6].Scale(EdgeOffset / (Math.Sin(Edge.Angle[iAngle] / 2) * Math.Tan(BevelAngle) + Math.Cos(Edge.Angle[iAngle] / 2)))));
+                // using sine law to solve for distance d:
+                // d/sin(90-bevelangle) = edgeoffset/sin(bevelangle + edgeangle/2 - 90)
+                // sin (90 - angle) = cos(angle)
+                // so d = EdgeOffset * cos(BevelAngle) / sin(BevelAngle + EdgeAngle/2 - 90)
+                double d = -EdgeOffset * Math.Cos(BevelAngle * Math.PI / 180) / Math.Cos(BevelAngle * Math.PI / 180 + Edge.Angle[iAngle] * Math.PI / 360);
+                Points.Add(Point.Add(Vectors[6].Scale(d)));
             }
             Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset)).Add(Vectors[0].Scale(-ThicknessBack)));
             //Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset + ToolRadius)).Add(Vectors[0].Scale(-ThicknessBack - ToolRadius)));
