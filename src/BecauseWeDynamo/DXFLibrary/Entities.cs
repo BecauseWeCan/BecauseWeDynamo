@@ -14,11 +14,12 @@ namespace DXFLibrary
             this.AddReplace(51, endAngle);
 		}
 
-        public Arc(double x, double y, double radius, double startAngle, double endAngle, double nx, double ny, double nz, string layer):base("ARC", layer)
+        public Arc(double x, double y, double z, double radius, double startAngle, double endAngle, double nx, double ny, double nz, string layer):base("ARC", layer)
         {
             this.dataAcceptanceList.AddRange(new int[] { 39, 10, 20, 30, 40, 100, 50, 51, 210, 220, 230 });
             this.AddReplace(10, x);
             this.AddReplace(20, y);
+            this.AddReplace(30, z);
             this.AddReplace(40, radius);
             this.AddReplace(50, startAngle);
             this.AddReplace(51, endAngle);
@@ -76,16 +77,17 @@ namespace DXFLibrary
             this.AddReplace(21, yf);
         }
 
-        public void setInitialPoint(double x, double y)
+        public void setInitialPoint(double x, double y, double z =0)
         {
             this.AddReplace(10, x);
             this.AddReplace(20, y);
+            if (z > 0) this.AddReplace(30, z);
         }
-        public void setFinalPoint(double x, double y)
+        public void setFinalPoint(double x, double y, double z = 0)
         {
             this.AddReplace(11, x);
-            this.AddReplace(21, x);
-            this.AddReplace(31, x);
+            this.AddReplace(21, y);
+            if (z > 0) this.AddReplace(31, z);
         }
     }
     class PolyLine : Entity

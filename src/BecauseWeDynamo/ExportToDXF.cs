@@ -62,12 +62,12 @@ namespace Utilities
             Point endpt = null;
             for (int i = 0; i < Curves.Count; i++)
             {
-                stTan = Curves[i].TangentAtParameter(0);
-                endTan = Curves[i].TangentAtParameter(Curves[i].EndParameter());
+                stTan = Curves[i].TangentAtParameter(0).Normalized();
+                endTan = Curves[i].TangentAtParameter(Curves[i].EndParameter()).Normalized();
                 stpt = Curves[i].StartPoint;
                 endpt = Curves[i].EndPoint;
 
-                if (stTan.IsParallel(endTan))
+                if (stTan.IsParallel(endTan) && stTan.IsAlmostEqualTo(endTan))
                 {
                     DXFLibrary.Line line = new DXFLibrary.Line(layerName, stpt.X, stpt.Y, endpt.X, endpt.Y);
                     dxf.add(line);
