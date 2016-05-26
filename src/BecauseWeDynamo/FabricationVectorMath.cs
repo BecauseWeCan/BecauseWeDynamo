@@ -277,25 +277,62 @@ namespace Fabrication
         {
             return Dot(V1, V2).Equals(0);
         }
+    }
+
+
+    public class MaptoXY
+    {
+        /// <summary>
+        /// map polycurves in index to XY plane
+        /// with given spacing and at given y-coordinate
+        /// </summary>
+        public static List<List<PolyCurve>> MapPolyCurves(List<List<PolyCurve>> Curves, List<CoordinateSystem> CoordinateSystem, List<int> index, double Xspacing, double Ycoordinate)
+        {
+            List<List<PolyCurve>> result = new List<List<PolyCurve>>(index.Count);
+            for (int i = 0; i < index.Count; i++)
+            {
+                List<PolyCurve> temp = new List<PolyCurve>();
+                for (int j = 0; j < Curves[index[i]].Count; j++)
+                {
+                    CoordinateSystem CS = Autodesk.DesignScript.Geometry.CoordinateSystem.ByOrigin(Xspacing * i, Ycoordinate);
+                    temp.Add((PolyCurve)Curves[index[i]][j].Transform(CoordinateSystem[index[i]], CS));
+                    CS.Dispose();
+                }
+                result.Add(temp);
+            }
+            return result;
+        }
 
         /// <summary>
-        /// creates a grid of curves on XY-plane 
+        /// map circles in index to XY plane
+        /// with given spacing and at given y-coordinate
+        /// </summary>
+        public static List<List<Circle>> MapCircles(List<List<Circle>> Circles, List<CoordinateSystem> CoordinateSystem, List<int> index, double X, double Y)
+        {
+            CoordinateSystem CS = null;
+            List<List<Circle>> result = new List<List<Circle>>(index.Count);
+            for (int i = 0; i < index.Count; i++)
+            {
+                List<Circle> temp = new List<Circle>();
+                for (int j = 0; j < Circles[index[i]].Count; j++)
+                {
+                    CS = Autodesk.DesignScript.Geometry.CoordinateSystem.ByOrigin(X * i, Y);
+                    temp.Add((Circle)Circles[index[i]][j].Transform(CoordinateSystem[index[i]], CS));
+                }
+                result.Add(temp);
+            }
+            if (CS != null) CS.Dispose();
+            return result;
+        }
+        /// <summary>
+        /// creates a grid of polycurves on XY-plane 
         /// from an array of curves with a designated coordinate system
         /// </summary>
-        /// <param name="PolyCurves">Array of PolyCurves</param>
-        /// <param name="CS">Coordinate System</param>
-        /// <param name="StartIndex">Start Index of Input Curves and Coordinate System</param>
-        /// <param name="EndIndex">End Index of Input Curves and Coordinate System</param>
-        /// <param name="Xspacing"></param>
-        /// <param name="XmaxCount"></param>
-        /// <param name="Yspacing"></param>
-        /// <param name="YmaxCount"></param>
-        /// <returns></returns>
-        public static List<List<PolyCurve>> MapPolycurvesToXY(PolyCurve[][] PolyCurves, CoordinateSystem[] CS, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
+        public static List<PolyCurve> MapPolyCurve(PolyCurve[] PolyCurves, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
         {
             int Length = Index.Length;
             if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Index.Length) Length = XmaxCount * YmaxCount;
-            double[,] position = new double[Length,2];
+            double[,] position = new double[Length, 2];
             for (int i = 0; i < Length; i++)
             {
                 if (XmaxCount + YmaxCount == 0)
@@ -303,10 +340,113 @@ namespace Fabrication
                     position[i, 0] = i;
                     position[i, 1] = 0;
                 }
-                else if (YmaxCount == 0)
+                else if (XmaxCount == 0)
+                {
+                    position[i, 1] = i % YmaxCount;
+                    position[i, 0] = Math.Floor((double)i / YmaxCount);
+                }
+                else
                 {
                     position[i, 0] = i % XmaxCount;
-                    position[i, 1] = Math.Floor((double)i/XmaxCount);
+                    position[i, 1] = Math.Floor((double)i / XmaxCount);
+                }
+            }
+            List<PolyCurve> result = new List<PolyCurve>();
+            for (int i = 0; i < Length; i++)
+            {
+                CoordinateSystem targetCS = CoordinateSystem.ByOrigin(Xspacing * position[i, 0], Yspacing * position[i, 1]);
+                result.Add((PolyCurve)PolyCurves[Index[i]].Transform(PolyCurves[Index[i]].ContextCoordinateSystem, targetCS));
+                targetCS.Dispose();
+            }
+            return result;
+        }
+        /// <summary>
+        /// creates a grid of curves on XY-plane 
+        /// from an array of curves with a designated coordinate system
+        /// </summary>
+        public static List<Curve> MapCurve(Curve[] Curves, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
+        {
+            int Length = Index.Length;
+            if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Index.Length) Length = XmaxCount * YmaxCount;
+            double[,] position = new double[Length, 2];
+            for (int i = 0; i < Length; i++)
+            {
+                if (XmaxCount + YmaxCount == 0)
+                {
+                    position[i, 0] = i;
+                    position[i, 1] = 0;
+                }
+                else if (XmaxCount == 0)
+                {
+                    position[i, 1] = i % YmaxCount;
+                    position[i, 0] = Math.Floor((double)i / YmaxCount);
+                }
+                else
+                {
+                    position[i, 0] = i % XmaxCount;
+                    position[i, 1] = Math.Floor((double)i / XmaxCount);
+                }
+            }
+            List<Curve> result = new List<Curve>();
+            for (int i = 0; i < Length; i++)
+            {
+                CoordinateSystem targetCS = CoordinateSystem.ByOrigin(Xspacing * position[i, 0], Yspacing * position[i, 1]);
+                result.Add((Curve)Curves[Index[i]].Transform(Curves[Index[i]].ContextCoordinateSystem, targetCS));
+                targetCS.Dispose();
+            }
+            return result;
+        }
+        /// <summary>
+        /// creates a grid of geometry on XY-plane 
+        /// from an array of curves with a designated coordinate system
+        /// </summary>
+        public static List<Geometry> MapGeometry(Geometry[] Geometry, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
+        {
+            int Length = Index.Length;
+            if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Index.Length) Length = XmaxCount * YmaxCount;
+            double[,] position = new double[Length, 2];
+            for (int i = 0; i < Length; i++)
+            {
+                if (XmaxCount + YmaxCount == 0)
+                {
+                    position[i, 0] = i;
+                    position[i, 1] = 0;
+                }
+                else if (XmaxCount == 0)
+                {
+                    position[i, 1] = i % YmaxCount;
+                    position[i, 0] = Math.Floor((double)i / YmaxCount);
+                }
+                else
+                {
+                    position[i, 0] = i % XmaxCount;
+                    position[i, 1] = Math.Floor((double)i / XmaxCount);
+                }
+            }
+            List<Geometry> result = new List<Geometry>();
+            for (int i = 0; i < Length; i++)
+            {
+                CoordinateSystem targetCS = CoordinateSystem.ByOrigin(Xspacing * position[i, 0], Yspacing * position[i, 1]);
+                result.Add(Geometry[Index[i]].Transform(Geometry[Index[i]].ContextCoordinateSystem, targetCS));
+                targetCS.Dispose();
+            }
+            return result;
+        }
+        /// <summary>
+        /// creates a grid of polycurves on XY-plane 
+        /// from an array of curves with a designated coordinate system
+        /// </summary>
+        public static List<List<PolyCurve>> MapPolyCurves(PolyCurve[][] PolyCurves, CoordinateSystem[] CS, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
+        {
+            int Length = Index.Length;
+            if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Index.Length) Length = XmaxCount * YmaxCount;
+            double[,] position = new double[Length, 2];
+            for (int i = 0; i < Length; i++)
+            {
+                if (XmaxCount + YmaxCount == 0)
+                {
+                    position[i, 0] = i;
+                    position[i, 1] = 0;
                 }
                 else if (XmaxCount == 0)
                 {
@@ -326,60 +466,28 @@ namespace Fabrication
                 List<PolyCurve> temp = new List<PolyCurve>(PolyCurves[Index[i]].Length);
                 for (int j = 0; j < PolyCurves[Index[i]].Length; j++)
                 {
-                    temp.Add((PolyCurve)PolyCurves[Index[i]][j].Transform(CS[i], targetCS));
+                    temp.Add((PolyCurve)PolyCurves[Index[i]][j].Transform(CS[Index[i]], targetCS));
                 }
                 targetCS.Dispose();
+                result.Add(temp);
             }
             return result;
         }
-
         /// <summary>
         /// creates a grid of curves on XY-plane 
         /// from an array of curves with a designated coordinate system
         /// </summary>
-        /// <param name="Curves">Array of PolyCurves</param>
-        /// <param name="CS">Coordinate System</param>
-        /// <param name="StartIndex">Start Index of Input Curves and Coordinate System</param>
-        /// <param name="EndIndex">End Index of Input Curves and Coordinate System</param>
-        /// <param name="Xspacing"></param>
-        /// <param name="XmaxCount"></param>
-        /// <param name="Yspacing"></param>
-        /// <param name="YmaxCount"></param>
-        /// <returns></returns>
-        public static Curve[] MapToXY(Curve[] Curves, CoordinateSystem[] CS, int StartIndex = 0, int EndIndex = -1, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
+        public static List<List<Curve>> MapCurves(Curve[][] Curves, CoordinateSystem[] CS, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
         {
-            int sign = 1;
-            int Length = Math.Min(Curves.Length, CS.Length);
-            if (EndIndex < 0) EndIndex = Length + EndIndex;
-            if (EndIndex > Length) EndIndex = EndIndex % Length;
-            if (StartIndex < 0) StartIndex = Length + StartIndex;
-            if (StartIndex > Length) StartIndex = StartIndex % Length;
-            if (EndIndex < StartIndex) sign = -1;
-            int Range = Math.Abs(EndIndex - StartIndex) + 1;
-            if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Range) Range = XmaxCount * YmaxCount;
-
-            double spacing = 0;
-            for (int i = StartIndex; i < EndIndex + 1; i = i + sign)
-            {
-                double rMax = CS[i].Origin.DistanceTo(Curves[i]) + Curves[i].BoundingBox.MaxPoint.DistanceTo(Curves[i].BoundingBox.MinPoint);
-                if (rMax > spacing) spacing = rMax;
-            }
-
-            if (Xspacing < 2 * spacing) Xspacing = 2 * spacing;
-            if (Xspacing < 2 * spacing) Yspacing = 2 * spacing;
-
-            double[,] position = new double[Range, 2];
-            for (int i = 0; i < Range; i++)
+            int Length = Index.Length;
+            if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Index.Length) Length = XmaxCount * YmaxCount;
+            double[,] position = new double[Length, 2];
+            for (int i = 0; i < Length; i++)
             {
                 if (XmaxCount + YmaxCount == 0)
                 {
                     position[i, 0] = i;
                     position[i, 1] = 0;
-                }
-                else if (YmaxCount == 0)
-                {
-                    position[i, 0] = i % XmaxCount;
-                    position[i, 1] = Math.Floor((double)i / XmaxCount);
                 }
                 else if (XmaxCount == 0)
                 {
@@ -389,123 +497,105 @@ namespace Fabrication
                 else
                 {
                     position[i, 0] = i % XmaxCount;
-                    position[i, 1] = i % YmaxCount;
+                    position[i, 1] = Math.Floor((double)i / XmaxCount);
                 }
             }
-            Curve[] result = new Curve[Length];
-            for (int i = 0; i < Range; i++)
+            List<List<Curve>> result = new List<List<Curve>>();
+            for (int i = 0; i < Length; i++)
             {
                 CoordinateSystem targetCS = CoordinateSystem.ByOrigin(Xspacing * position[i, 0], Yspacing * position[i, 1]);
-                result[i] = (PolyCurve)Curves[StartIndex + sign * i].Transform(CS[i], targetCS);
+                List<Curve> temp = new List<Curve>(Curves[Index[i]].Length);
+                for (int j = 0; j < Curves[Index[i]].Length; j++)
+                {
+                    temp.Add((Curve)Curves[Index[i]][j].Transform(CS[Index[i]], targetCS));
+                }
                 targetCS.Dispose();
+                result.Add(temp);
             }
             return result;
         }
-
-
-    }
-
-
-    public class Sheets
-    {
-        public List<List<PolyCurve>> Curves { get; set; }
-        public List<List<Circle>> Circles { get; set; }
-        public List<CoordinateSystem> CoordinateSystem { get; set; }
-
-
-        internal Sheets(List<List<PolyCurve>> Curves, List<CoordinateSystem> CoordinateSystem)
-        {
-            this.CoordinateSystem = CoordinateSystem;
-            this.Curves = Curves;
-            this.Circles = null;
-        }
-        internal Sheets(List<List<Circle>> Circles, List<CoordinateSystem> CoordinateSystem)
-        {
-            this.CoordinateSystem = CoordinateSystem;
-            this.Circles = Circles;
-            this.Curves = null;
-        }
-
-        //**CREATE
         /// <summary>
-        /// creates a sheet layout of an array of Polycurves with designated coordinate system
+        /// creates a grid of circles on XY-plane 
+        /// from an array of curves with a designated coordinate system
         /// </summary>
-        /// <param name="Curves">list of polycurves</param>
-        /// <param name="CS">list of polycurves coordinate system</param>
-        /// <returns>sheet object</returns>
-        public static Sheets ByPolyCurvesAndCS(List<List<PolyCurve>> Curves, List<CoordinateSystem> CS) { return new Sheets(Curves, CS); }
-        /// <summary>
-        /// creates a sheet layout of an array of Circles with designated coordinate system
-        /// </summary>
-        /// <param name="Circles">list of circles</param>
-        /// <param name="CS">list of circles coordinate system</param>
-        /// <returns>sheet object</returns>
-        public static Sheets ByCirclesAndCS(List<List<Circle>> Circles, List<CoordinateSystem> CS) { return new Sheets(Circles, CS); }
-        /// <summary>
-        /// creates a sheet layout of an array of Curves with designated coordinate system
-        /// </summary>
-        /// <param name="Curves">list of curves</param>
-        /// <param name="CS">list of curves coordinate system</param>
-        /// <returns>sheet object</returns>
-        public static Sheets ByCurvesAndCS(List<List<Curve>> Curves, List<CoordinateSystem> CS)
+        public static List<List<Circle>> MapCircles(Circle[][] Circles, CoordinateSystem[] CS, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
         {
-            List<List<PolyCurve>> result = new List<List<PolyCurve>>(Curves.Count);
-            for (int i = 0; i < Curves.Count; i++)
+            int Length = Index.Length;
+            if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Index.Length) Length = XmaxCount * YmaxCount;
+            double[,] position = new double[Length, 2];
+            for (int i = 0; i < Length; i++)
             {
-                List<PolyCurve> temp = new List<PolyCurve>(1) { PolyCurve.ByJoinedCurves(Curves[i]) };
-                result.Add(temp);
-            }
-            return new Sheets(result, CS);
-        }
-
-        //**ACTIONS
-        /// <summary>
-        /// returns a row containing given index list
-        /// </summary>
-        /// <param name="index">index list</param>
-        /// <param name="X">spacing in X direction</param>
-        /// <param name="Y">Y-coordinate</param>
-        /// <returns>row of polycurves as list of polycurves</returns>
-        public List<List<PolyCurve>> GetPolyCurveIndexAsRow(List<int> index, double X, double Y)
-        {
-            CoordinateSystem CS = null;
-            List<List<PolyCurve>> result = new List<List<PolyCurve>>(index.Count);
-            for (int i = 0; i < index.Count; i++)
-            {
-                List<PolyCurve> temp = new List<PolyCurve>();
-                for (int j = 0; j < Curves[index[i]].Count; j++)
+                if (XmaxCount + YmaxCount == 0)
                 {
-                    CS = Autodesk.DesignScript.Geometry.CoordinateSystem.ByOrigin(X * i, Y);
-                    temp.Add((PolyCurve) Curves[index[i]][j].Transform(CoordinateSystem[index[i]], CS));
+                    position[i, 0] = i;
+                    position[i, 1] = 0;
                 }
+                else if (XmaxCount == 0)
+                {
+                    position[i, 1] = i % YmaxCount;
+                    position[i, 0] = Math.Floor((double)i / YmaxCount);
+                }
+                else
+                {
+                    position[i, 0] = i % XmaxCount;
+                    position[i, 1] = Math.Floor((double)i / XmaxCount);
+                }
+            }
+            List<List<Circle>> result = new List<List<Circle>>();
+            for (int i = 0; i < Length; i++)
+            {
+                CoordinateSystem targetCS = CoordinateSystem.ByOrigin(Xspacing * position[i, 0], Yspacing * position[i, 1]);
+                List<Circle> temp = new List<Circle>(Circles[Index[i]].Length);
+                for (int j = 0; j < Circles[Index[i]].Length; j++)
+                {
+                    temp.Add((Circle)Circles[Index[i]][j].Transform(CS[Index[i]], targetCS));
+                }
+                targetCS.Dispose();
                 result.Add(temp);
             }
-            if (CS != null) CS.Dispose();
             return result;
         }
         /// <summary>
-        /// returns a row containing given index list
+        /// creates a grid of geometry on XY-plane 
+        /// from an array of curves with a designated coordinate system
         /// </summary>
-        /// <param name="index">index list</param>
-        /// <param name="X">spacing in X direction</param>
-        /// <param name="Y">Y-coordinate</param>
-        /// <returns>row of circles as list of circles</returns>
-        public List<List<Circle>> GetCircleIndexAsRow(List<int> index, double X, double Y)
+        public static List<List<Geometry>> MapGeometry(Geometry[][] Geometry, CoordinateSystem[] CS, int[] Index, double Xspacing = 0, int XmaxCount = 0, double Yspacing = 0, int YmaxCount = 0)
         {
-            CoordinateSystem CS = null;
-            List<List<Circle>> result = new List<List<Circle>>(index.Count);
-            for (int i = 0; i < index.Count; i++)
+            int Length = Index.Length;
+            if (XmaxCount * YmaxCount > 0 && XmaxCount * YmaxCount < Index.Length) Length = XmaxCount * YmaxCount;
+            double[,] position = new double[Length, 2];
+            for (int i = 0; i < Length; i++)
             {
-                List<Circle> temp = new List<Circle>();
-                for (int j = 0; j < Circles[index[i]].Count; j++)
+                if (XmaxCount + YmaxCount == 0)
                 {
-                    CS = Autodesk.DesignScript.Geometry.CoordinateSystem.ByOrigin(X * i, Y);
-                    temp.Add((Circle)Circles[index[i]][j].Transform(CoordinateSystem[index[i]], CS));
+                    position[i, 0] = i;
+                    position[i, 1] = 0;
                 }
+                else if (XmaxCount == 0)
+                {
+                    position[i, 1] = i % YmaxCount;
+                    position[i, 0] = Math.Floor((double)i / YmaxCount);
+                }
+                else
+                {
+                    position[i, 0] = i % XmaxCount;
+                    position[i, 1] = Math.Floor((double)i / XmaxCount);
+                }
+            }
+            List<List<Geometry>> result = new List<List<Geometry>>();
+            for (int i = 0; i < Length; i++)
+            {
+                CoordinateSystem targetCS = CoordinateSystem.ByOrigin(Xspacing * position[i, 0], Yspacing * position[i, 1]);
+                List<Geometry> temp = new List<Geometry>(Geometry[Index[i]].Length);
+                for (int j = 0; j < Geometry[Index[i]].Length; j++)
+                {
+                    temp.Add(Geometry[Index[i]][j].Transform(CS[Index[i]], targetCS));
+                }
+                targetCS.Dispose();
                 result.Add(temp);
             }
-            if (CS != null) CS.Dispose();
             return result;
         }
+
     }
 }
