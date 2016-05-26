@@ -7,7 +7,7 @@ using Autodesk.DesignScript.Runtime;
 namespace Topology
 {
     /// <summary>
-    /// HalfEdge: 
+    /// HalfEdge: ordered vertex array with reference to face, edge, normal, angle, and length 
     /// </summary>
     public class HalfEdge
     {
@@ -50,6 +50,12 @@ namespace Topology
             : this(Vertices)
         { this.Edge = Edge; this.Face = Face; }
 
+        //**METHODS** //**CREATE**
+        /// <summary>
+        /// creates HalfEdge instance
+        /// </summary>
+        /// <param name="Vertices">Vertices</param>
+        /// <returns>HalfEdge</returns>
         public static HalfEdge ByVertices(IEnumerable<Vertex> Vertices) { return new HalfEdge(Vertices); }
 
         //**METHODS** //**ACTION**
@@ -112,15 +118,39 @@ namespace Topology
         }
     }
 
+    /// <summary>
+    /// Vertex: coordinate list with reference to face and edge sets
+    /// </summary>
     public class Vertex : IEquatable<Vertex>
     {
         //**PROPERTIES** //**QUERY**
+        /// <summary>
+        /// XYZ coordinates
+        /// </summary>
         public double[] Coordinates { get; private set; }
+        /// <summary>
+        /// X-coordinate
+        /// </summary>
         public double X { get { return Coordinates[0]; } }
+        /// <summary>
+        /// Y-coordinate
+        /// </summary>
         public double Y { get { return Coordinates[1]; } }
+        /// <summary>
+        /// Z-coordinate
+        /// </summary>
         public double Z { get { return Coordinates[2]; } }
+        /// <summary>
+        /// Vertex Geometry as Point Object
+        /// </summary>
         public Point Point { get { return Point.ByCoordinates(X, Y, Z); } }
+        /// <summary>
+        /// Edges connected to Vertex
+        /// </summary>
         public HashSet<Edge> Edges { get; private set; }
+        /// <summary>
+        /// Faces connected to Vertex
+        /// </summary>
         public HashSet<Face> Faces { get; private set; }
 
         //**CONSTRUCTOR**
@@ -149,15 +179,46 @@ namespace Topology
             this.Faces = new HashSet<Face>(Faces);
         }
 
+        //**METHODS** //**CREAT**
+        /// <summary>
+        /// creates empty vertex at point
+        /// </summary>
+        /// <param name="Point">Point</param>
+        /// <returns>Vertex</returns>
         public static Vertex ByPoint(Point Point) { return new Vertex(Point); }
 
         //**METHODS** //**ACTION**
+        /// <summary>
+        /// return XYZ coordinates of Vertex
+        /// </summary>
+        /// <returns>XYZ Coordinates</returns>
         [MultiReturn(new[] { "X", "Y", "Z" })]
         public Dictionary<string, double> GetCoordinates() { return new Dictionary<string, double> { { "X", X }, { "Y", Y }, { "Z", Z } }; }
+        /// <summary>
+        /// adds edge to vertex if connected
+        /// </summary>
+        /// <param name="Edge">Edge to be added</param>
         public void AddEdge(Edge Edge) { if (Edge.Vertices.Contains(this) && !Edges.Contains(Edge)) Edges.Add(Edge); }
+        /// <summary>
+        /// adds edges to vertex if connected
+        /// </summary>
+        /// <param name="Edges">Edges</param>
         public void AddEdges(IEnumerable<Edge> Edges) { for (int i = 0; i < Edges.Count(); i++) AddEdge(Edges.ElementAt(i)); }
+        /// <summary>
+        /// adds face to vertex if connected
+        /// </summary>
+        /// <param name="Face">Face</param>
         public void AddFace(Face Face) { if (Face.Vertices.Contains(this) && !Faces.Contains(Face)) Faces.Add(Face); }
+        /// <summary>
+        /// adds faces to vertex if connected
+        /// </summary>
+        /// <param name="Faces">Faces</param>
         public void AddFaces(IEnumerable<Face> Faces) { for (int i = 0; i < Faces.Count(); i++) AddFace(Faces.ElementAt(i)); }
+        /// <summary>
+        /// returns distance to given vertex
+        /// </summary>
+        /// <param name="Vertex">Vertex</param>
+        /// <returns>Distance</returns>
         public double DistanceTo(Vertex Vertex)
         {
             double x = X - Vertex.X;
@@ -165,6 +226,11 @@ namespace Topology
             double z = Z - Vertex.Z;
             return Math.Sqrt(x * x + y * y + z * z);
         }
+        /// <summary>
+        /// returns distance to given point
+        /// </summary>
+        /// <param name="Point">Point</param>
+        /// <returns>Distance</returns>
         public double DistanceTo(Point Point)
         {
             double x = X - Point.X;
@@ -172,6 +238,11 @@ namespace Topology
             double z = Z - Point.Z;
             return Math.Sqrt(x * x + y * y + z * z);
         }
+        /// <summary>
+        /// checks is vertex is located at point
+        /// </summary>
+        /// <param name="Point">Point</param>
+        /// <returns>Boolean</returns>
         public bool IsAtPoint(Point Point) { return (X == Point.X && Y == Point.Y && Z == Point.Z); }
 
         //**METHODS**IEQUATABLE
@@ -181,11 +252,14 @@ namespace Topology
             if (Object.ReferenceEquals(Vertex, null)) return false;
             if (Object.ReferenceEquals(this, Vertex)) return true;
             if (this.GetType() != Vertex.GetType()) return false;
-            return (X == Vertex.X && Y == Vertex.Y && Z == Vertex.Z);
+            return (X == Vertex.X && Y == Vertex.Y && Z == Vertex.Z && Vertex.Edges == Edges && Vertex.Faces == Faces);
         }
-        public override int GetHashCode() { return string.Format("{0}-{1}-{2}", X, Y, Z).GetHashCode(); }
+        public override int GetHashCode() { return string.Format("{0}-{1}-{2}-{3}-{4}", X, Y, Z, Edges.GetHashCode(), Faces.GetHashCode()).GetHashCode(); }
     }
 
+    /// <summary>
+    /// Edge: HalfEdge List with reference to faces, vertices, length, name, angle, normal, midpoint, and length
+    /// </summary>
     public class Edge
     {
         //**FIELDS**
@@ -193,10 +267,25 @@ namespace Topology
         internal double[] N;
 
         //**PROPERTIES** //**QUERY**
+        /// <summary>
+        /// Edge Length
+        /// </summary>
         public double Length { get { return E.ElementAt(0).Length; } }
+        /// <summary>
+        /// Edge Name for Label
+        /// </summary>
         public string Name { get; set; }
+        /// <summary>
+        /// Angle between Faces at Edge
+        /// </summary>
         public double[] Angle { get; set; }
+        /// <summary>
+        /// HalfEdge Array
+        /// </summary>
         public HalfEdge[] HalfEdges { get { return E.ToArray(); } }
+        /// <summary>
+        /// Normal Vector
+        /// </summary>
         public Vector[] Normal
         {
             get
@@ -207,6 +296,9 @@ namespace Topology
                 return V.ToArray();
             }
         }
+        /// <summary>
+        /// Midpoint
+        /// </summary>
         public Point MidPoint
         {
             get
@@ -215,7 +307,13 @@ namespace Topology
                 return Point.ByCoordinates(V[0].X / 2 + V[1].X / 2, V[0].Y / 2 + V[1].Y / 2, V[0].Z / 2 + V[1].Z / 2);
             }
         }
+        /// <summary>
+        /// Face List
+        /// </summary>
         public List<Face> Faces { get { List<Face> F = new List<Face>(E.Count); E.ToList().ForEach(e => F.Add(e.Face)); return F; } }
+        /// <summary>
+        /// Vertex Array
+        /// </summary>
         public Vertex[] Vertices { get { if (E.Count > 0) return E.ElementAt(0).V; return null; } }
 
         //**CONSTRUCTOR**
@@ -224,15 +322,31 @@ namespace Topology
         internal Edge(IEnumerable<HalfEdge> HalfEdges, string Name) : this(HalfEdges) { this.Name = Name; }
 
         //**METHODS**CREATE
+        /// <summary>
+        /// create and Edge object as an array of HalfEdges
+        /// </summary>
+        /// <param name="HalfEdges">HalfEdges</param>
+        /// <returns>Edge</returns>
         public static Edge ByHalfEdges(IEnumerable<HalfEdge> HalfEdges) { return new Edge(HalfEdges); }
 
         //**METHODS** //**ACTION**
+        /// <summary>
+        /// get other vertex
+        /// </summary>
+        /// <param name="Vertex">Vertex</param>
+        /// <returns>Other Vertex</returns>
         public Vertex GetOtherVertex(Vertex Vertex)
         {
             if (Vertices[0].Equals(Vertex)) return Vertices[1];
             if (Vertices[1].Equals(Vertex)) return Vertices[0];
             return null;
         }
+        /// <summary>
+        /// get normal vector to two faces that create an angle
+        /// </summary>
+        /// <param name="eA">HalfEdge A</param>
+        /// <param name="eB">HalfEdge B</param>
+        /// <returns></returns>
         internal double[] GetAngleNormal(HalfEdge eA, HalfEdge eB)
         {
             if (!E.Contains(eA) || !E.Contains(eB)) return null;
@@ -246,6 +360,10 @@ namespace Topology
             eN.Dispose(); eY.Dispose(); M.Dispose(); Ma.Dispose(); Mb.Dispose(); Me.Dispose(); arc.Dispose();
             return result;
         }
+        /// <summary>
+        /// creates line geometry based on edge
+        /// </summary>
+        /// <returns>Line</returns>
         public Line GetLine()
         {
             Point a = Vertices[0].Point;
@@ -254,6 +372,11 @@ namespace Topology
             a.Dispose(); b.Dispose();
             return output;
         }
+        /// <summary>
+        /// checks to see if edge has same geometric properties as given line
+        /// </summary>
+        /// <param name="Line">Line</param>
+        /// <returns>Boolean</returns>
         public bool IsAtCurve(Curve Line)
         {
             return (Vertices[0].IsAtPoint(Line.EndPoint) && Vertices[1].IsAtPoint(Line.StartPoint)) || (Vertices[0].IsAtPoint(Line.StartPoint) && Vertices[1].IsAtPoint(Line.EndPoint));

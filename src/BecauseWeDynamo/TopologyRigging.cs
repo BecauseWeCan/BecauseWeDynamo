@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
-using Text;
+using Fabrication.Text;
 using Topology;
 using Topology.Panelization;
 
@@ -41,7 +41,7 @@ namespace Topology.Rigging
                 t.Name = "t" + (i + 1).ToString("D" + 4);
                 t.AddParameter("panel", Solids[i]);
                 Faces.Add(t);
-                eCount = FindEdges(t, eCount);
+                eCount = FindFaceEdges(t, eCount);
             }
             Points = V.Keys.ToArray();
             BuildEdges(OrderedSplines);

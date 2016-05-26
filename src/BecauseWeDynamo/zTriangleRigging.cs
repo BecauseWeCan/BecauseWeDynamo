@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
-using Text;
+using Fabrication.Text;
 
 namespace TriangleRigging
 {
@@ -339,7 +339,7 @@ namespace TriangleRigging
                                     triangles[i].Geometry.ClosestPointTo(triangles[i].edges[j].midpoint),
                                     Vector.ByTwoPoints(triangles[i].edges[j].midpoint, triangles[i].edges[j].B.point),
                                     Vector.ByTwoPoints(triangles[i].center, triangles[i].edges[j].midpoint)
-                                    ).display(factor));
+                                    ).Display(factor));
                         }
                         else if (((a - b) % 3 + 3) % 3 == 2)
                         {
@@ -348,7 +348,7 @@ namespace TriangleRigging
                                     triangles[i].Geometry.ClosestPointTo(triangles[i].edges[j].midpoint), //cs point
                                     Vector.ByTwoPoints(triangles[i].edges[j].midpoint, triangles[i].edges[j].A.point), // X-axis
                                     Vector.ByTwoPoints(triangles[i].center, triangles[i].edges[j].midpoint) // Y-axis
-                                    ).display(factor));
+                                    ).Display(factor));
                         } // end switch
                     }
                 } // end Edges
@@ -524,7 +524,7 @@ namespace TriangleRigging
                                 Geometry.ClosestPointTo(edges[j].midpoint),
                                 Vector.ByTwoPoints(edges[j].midpoint, edges[j].B.point),
                                 Vector.ByTwoPoints(center, edges[j].midpoint)
-                                ).display(factor));
+                                ).Display(factor));
                 }
                 else if (((a - b) % 3 + 3) % 3 == 2)
                 {
@@ -533,7 +533,7 @@ namespace TriangleRigging
                                 Geometry.ClosestPointTo(edges[j].midpoint), //cs point
                                 Vector.ByTwoPoints(edges[j].midpoint, edges[j].A.point), // X-axis
                                 Vector.ByTwoPoints(center, edges[j].midpoint) // Y-axis
-                                ).display(factor));
+                                ).Display(factor));
                 } // end switch
             } // end Edges
 

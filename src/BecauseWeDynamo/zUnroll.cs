@@ -1,6 +1,4 @@
 ﻿using Autodesk.DesignScript.Geometry;
-using Autodesk.DesignScript.Interfaces;
-using Autodesk.DesignScript.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Fabrication
 {
-    class Unroll
+    class zUnroll
     {
         //**TODOS
         //***Implement code copy from existing unfolding scripts from Inventor or 123Dmake
@@ -29,7 +27,7 @@ namespace Fabrication
         /// </summary>
         /// <param name="surfaces">list of surfaces to unroll</param>
         /// <param name="canUnroll">true: singly curved, false: doubly curved</param>
-        internal Unroll(List<Surface> surfaces, double thickness, bool canUnroll, double tolerance)
+        internal zUnroll(List<Surface> surfaces, double thickness, bool canUnroll, double tolerance)
         {
             if (!canUnroll)
             {
@@ -48,7 +46,7 @@ namespace Fabrication
         /// </summary>
         /// <param name="surface">input surface</param>
         /// <returns>Unroll object</returns>
-        public static Unroll BySurface(Surface surface, double thickness, double tolerance = 1)
+        public static zUnroll BySurface(Surface surface, double thickness, double tolerance = 1)
         {
             bool canUnroll = true;
             for (float i = 0; i < 1; i += 0.1f)
@@ -63,14 +61,14 @@ namespace Fabrication
                 }
             }
             Surface[] surfaces = {surface};
-            return new Unroll(surfaces.ToList(), thickness, canUnroll, tolerance);
+            return new zUnroll(surfaces.ToList(), thickness, canUnroll, tolerance);
         }
         /// <summary>
         /// creates instance of unrolling
         /// </summary>
         /// <param name="solid">input solid</param>
         /// <returns>Unroll object</returns>
-        public static Unroll BySolid(Solid solid, double thickness, double tolerance = 1)
+        public static zUnroll BySolid(Solid solid, double thickness, double tolerance = 1)
         {
             bool canUnroll = true;
             List<Surface> surfaces = new List<Surface>();
@@ -90,14 +88,14 @@ namespace Fabrication
                     }
                 }
             }
-            return new Unroll(surfaces, thickness, canUnroll, tolerance);
+            return new zUnroll(surfaces, thickness, canUnroll, tolerance);
         }
         /// <summary>
         /// creates instance of unrolling
         /// </summary>
         /// <param name="polysurface">input polysurface</param>
         /// <returns>Unroll object</returns>
-        public static Unroll ByPolySurface(PolySurface polysurface, double thickness, double tolerance = 1)
+        public static zUnroll ByPolySurface(PolySurface polysurface, double thickness, double tolerance = 1)
         {
             bool canUnroll = true;
             List<Surface> surfaces = new List<Surface>();
@@ -117,7 +115,7 @@ namespace Fabrication
                     }
                 }
             }
-            return new Unroll(surfaces, thickness, canUnroll, tolerance);
+            return new zUnroll(surfaces, thickness, canUnroll, tolerance);
         }
 
         //**ACTIONS

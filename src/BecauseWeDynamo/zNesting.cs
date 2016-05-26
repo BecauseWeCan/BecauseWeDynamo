@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Fabrication
 {
-     class Nesting
+     class zNesting
     {
         //**TODO SUMMARY 
         /* ***Implement code to do actual nesting based on nesting code from existing freeware
@@ -38,7 +38,7 @@ namespace Fabrication
         /// <param name="circles">input result to be cut</param>
         /// <param name="spacing">spacing between input result</param>
         /// <param name="sheet">closed curve of sheet</param>
-        internal Nesting(List<PolyCurve> polycurves, double spacing, PolyCurve sheet)
+        internal zNesting(List<PolyCurve> polycurves, double spacing, PolyCurve sheet)
         {
             ListPolyCurve = TileVertical(MapToXYPlane(polycurves), spacing);
             Sheet = sheet;
@@ -50,7 +50,7 @@ namespace Fabrication
         /// <param name="surfaces">input planar surfaces to be cut</param>
         /// <param name="spacing">spacing between input result</param>
         /// <param name="sheet">closed curve of sheet</param>
-        internal Nesting(List<Surface[]> surfaces, double spacing, PolyCurve sheet)
+        internal zNesting(List<Surface[]> surfaces, double spacing, PolyCurve sheet)
         {
             ListPolyCurve = TileVertical(MapToXYPlane(surfaces), spacing);
             Sheet = sheet;
@@ -63,7 +63,7 @@ namespace Fabrication
         /// <param name="spacing">spacing between input result</param>
         /// <param name="width">width of sheet</param>
         /// <param name="length">length of sheet</param>
-        internal Nesting(List<Surface[]> surfaces, double spacing, double width, double length)
+        internal zNesting(List<Surface[]> surfaces, double spacing, double width, double length)
         {
             Width = width;
             Length = length;
@@ -77,7 +77,7 @@ namespace Fabrication
         /// <param name="spacing">spacing between input result</param>
         /// <param name="width">width of sheet</param>
         /// <param name="length">length of sheet</param>
-        internal Nesting(List<PolyCurve> polycurves, double spacing, double width, double length)
+        internal zNesting(List<PolyCurve> polycurves, double spacing, double width, double length)
         {
             Width = width;
             Length = length;
@@ -93,7 +93,7 @@ namespace Fabrication
         /// <param name="spacing">(double) spacing between circles</param>
         /// <param name="sheet">closed planar polycurve of sheet outline</param>
         /// <returns>new instance of nesting</returns>
-        public static Nesting ByPolyCurvesInPolyCurve(List<PolyCurve> polycurves, double spacing, PolyCurve sheet)
+        public static zNesting ByPolyCurvesInPolyCurve(List<PolyCurve> polycurves, double spacing, PolyCurve sheet)
         {
             // error for sheet not closed or planar
             if (!sheet.IsClosed && !sheet.IsPlanar)
@@ -117,7 +117,7 @@ namespace Fabrication
             // NEEDS WORK:
             // error for input result not fitting inside sheet
 
-            return new Nesting(polycurves, spacing, sheet);
+            return new zNesting(polycurves, spacing, sheet);
         }
         /// <summary>
         /// create nesting layout of closed polycurve profiles within a closed polycurve sheet with given spacing
@@ -126,7 +126,7 @@ namespace Fabrication
         /// <param name="spacing">(double) spacing between circles</param>
         /// <param name="sheet">closed planar polycurve of sheet outline</param>
         /// <returns>new instance of nesting</returns>
-        public static Nesting BySurfacesInPolyCurve(List<Surface[]> Surfaces, double spacing, PolyCurve sheet)
+        public static zNesting BySurfacesInPolyCurve(List<Surface[]> Surfaces, double spacing, PolyCurve sheet)
         {
             // error for sheet not closed or planar
             if (!sheet.IsClosed && !sheet.IsPlanar)
@@ -142,7 +142,7 @@ namespace Fabrication
             // NEEDS WORK:
             // error for input result not fitting inside sheet
 
-            return new Nesting(Surfaces, spacing, sheet);
+            return new zNesting(Surfaces, spacing, sheet);
         }
         /// <summary>
         /// create nesting layout of closed polycurve profiles within a closed polycurve sheet with given spacing
@@ -151,7 +151,7 @@ namespace Fabrication
         /// <param name="spacing">(double) spacing between circles</param>
         /// <param name="width">(double) width of sheet</param>
         /// <returns>new instance of nesting</returns>
-        public static Nesting BySurfacesInWidth(List<Surface[]> Surfaces, double spacing, double width)
+        public static zNesting BySurfacesInWidth(List<Surface[]> Surfaces, double spacing, double width)
         {
             // error for width being too small
             if (!(width > 0))
@@ -167,7 +167,7 @@ namespace Fabrication
             // NEEDS WORK:
             // error for input result not fitting inside sheet
 
-            return new Nesting(Surfaces, spacing, width, 0);
+            return new zNesting(Surfaces, spacing, width, 0);
         }
         /// <summary>
         /// create nesting layout of closed polycurve profiles within a closed polycurve sheet with given spacing
@@ -176,7 +176,7 @@ namespace Fabrication
         /// <param name="spacing">(double) spacing between circles</param>
         /// <param name="width">(double) width of sheet</param>
         /// <returns>new instance of nesting</returns>
-        public static Nesting BySurfacesInWidthAndLength(List<Surface[]> Surfaces, double spacing, double width, double length)
+        public static zNesting BySurfacesInWidthAndLength(List<Surface[]> Surfaces, double spacing, double width, double length)
         {
             // error for width or length being too small
             if ((width <= 0) ^ (length <= 0))
@@ -192,7 +192,7 @@ namespace Fabrication
             // NEEDS WORK:
             // error for input result not fitting inside sheet
 
-            return new Nesting(Surfaces, spacing, width, length);
+            return new zNesting(Surfaces, spacing, width, length);
         }
 
         //**ACTIONS
@@ -255,7 +255,7 @@ namespace Fabrication
         /// <param name="nesting">nesting object</param>
         /// <returns>list of sheets and list of circles on sheet</returns>
         [MultiReturn(new[] { "Profiles", "Sheet" })]
-        public static Dictionary<string, object> SheetLayout(Nesting nesting)
+        public static Dictionary<string, object> SheetLayout(zNesting nesting)
         {
             // list of polycurve arrays by sheet
             List<PolyCurve[]> Profiles = new List<PolyCurve[]>();

@@ -32,15 +32,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MeshToolkit, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="DynamoServices">
+      <HintPath>References\DynamoServices.dll</HintPath>
+    </Reference>
+    <Reference Include="ProtoGeometry, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\MeshToolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="ProtoGeometry">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoGeometry.dll</HintPath>
-    </Reference>
-    <Reference Include="ProtoInterface">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoInterface.dll</HintPath>
+      <HintPath>References\ProtoGeometry.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -51,27 +48,28 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DXFLibrary\Document.cs" />
     <Compile Include="DXFLibrary\Entities.cs" />
     <Compile Include="DXFLibrary\Elements.cs" />
     <Compile Include="DXFLibrary\Data.cs" />
-    <Compile Include="DXFLibrary\Document.cs" />
     <Compile Include="DXFLibrary\Element.cs" />
     <Compile Include="DXFLibrary\Writer.cs" />
-    <Compile Include="ExportToDXF.cs" />
-    <Compile Include="Panelization.cs" />
+    <Compile Include="FabricationDXF.cs" />
+    <Compile Include="TopologyPanelization.cs" />
     <Compile Include="TopologyMesh.cs" />
     <Compile Include="Topology.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DXFLibrary\Sections.cs" />
-    <Compile Include="Nesting.cs" />
-    <Compile Include="Sheets.cs" />
-    <Compile Include="Slicer.cs" />
+    <Compile Include="zNesting.cs" />
+    <Compile Include="zSheets.cs" />
+    <Compile Include="FabricationSlicer.cs" />
     <Compile Include="DXFLibrary\TableEntries.cs" />
-    <Compile Include="Text.cs" />
-    <Compile Include="TopologyPanelization.cs" />
-    <Compile Include="TriangleRigging.cs" />
+    <Compile Include="FabricationText.cs" />
+    <Compile Include="zPanelization.cs" />
+    <Compile Include="zTriangleRigging.cs" />
     <Compile Include="TopologyRigging.cs" />
-    <Compile Include="Unroll.cs" />
+    <Compile Include="zUnroll.cs" />
+    <Compile Include="FabricationVectorMath.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

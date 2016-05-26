@@ -6,6 +6,9 @@ using Topology;
 
 namespace Topology
 {
+    /// <summary>
+    /// Triangle Mesh Object
+    /// </summary>
     public class TriangleMesh : IDisposable
     {
         //**FIELDS**
@@ -19,13 +22,28 @@ namespace Topology
 
         //**PROPERTIES**QUERY
         /// <summary>
-        /// gets 
+        /// Face List
         /// </summary>
         public List<Triangle> Faces { get; set; }
+        /// <summary>
+        /// Edge List
+        /// </summary>
         public List<Edge> Edges { get; set; }
+        /// <summary>
+        /// Outer Edge List
+        /// </summary>
         public List<Edge> EdgesOuter { get { return E1; } }
+        /// <summary>
+        /// Vertex List
+        /// </summary>
         public List<Vertex> Vertices { get { return V.Values.ToList(); } }
+        /// <summary>
+        /// Spline List
+        /// </summary>
         public List<Spline> Splines { get; set; }
+        /// <summary>
+        /// Point List (Vertex Geometry List)
+        /// </summary>
         public Point[] Points { get; set; }
 
         //**CONSTRUCTOR
@@ -250,22 +268,46 @@ namespace Topology
         }
 
         //**METHODS**CREATE
+        /// <summary>
+        /// creates a triangle mesh object based on given surfaces and points
+        /// </summary>
+        /// <param name="Surfaces">Surface Array</param>
+        /// <param name="Points">Point Array</param>
+        /// <returns>TriangleMesh Object</returns>
         public static TriangleMesh BySurfacesPoints(Surface[] Surfaces, Point[] Points) { return new TriangleMesh(Surfaces, Points); }
+        /// <summary>
+        /// creates a triangle mesh object based on given native mesh object
+        /// </summary>
+        /// <param name="Mesh">Mesh</param>
+        /// <returns>TriangleMesh Object</returns>
         public static TriangleMesh ByMesh(Autodesk.DesignScript.Geometry.Mesh Mesh) { return new TriangleMesh(Mesh); }
 
         //**METHODS**ACTIONS
+        /// <summary>
+        /// finds vertex indexed by given point
+        /// </summary>
+        /// <param name="Point">Point Geometry</param>
+        /// <returns>Vertex</returns>
         public Vertex GetVertexAtPoint(Point Point)
         {
             Vertex Result = null;
             for (int k = 0; k < V.Keys.Count; k++) if (Point.IsAlmostEqualTo(Points[k])) { Result = V[Points[k]]; break; }
             return Result;
         }
+        /// <summary>
+        /// finds edge indexed by given line
+        /// </summary>
+        /// <param name="Line">Line Geometry</param>
+        /// <returns>Edge</returns>
         public Edge GetEdgeAtLine(Curve Line)
         {
             Edge Result = null;
             for (int k = 0; k < Edges.Count; k++) if (Edges[k].IsAtCurve(Line)) { Result = Edges[k]; break; }
             return Result;
         }
+        /// <summary>
+        /// analyzes mesh to find angles
+        /// </summary>
         public void CalculateAngles()
         {
             //**ITERATE THROUGH EDGES FOR ANGLE CALCS
@@ -315,8 +357,9 @@ namespace Topology
                 else E0.Add(Edges[i]);
             }
         }
+
         //**METHODS**IN PROGRESS
-        private TriangleMesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
+        internal TriangleMesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
         {
             // find start point
             Vertex v = GetVertexAtPoint(Point);
@@ -382,7 +425,7 @@ namespace Topology
             }
             return this;
         }
-        public TriangleMesh GetSplineData(Curve[] Start, Curve[] End, Curve[] Lines)
+        internal TriangleMesh GetSplineData(Curve[] Start, Curve[] End, Curve[] Lines)
         {
             List<Edge> E = new List<Edge>(Start.Length);
             List<Curve> Search = new List<Curve>(Lines);
@@ -436,6 +479,9 @@ namespace Topology
         }
     }
 
+    /// <summary>
+    /// Mesh Object with Topology and Geometry
+    /// </summary>
     public class Mesh : IDisposable
     {
         //**FIELDS**
@@ -451,11 +497,29 @@ namespace Topology
         internal double MinFaceAngle = 180;
 
         //**PROPERTIES**QUERY
+        /// <summary>
+        /// Face List
+        /// </summary>
         public List<Face> Faces { get; set; }
+        /// <summary>
+        /// Edge List
+        /// </summary>
         public List<Edge> Edges { get; set; }
+        /// <summary>
+        /// Naked Edge List
+        /// </summary>
         public List<Edge> EdgesOuter { get { return E1; } }
+        /// <summary>
+        /// Vertex List
+        /// </summary>
         public List<Vertex> Vertices { get { return V.Values.ToList(); } }
+        /// <summary>
+        /// Spline List
+        /// </summary>
         public List<Spline> Splines { get; set; }
+        /// <summary>
+        /// Point List (Vertex Geometry)
+        /// </summary>
         public Point[] Points { get; set; }
 
         //**CONSTRUCTOR**
@@ -502,70 +566,75 @@ namespace Topology
                     Triangle t = new Triangle(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5, 0.5));
                     t.Name = "t" + (i + 1).ToString("D" + Df);
                     Faces.Add(t);
-                    eCount = FindEdges(t, eCount);
+                    eCount = FindFaceEdges(t, eCount);
                 }
                 else
                 {
                     Face f = new Face(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5,0.5));
                     f.Name = "f" + (i + 1).ToString("D" + Df);
                     Faces.Add(f);
-                    eCount = FindEdges(f, eCount);
+                    eCount = FindFaceEdges(f, eCount);
                 }
             }
-            //**ITERATE THROUGH EDGES FOR ANGLE CALCS
-            CalculateAngles();
-        }
-        internal Mesh(Surface[] Surfaces)
-            : this()
-        {
-            Df = Surfaces.Length.ToString().Length;
-            De = (2 * Surfaces.Length).ToString().Length;
-            // initialize
-            Faces = new List<Face>(Surfaces.Length);
-            //**CONSTRUCT MESH
-            // create faces from surfaces
-            int eCount = 1;
-            for (int i = 0; i < Surfaces.Length; i++)
-            {
-                // find face vertices in lookup table
-                // create face based on vertices
-                if (Surfaces[i].Vertices.Length == 3)
-                {
-                    Triangle t = new Triangle(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5, 0.5));
-                    t.Name = "t" + (i + 1).ToString("D" + Df);
-                    Faces.Add(t);
-                    eCount = FindEdges(t, eCount);
-                }
-                else
-                {
-                    Face f = new Face(FindFaceVertices(Surfaces[i]), Surfaces[i].NormalAtParameter(0.5,0.5));
-                    f.Name = "f" + (i + 1).ToString("D" + Df);
-                    Faces.Add(f);
-                    eCount = FindEdges(f, eCount);
-                }
-            }
-            this.Points = V.Keys.ToArray();
             //**ITERATE THROUGH EDGES FOR ANGLE CALCS
             CalculateAngles();
         }
 
         //**METHODS**CREATE
+        /// <summary>
+        /// creates mesh object with given points and surfaces
+        /// surfaces must be planar but can be concave as well as polygonal
+        /// </summary>
+        /// <param name="Points">Vertex Point Array</param>
+        /// <param name="Surfaces">Surface Array</param>
+        /// <returns>Mesh Object</returns>
         public static Mesh BySurfacesPoints(Point[] Points, Surface[] Surfaces) { return new Mesh(Points, Surfaces); }
-        public static Mesh BySurfaces(Surface[] Surfaces) { return new Mesh(Surfaces); }
+        /// <summary>
+        /// creates mesh object with given surfaces and derives vertices
+        /// surfaces must be planar but can be concave as well as polygonal
+        /// </summary>
+        /// <param name="Surfaces">Surface Array</param>
+        /// <returns>Mesh Object</returns>
+        public static Mesh BySurfaces(Surface[] Surfaces) 
+        {
+            List<Point> Points = new List<Point>();
+            for (int i = 0; i < Surfaces.Length; i++ )
+            {
+                for (int j=0; j < Surfaces[i].Vertices.Length; j++)
+                {
+                    if (Points.Contains(Surfaces[i].Vertices[j].PointGeometry)) continue;
+                    Points.Add(Surfaces[i].Vertices[j].PointGeometry);
+                }
+            }
+            return new Mesh(Points.ToArray(), Surfaces); 
+        }
 
         //**METHODS**ACTIONS
+        /// <summary>
+        /// returns topological entity (vertex) at point
+        /// </summary>
+        /// <param name="Point">Vertex Geometry</param>
+        /// <returns>Vertex</returns>
         public Vertex GetVertexAtPoint(Point Point)
         {
             Vertex Result = null;
             for (int k = 0; k < V.Keys.Count; k++) if (Point.IsAlmostEqualTo(Points[k])) { Result = V[Points[k]]; break; }
             return Result;
         }
+        /// <summary>
+        /// returns topological entity (edge) at line
+        /// </summary>
+        /// <param name="Line">Edge Geometry</param>
+        /// <returns>Edge</returns>
         public Edge GetEdgeAtLine(Curve Line)
         {
             Edge Result = null;
             for (int k = 0; k < Edges.Count; k++) if (Edges[k].IsAtCurve(Line)) { Result = Edges[k]; break; }
             return Result;
         }
+        /// <summary>
+        /// calculates edge angles based on input geometry
+        /// </summary>
         public void CalculateAngles()
         {
             //**ITERATE THROUGH EDGES FOR ANGLE CALCS
@@ -618,20 +687,28 @@ namespace Topology
                 else E0.Add(Edges[i]);
             }
         }
-        public int FindEdges(Face f, int EdgeCount)
+        /// <summary>
+        /// looks for Face Edge in Mesh Edge List,
+        /// adds topological information if found
+        /// otherwise creates Edge and adds to Mesh Edge List
+        /// </summary>
+        /// <param name="Face">Face</param>
+        /// <param name="EdgeCount">ExistingEdgeCount</param>
+        /// <returns>NewEdgeCount</returns>
+        public int FindFaceEdges(Face Face, int EdgeCount)
         {
             int eCount = EdgeCount;
-            for (int j = 0; j < f.E.Count; j++)
+            for (int j = 0; j < Face.E.Count; j++)
             {
                 bool edgeFound = false;
                 if (Edges.Count > 0)
                 {
                     for (int k = 0; k < Edges.Count; k++)
                     {
-                        if (Edges[k].Vertices.Contains(f.E[j].V[0]) && Edges[k].Vertices.Contains(f.E[j].V[1]))
+                        if (Edges[k].Vertices.Contains(Face.E[j].V[0]) && Edges[k].Vertices.Contains(Face.E[j].V[1]))
                         {
-                            Edges[k].E.Add(f.E[j]);
-                            f.E[j].AddEdge(Edges[k]);
+                            Edges[k].E.Add(Face.E[j]);
+                            Face.E[j].AddEdge(Edges[k]);
                             edgeFound = true;
                             break;
                         }
@@ -641,17 +718,24 @@ namespace Topology
                 {
                     Edge e = new Edge();
                     e.Name = eCount.ToString("D" + De);
-                    e.E.Add(f.E[j]);
-                    f.E[j].AddEdge(e);
+                    e.E.Add(Face.E[j]);
+                    Face.E[j].AddEdge(e);
                     Edges.Add(e);
                     eCount++;
                 }
             }
             return eCount;
         }
-        public List<Vertex> FindFaceVertices(Surface s)
+        /// <summary>
+        /// looks for Face Vertex in Mesh Vertex List,
+        /// adds topological information if found
+        /// otherwise creates Vertex and adds to Mesh Vertex List
+        /// </summary>
+        /// <param name="Surface"></param>
+        /// <returns></returns>
+        public List<Vertex> FindFaceVertices(Surface Surface)
         {
-            Autodesk.DesignScript.Geometry.Vertex[] vtx = s.Vertices;
+            Autodesk.DesignScript.Geometry.Vertex[] vtx = Surface.Vertices;
             List<Vertex> v = new List<Vertex>(vtx.Length);
             for (int j = 0; j < vtx.Length; j++)
             {
@@ -671,6 +755,10 @@ namespace Topology
             vtx.ForEach(x => x.Dispose());
             return v;
         }
+        /// <summary>
+        /// flips face normals
+        /// </summary>
+        /// <returns>Mesh</returns>
         public Mesh FlipFaceNormals()
         {
             Faces.ForEach(f => f.E.ForEach(e => e.FlipDirection()));
@@ -678,7 +766,7 @@ namespace Topology
         }
 
         //**METHODS**IN PROGRESS
-        private Mesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
+        internal Mesh AddEdgeNames(Point Point, int SplineCount = 2, int EdgeCount = 3)
         {
             // find start point
             Vertex v = GetVertexAtPoint(Point);
@@ -744,7 +832,7 @@ namespace Topology
             }
             return this;
         }
-        private Mesh GetSplineData(Curve[] Start, Curve[] End, Curve[] Lines)
+        internal Mesh GetSplineData(Curve[] Start, Curve[] End, Curve[] Lines)
         {
             List<Edge> E = new List<Edge>(Start.Length);
             List<Curve> Search = new List<Curve>(Lines);

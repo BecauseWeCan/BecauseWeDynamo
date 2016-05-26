@@ -1,6 +1,6 @@
 using System;
 
-namespace DXFLibrary
+namespace Fabrication.DXFLibrary
 {
     class Header : Section
     {

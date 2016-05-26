@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DXFLibrary 
+namespace Fabrication.DXFLibrary 
 {
     class Arc : Entity
     {
@@ -14,6 +14,21 @@ namespace DXFLibrary
             this.AddReplace(51, endAngle);
 		}
 
+        /// <summary>
+        /// right hand rule for angle direction
+        /// for normal vector (nx,ny,nz)
+        /// zero vector = (-sgn(nz)*ny, sgn(nz)*nx, 0)
+        /// </summary>
+        /// <param name="x">Center X-coordinate</param>
+        /// <param name="y">Center Y-coordinate</param>
+        /// <param name="z">Center Z-coordinate</param>
+        /// <param name="radius">Radius</param>
+        /// <param name="startAngle">start angle</param>
+        /// <param name="endAngle">end angle</param>
+        /// <param name="nx">Normal Vector X-coordinate</param>
+        /// <param name="ny">Normal Vector Y-coordinate</param>
+        /// <param name="nz">Normal Vector Z-coordinate</param>
+        /// <param name="layer">layer</param>
         public Arc(double x, double y, double z, double radius, double startAngle, double endAngle, double nx, double ny, double nz, string layer):base("ARC", layer)
         {
             this.dataAcceptanceList.AddRange(new int[] { 39, 10, 20, 30, 40, 100, 50, 51, 210, 220, 230 });
@@ -101,6 +116,7 @@ namespace DXFLibrary
         }
         public void AddVertex(Vertex v) { this.InsertElement(this.ElementCount() - 1, v); }
         public void AddVertex(double x, double y) { this.AddVertex(new Vertex(x, y, this.layer)); }
+        public void AddVertex(double x, double y, double z) { this.AddVertex(new Vertex(x, y, z, this.layer)); }
     }
 
     class Text : Entity
@@ -149,7 +165,7 @@ namespace DXFLibrary
         {
             this.AddReplace(11, x);
             this.AddReplace(21, y);
-            this.AddReplace(21, y);
+            this.AddReplace(31, z);
         }
 
         public void Rotate(double angle) { this.AddReplace(50, angle); }
@@ -164,6 +180,14 @@ namespace DXFLibrary
             this.AddReplace(10, x);
             this.AddReplace(20, y);
         }
+        public Vertex(double x, double y, double z, string layer)
+            : base("VERTEX", layer)
+        {
+            this.dataAcceptanceList.AddRange(new int[] { 10, 20, 30, 70, 40, 41, 42, 50, 71, 72, 73, 74, });
+            this.AddReplace(10, x);
+            this.AddReplace(20, y);
+            this.AddReplace(30, z);
+        }
     }
 
     class Insert : Entity
@@ -175,6 +199,15 @@ namespace DXFLibrary
             this.AddData(new Data(2, block));
             this.AddData(new Data(10, x));
             this.AddData(new Data(20, y));
+        }
+        public Insert(string block, double x, double y, double z, string layer)
+            : base("INSERT", layer)
+        {
+            this.dataAcceptanceList.AddRange(new int[] { 66, 2, 10, 20, 30, 41, 42, 43, 50, 70, 71, 44, 45, 210, 220, 230 });
+            this.AddData(new Data(2, block));
+            this.AddData(new Data(10, x));
+            this.AddData(new Data(20, y));
+            this.AddData(new Data(30, z));
         }
     }
     class SeqEnd : Entity

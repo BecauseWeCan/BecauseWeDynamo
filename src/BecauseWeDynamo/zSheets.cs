@@ -1,25 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using Autodesk.DesignScript.Geometry;
+﻿using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
+using System;
+using System.Collections.Generic;
 
 namespace Fabrication
 {
-    public class Sheets
+    class zSheets
     {
         public List<List<PolyCurve>> Curves { get; set; }
         public List<List<Circle>> Circles { get; set; }
         public List<CoordinateSystem> CoordinateSystem { get; set; }
 
 
-        internal Sheets(List<List<PolyCurve>> Curves, List<CoordinateSystem> CoordinateSystem)
+        internal zSheets(List<List<PolyCurve>> Curves, List<CoordinateSystem> CoordinateSystem)
         {
             this.CoordinateSystem = CoordinateSystem;
             this.Curves = Curves;
             this.Circles = null;
         }
-        internal Sheets(List<List<Circle>> Circles, List<CoordinateSystem> CoordinateSystem)
+        internal zSheets(List<List<Circle>> Circles, List<CoordinateSystem> CoordinateSystem)
         {
             this.CoordinateSystem = CoordinateSystem;
             this.Circles = Circles;
@@ -33,21 +33,21 @@ namespace Fabrication
         /// <param name="Curves">list of polycurves</param>
         /// <param name="CS">list of polycurves coordinate system</param>
         /// <returns>sheet object</returns>
-        public static Sheets ByPolyCurvesAndCS(List<List<PolyCurve>> Curves, List<CoordinateSystem> CS) { return new Sheets(Curves, CS); }
+        public static zSheets ByPolyCurvesAndCS(List<List<PolyCurve>> Curves, List<CoordinateSystem> CS) { return new zSheets(Curves, CS); }
         /// <summary>
         /// creates a sheet layout of an array of Circles with designated coordinate system
         /// </summary>
         /// <param name="Circles">list of circles</param>
         /// <param name="CS">list of circles coordinate system</param>
         /// <returns>sheet object</returns>
-        public static Sheets ByCirclesAndCS(List<List<Circle>> Circles, List<CoordinateSystem> CS) { return new Sheets(Circles, CS); }
+        public static zSheets ByCirclesAndCS(List<List<Circle>> Circles, List<CoordinateSystem> CS) { return new zSheets(Circles, CS); }
         /// <summary>
         /// creates a sheet layout of an array of Curves with designated coordinate system
         /// </summary>
         /// <param name="Curves">list of curves</param>
         /// <param name="CS">list of curves coordinate system</param>
         /// <returns>sheet object</returns>
-        public static Sheets ByCurvesAndCS(List<List<Curve>> Curves, List<CoordinateSystem> CS)
+        public static zSheets ByCurvesAndCS(List<List<Curve>> Curves, List<CoordinateSystem> CS)
         {
             List<List<PolyCurve>> result = new List<List<PolyCurve>>(Curves.Count);
             for (int i = 0; i < Curves.Count; i++)
@@ -55,7 +55,7 @@ namespace Fabrication
                 List<PolyCurve> temp = new List<PolyCurve>(1) { PolyCurve.ByJoinedCurves(Curves[i]) };
                 result.Add(temp);
             }
-            return new Sheets(result, CS);
+            return new zSheets(result, CS);
         }
 
         //**ACTIONS
@@ -109,7 +109,7 @@ namespace Fabrication
         }
     }
 
-    public class Sheet<T> where T : Curve
+    /*public class Sheet<T> where T : Curve
     {
         public List<List<T>> Curves { get; set; }
         public List<CoordinateSystem> CoordinateSystem { get; set; }
@@ -156,4 +156,5 @@ namespace Fabrication
             return result;
         }
     }
+     * */
 }

@@ -1,77 +1,117 @@
-﻿/*
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Autodesk.DesignScript.Geometry;
-using Autodesk.DesignScript.Interfaces;
 using Autodesk.DesignScript.Runtime;
-using Text;
+using Fabrication.Text;
 using Topology;
 
-namespace Panelization
+namespace Topology.Panelization
 {
     /// <summary>
-    /// TrianglePanel: triangular panel base class with filleted edges based on existing triangular face with edge offsets, thickness, and extrusion direction
+    /// Panel
     /// </summary>
-    public class TrianglePanel : IDisposable
+    public class Panel : IDisposable
     {
-        //**FIELDS
-        internal double Thickness;
-        internal int Direction;
-        bool disposed = false;
+        internal bool disposed = false;
+        internal double[] Thickness;
+        internal double BevelAngle;
 
-        //**PROPERTIES**QUERY
+        //**PROPERTIES**
         /// <summary>
-        /// gets reference triangular face on mesh
+        /// mesh face that defines base plane and panel geometry
         /// </summary>
-        public Triangle Triangle { get; private set; }
+        public Face Face { get; private set; }
         /// <summary>
-        /// gets point data for panel;
-        /// i: index that refers to the vertex
-        /// j: index of arc points at vertex with order inherited by triangle face (cc)
+        /// point array that defines panel geometry
         /// </summary>
         public Point[][] ArcPoints { get; set; }
         /// <summary>
-        /// gets hole information set by panelization of mesh
+        /// double array that stores edge offsets
         /// </summary>
-        public List<Circle> Holes { get; set; }
+        public double[] EdgeOffset { get; set; }
 
-        //**METHODS**CONSTRUCTOR
-        internal TrianglePanel(Triangle Triangle, double Thickness, double MinEdgeOffset, int Direction)
+        //**CONSTRUCTOR
+        internal Panel(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double MinCornerRadius, double MinFaceAngle, double BevelAngle)
         {
             // initialize
-            this.Thickness = Thickness;
-            this.Direction = Direction;
-            this.Triangle = Triangle;
-            Holes = new List<Circle>();
+            this.Face = Face;
+            this.Thickness = new double[] { ThicknessFront, ThicknessBack };
+            this.BevelAngle = BevelAngle;
+            // edge offsets indexed by triangle halfedge angles
+            EdgeOffset = new double[Face.E.Count];
+            for (int i = 0; i < Face.E.Count; i++)
+            {
+                // check clearance in back
+                EdgeOffset[i] = MinEdgeOffset;
+                if (Face.E[i].Angle == 360 || Face.E[i].Angle == 180) continue;
+                EdgeOffset[i] = 0;
+                if (Face.E[i].Angle < 2 * (90 - BevelAngle))
+                    EdgeOffset[i] = ThicknessBack / Math.Tan(Face.E[i].Angle * Math.PI / 360) - ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
+                // check clearance in front
+                double OffsetAngle = MinEdgeOffset / Math.Sin(Face.E[i].Angle * Math.PI / 360) - ThicknessFront / Math.Tan(Face.E[i].Angle * Math.PI / 360);
+                if (EdgeOffset[i] < OffsetAngle) EdgeOffset[i] = OffsetAngle;
+            }
+            // corner arcs based on triangle vertex
+            List<Point[]> P = new List<Point[]>(Face.E.Count);
+            for (int i = 0; i < Face.E.Count; i++)
+            {
+                double sinA = Math.Sin(Face.Angles[i] * Math.PI / 180);
+                double sinB = Math.Sin(Face.Angles[i] * Math.PI / 360);
+                double tanB = Math.Abs(Math.Tan(Face.Angles[i] * Math.PI / 360));
+                double CornerRadius = MinCornerRadius * tanB;
+                int j = (i + Face.E.Count - 1) % Face.E.Count;
+                Point[] arc = new Point[] { Face.VertexPoints[i].Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)) };
+                if (Face.Angles[i] < 180)
+                {
+                    Point a0 = arc[0].Add(Face.VertexVectors[i][1].Scale(CornerRadius / tanB));
+                    Point a1 = arc[0].Add(Face.VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
+                    Point a2 = arc[0].Add(Face.VertexVectors[i][0].Scale(CornerRadius / tanB));
+                    arc[0].Dispose();
+                    arc = new Point[] { a0, a1, a2 };
+                }
+                P.Add(arc);
+            }
+            ArcPoints = P.ToArray();
         }
 
-        //**METHODS**ACTION
+        //**CREATE
         /// <summary>
-        /// returns profile curve of panel as single Polycurve
+        /// creates panel system based on mesh face and parameters
         /// </summary>
-        /// <returns>Polycurve of joined Arcs and Lines</returns>
+        /// <param name="Face"></param>
+        /// <param name="ThicknessFront"></param>
+        /// <param name="ThicknessBack"></param>
+        /// <param name="MinEdgeOffset"></param>
+        /// <param name="CornerOffset"></param>
+        /// <param name="MinFaceAngle"></param>
+        /// <param name="BevelAngle"></param>
+        /// <returns></returns>
+        public static Panel ByFaceAndParameters(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerOffset, double MinFaceAngle, double BevelAngle = 0)
+        { return new Panel(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, CornerOffset, MinFaceAngle, BevelAngle); }
+
+        /// <summary>
+        /// creates panel profile at mesh face as a polycurve
+        /// </summary>
+        /// <returns>panel profiles as polycurves</returns>
         public PolyCurve GetPanelProfile()
         {
             if (ArcPoints.Equals(null)) return null;
-            Curve[] Curves = {
-                          Arc.ByThreePoints(ArcPoints[0][0],ArcPoints[0][1], ArcPoints[0][2]),
-                          Line.ByStartPointEndPoint(ArcPoints[0][2], ArcPoints[1][0]),
-                          Arc.ByThreePoints(ArcPoints[1][0],ArcPoints[1][1], ArcPoints[1][2]),
-                          Line.ByStartPointEndPoint(ArcPoints[1][2], ArcPoints[2][0]),
-                          Arc.ByThreePoints(ArcPoints[2][0],ArcPoints[2][1], ArcPoints[2][2]),
-                          Line.ByStartPointEndPoint(ArcPoints[2][2], ArcPoints[0][0])
-                      };
+            List<Curve> Curves = new List<Curve>(2 * Face.E.Count);
+            for (int i = 0; i < Face.E.Count; i++)
+            {
+                int j = (i + 1) % Face.E.Count;
+                if (ArcPoints[i].Length > 1) Curves.Add(Arc.ByThreePoints(ArcPoints[i][0], ArcPoints[i][1], ArcPoints[i][2]));
+                Curves.Add(Line.ByStartPointEndPoint(ArcPoints[i][ArcPoints[i].Length - 1], ArcPoints[j][0]));
+            }
             PolyCurve Profile = PolyCurve.ByJoinedCurves(Curves);
             Curves.ForEach(c => c.Dispose());
             return Profile;
         }
         /// <summary>
-        /// returns flat panel on mesh face as single Surface
+        /// creates panel face at mesh face as a surface
         /// </summary>
-        /// <returns>Surface by Polycurve patch</returns>
+        /// <returns></returns>
         public Surface GetPanelSurface()
         {
             Curve c = GetPanelProfile();
@@ -81,151 +121,127 @@ namespace Panelization
             return s;
         }
         /// <summary>
-        /// returns solid panel based on panel profile as single Solid
+        /// creates panel face extrusion
         /// </summary>
-        /// <returns>Solid by Polycurve sweep</returns>
+        /// <returns>panel face extrusion</returns>
         public Solid GetPanelSolid()
         {
-            Curve c = GetPanelProfile();
-            if (c.Equals(null)) { c.Dispose(); return null; }
-            Point a = c.StartPoint;
-            Point b = c.StartPoint;
-            if (Direction == 0)
-            {
-                a = a.Add(Triangle.Normal.Scale(-Thickness / 2));
-                b = b.Add(Triangle.Normal.Scale(Thickness / 2));
-            }
-            else b = b.Add(Triangle.Normal.Scale(Direction * Thickness));
-            Line l = Line.ByStartPointEndPoint(a, b);
-            Solid s = c.SweepAsSolid(l);
-            c.Dispose();
-            a.Dispose();
-            b.Dispose();
-            l.Dispose();
-            return s;
-        }
-        /// <summary>
-        /// returns solid panel with holes based on flat panel as single Solid
-        /// </summary>
-        /// <returns>Solid by Surface Thickening</returns>
-        public Solid GetPanelSolidHole()
-        {
-            Surface s = GetPanelSurface();
-            Solid S = null;
-            if (Holes.Count > 5)
-            {
-                Geometry[] G0 = s.Split(Holes[0]);
-                Geometry[] G1 = G0[1].Split(Holes[1]);
-                Geometry[] G2 = G1[1].Split(Holes[2]);
-                Geometry[] G3 = G2[1].Split(Holes[3]);
-                Geometry[] G4 = G3[1].Split(Holes[4]);
-                Geometry[] G5 = G4[1].Split(Holes[5]);
-                S = (G5[1] as Surface).Thicken(Thickness);
-                G0.ForEach(g => g.Dispose());
-                G1.ForEach(g => g.Dispose());
-                G2.ForEach(g => g.Dispose());
-                G3.ForEach(g => g.Dispose());
-                G4.ForEach(g => g.Dispose());
-                G5.ForEach(g => g.Dispose());
-            }
-            else if (Holes.Count > 3)
-            {
-                Geometry[] G0 = s.Split(Holes[0]);
-                Geometry[] G1 = G0[1].Split(Holes[1]);
-                Geometry[] G2 = G1[1].Split(Holes[2]);
-                Geometry[] G3 = G2[1].Split(Holes[3]);
-                S = (G3[1] as Surface).Thicken(Thickness);
-                G0.ForEach(g => g.Dispose());
-                G1.ForEach(g => g.Dispose());
-                G2.ForEach(g => g.Dispose());
-                G3.ForEach(g => g.Dispose());
-            }
-            else if (Holes.Count > 1)
-            {
-                Geometry[] G0 = s.Split(Holes[0]);
-                Geometry[] G1 = G0[1].Split(Holes[1]);
-                S = (G1[1] as Surface).Thicken(Thickness);
-                G0.ForEach(g => g.Dispose());
-                G1.ForEach(g => g.Dispose());
-            }
-            s.Dispose();
+            Plane P = Plane.ByBestFitThroughPoints(Face.VertexPoints);
+            Line L = Line.ByStartPointDirectionLength(Face.Center, Face.Normal, Thickness[0]);
+            PolyCurve C = GetPanelProfile();
+            Curve M = C.PullOntoPlane(P);
+            Solid S = Solid.BySweep(M, L);
+            P.Dispose(); L.Dispose(); C.Dispose(); M.Dispose();
             return S;
         }
         /// <summary>
-        /// returns edge labels at edge on triangular mesh face backside as an Polycurve Array
+        /// creates edge labels as polylines on back of panel
         /// </summary>
-        /// <param name="Scale">Scale = (letter height)/4; in mesh units</param>
-        /// <returns>Polycurve Array</returns>
-        public PolyCurve[] GetEdgeLabels(double Scale)
+        /// <param name="Scale">Scale</param>
+        /// <param name="Offset">Label Offset from Edge</param>
+        /// <param name="LabelPrefix">Label Prefix</param>
+        /// <returns>Edge Labels on Panel Back</returns>
+        public PolyCurve[] GetEdgeLabelsBack(double Scale = 1.0/12, double Offset = 0, string LabelPrefix = "")
         {
             List<PolyCurve> labels = new List<PolyCurve>();
-            for (int j = 0; j < Triangle.E.Count; j++)
+            for (int i = 0; i < Face.E.Count; i++)
             {
-                if (Triangle.E[j].Edge.E.Count == 1) continue;
-                Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
-                Vector Y = Triangle.VertexVectors[j][0].Cross(Triangle.Normal);
-                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, Triangle.VertexVectors[j][0], Y);
-                labels.AddRange(w.display(Scale));
+                if (Face.E[i].Edge.E.Count == 1) continue;
+                int j = (i + 1) % Face.E.Count;
+                Point m = Point.ByCoordinates(ArcPoints[i][ArcPoints[i].Length - 1].X / 2 + ArcPoints[j][0].X / 2, ArcPoints[i][ArcPoints[i].Length - 1].Y / 2 + ArcPoints[j][0].Y / 2, ArcPoints[i][ArcPoints[i].Length - 1].Z / 2 + ArcPoints[j][0].Z / 2);
+                Vector Y = Face.VertexVectors[i][0].Cross(Face.Normal);
+                if (Offset > 0) m = m.Add(Y.Normalized().Scale(-Offset));
+                Word w = Word.ByStringOriginVectors(LabelPrefix + Face.E[i].Edge.Name, m, Face.VertexVectors[i][0], Y);
+                labels.AddRange(w.Display(Scale));
                 m.Dispose(); Y.Dispose(); w.Dispose();
             }
             return labels.ToArray();
         }
         /// <summary>
-        /// returns edge labels at edge connector and triangle label at triangle center 
-        /// on triangular mesh face backside as an Polycurve Array
+        /// creates edge labels as polylines on front of panel
         /// </summary>
-        /// <param name="Scale">Scale = (letter height)/4; in mesh units</param>
-        /// <param name="PanelSystem">parent PanelSystem of Panel</param>
-        /// <returns>Polycurve Array</returns>
-        public PolyCurve[] GetLabels(double Scale, PanelSystem PanelSystem)
+        /// <param name="Scale">Scale</param>
+        /// <param name="Offset">Label Offset from Edge</param>
+        /// <param name="LabelPrefix">Label Prefix</param>
+        /// <returns>Edge Labels on Panel Front</returns>
+        public PolyCurve[] GetEdgeLabelsFront(double Scale = 1.0/12, double Offset = 0, string LabelPrefix = "")
         {
             List<PolyCurve> labels = new List<PolyCurve>();
-            for (int j = 0; j < Triangle.E.Count; j++)
+            for (int i = 0; i < Face.E.Count; i++)
             {
-                if (!PanelSystem.E.ContainsKey(Triangle.E[j].Edge)) continue;
-                Point m = Point.ByCoordinates(ArcPoints[j][2].X / 2 + ArcPoints[(j + 1) % 3][0].X / 2, ArcPoints[j][2].Y / 2 + ArcPoints[(j + 1) % 3][0].Y / 2, ArcPoints[j][2].Z / 2 + ArcPoints[(j + 1) % 3][0].Z / 2);
-                Vector Y = Triangle.VertexVectors[j][0].Cross(Triangle.Normal);
-                m = m.Subtract(Y.Scale(PanelSystem.E[Triangle.Edges[j]][0].Inset + 2 * PanelSystem.E[Triangle.Edges[j]][0].Width));
-                Word w = Word.ByStringOriginVectors(Triangle.E[j].Edge.Name, m, Triangle.VertexVectors[j][0], Y);
-                labels.AddRange(w.display(Scale));
+                if (Face.E[i].Edge.E.Count == 1) continue;
+                int j = (i + 1) % Face.E.Count;
+                Point m = Point.ByCoordinates(ArcPoints[i][2].X / 2 + ArcPoints[j][0].X / 2, ArcPoints[i][2].Y / 2 + ArcPoints[j][0].Y / 2, ArcPoints[i][2].Z / 2 + ArcPoints[j][0].Z / 2);
+                Vector Y = Face.VertexVectors[i][0].Cross(Face.Normal);
+                if (Offset > 0) m = m.Add(Y.Normalized().Scale(-Offset));
+                Word w = Word.ByStringOriginVectors(LabelPrefix + Face.E[i].Edge.Name, m, Face.VertexVectors[i][0].Reverse(), Y);
+                labels.AddRange(w.Display(Scale));
                 m.Dispose(); Y.Dispose(); w.Dispose();
             }
-            Point c = Triangle.Center;
-            Vector N = Triangle.VertexVectors[0][0].Cross(Triangle.Normal);
-            Word W = Word.ByStringOriginVectors(Triangle.Name, c, Triangle.VertexVectors[0][0], N);
-            labels.AddRange(W.display(2 * Scale));
-            c.Dispose(); N.Dispose(); W.Dispose();
             return labels.ToArray();
         }
         /// <summary>
-        /// returns triangle label at triangle center on triangular mesh face frontside as an Polycurve Array
+        /// creates edge and face labels as polylines on back of panel
         /// </summary>
-        /// <param name="Scale"></param>
-        /// <returns></returns>
-        public PolyCurve[] GetTriangleLabel(double Scale)
+        /// <param name="Scale">Scale</param>
+        /// <param name="Offset">Label Offset from Edge</param>
+        /// <param name="LabelPrefix">Label Prefix</param>
+        /// <returns>Labels on Panel Back</returns>
+        public PolyCurve[] GetLabelsBack(double Scale = 1.0/12, double Offset = 0, string LabelPrefix = "")
         {
             List<PolyCurve> labels = new List<PolyCurve>();
-            Point c = Triangle.Center;
-            Vector X = Triangle.VertexVectors[0][0].Reverse();
-            Vector Y = Triangle.VertexVectors[0][0].Cross(Triangle.Normal);
-            Word W = Word.ByStringOriginVectors(Triangle.Name, c, X, Y);
-            labels.AddRange(W.display(Scale));
+            labels.AddRange(GetEdgeLabelsBack(Scale, Offset, LabelPrefix));
+            labels.AddRange(GetFaceLabelBack(Scale, LabelPrefix));
+            return labels.ToArray();
+        }
+        /// <summary>
+        /// creates edge and face labels as polylines on front of panel
+        /// </summary>
+        /// <param name="Scale">Scale</param>
+        /// <param name="Offset">Label Offset from Edge</param>
+        /// <param name="LabelPrefix">Label Prefix</param>
+        /// <returns>Labels on Panel Front</returns>
+        public PolyCurve[] GetLabelsFront(double Scale = 1.0/12, double Offset = 0, string LabelPrefix = "")
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            labels.AddRange(GetEdgeLabelsFront(Scale, Offset, LabelPrefix));
+            labels.AddRange(GetFaceLabelFront(Scale, LabelPrefix));
+            return labels.ToArray();
+        }
+        /// <summary>
+        /// creates face labels as polylines on front of panel
+        /// </summary>
+        /// <param name="Scale">Scale</param>
+        /// <param name="LabelPrefix">Label Prefix</param>
+        /// <returns>Face Labels on Panel Front</returns>
+        public PolyCurve[] GetFaceLabelFront(double Scale = 1.0/12, string LabelPrefix = "")
+        {
+            List<PolyCurve> labels = new List<PolyCurve>();
+            Point c = Face.Center;
+            Vector X = Face.VertexVectors[0][0].Reverse();
+            Vector Y = Face.VertexVectors[0][0].Cross(Face.Normal);
+            Word W = Word.ByStringOriginVectors(LabelPrefix + Face.Name, c, X, Y);
+            labels.AddRange(W.Display(Scale));
             c.Dispose(); X.Dispose(); Y.Dispose(); W.Dispose();
             return labels.ToArray();
         }
         /// <summary>
-        /// add hole with center at closest point on panel to input point with given radius
+        /// creates face labels as polylines on back of panel
         /// </summary>
-        /// <param name="Point">Point is center of hole</param>
-        /// <param name="Radius">Radius of hole</param>
-        public void AddHole(Point Point, double Radius)
+        /// <param name="Scale">Scale</param>
+        /// <param name="LabelPrefix">Label Prefix</param>
+        /// <returns>Face Labels on Panel Back</returns>
+        public PolyCurve[] GetFaceLabelBack(double Scale = 1.0/12, string LabelPrefix = "")
         {
-            Surface s = GetPanelSurface();
-            Point p = s.ClosestPointTo(Point);
-            Holes.Add(Circle.ByCenterPointRadiusNormal(p, Radius, Triangle.Normal));
-            s.Dispose();
-            p.Dispose();
+            List<PolyCurve> labels = new List<PolyCurve>();
+            Point c = Face.Center;
+            Vector N = Face.VertexVectors[0][0].Cross(Face.Normal);
+            Word W = Word.ByStringOriginVectors(LabelPrefix + Face.Name, c, Face.VertexVectors[0][0], N);
+            labels.AddRange(W.Display(Scale));
+            c.Dispose(); N.Dispose(); W.Dispose();
+            return labels.ToArray();
         }
+
 
         //**METHODS**DISPOSE
         public void Dispose()
@@ -239,141 +255,110 @@ namespace Panelization
             if (disposing)
             {
                 if (!ArcPoints.Equals(null)) ArcPoints.ForEach(p => p.ForEach(pt => pt.Dispose()));
-                if (!Holes.Equals(null)) Holes.ForEach(h => h.Dispose());
             }
             disposed = true;
         }
     }
 
-    /// <summary>
-    /// TrianglePanelEdgeBased: extends TrianglePanel so that edge offset is face-based and corner fillets are distance based
-    /// </summary>
-    public class TrianglePanelFaceBased : TrianglePanel
+    public class PanelHole : Panel
     {
-        //**PROPERTIES
-        /// <summary>
-        /// gets offset of panel edge from triangle face edge
-        /// </summary>
-        public double EdgeOffset { get; set; }
+        public List<double[]> Holes { get; set; }
 
-        //**CONSTRUCTOR
-        internal TrianglePanelFaceBased(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinCornerRadius, int Direction)
-            : base(Triangle, Thickness, MinEdgeOffset, Direction)
+        //**METHODS**CONSTRUCTOR
+        internal PanelHole(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double MinCornerRadius, double MinFaceAngle)
+            : base(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, MinCornerRadius, MinFaceAngle, 0)
         {
-            // edge offsets indexed by triangle halfedge angles
-            EdgeOffset = 0.5 * Thickness / Math.Tan(Triangle.MinEdgeAngle * Math.PI / 360);
-            for (int i = 0; i < 3; i++)
+            // initialize
+            Holes = new List<double[]>();
+        }
+        /// <summary>
+        /// returns solid panel with holes based on flat panel as single Solid
+        /// </summary>
+        /// <returns>Solid by Surface Thickening</returns>
+        public Solid GetPanelSolidHole()
+        {
+            Surface s = GetPanelSurface();
+            for (int i = 0; i < Holes.Count; i++ )
             {
-                if (Triangle.E[i].Angle == 360) continue;
-                double d = MinEdgeOffset / Math.Sin(Triangle.E[i].Angle * Math.PI / 360) - 0.5 * Thickness / Math.Tan(Triangle.E[i].Angle * Math.PI / 360);
-                if (EdgeOffset < d) EdgeOffset = d;
+                Point center = Point.ByCoordinates(Holes[i][0], Holes[i][1], Holes[i][2]);
+                Circle c = Circle.ByCenterPointRadiusNormal(center, Holes[i][3], Face.Normal);
+                if (s.DoesIntersect(c)) s = s.Split(c)[1] as Surface;
+                center.Dispose();
+                c.Dispose();
             }
-            // corner offsets based on triangle vertex
-            double[] r = {
-                           (EdgeOffset + MinCornerRadius) / Math.Sin(Triangle.Angles[0]/2) - MinCornerRadius,
-                           (EdgeOffset + MinCornerRadius) / Math.Sin(Triangle.Angles[1]/2) - MinCornerRadius,
-                           (EdgeOffset + MinCornerRadius) / Math.Sin(Triangle.Angles[2]/2) - MinCornerRadius
-                       };
-            for (int i = 0; i < r.Length; i++) if (r[i] < CornerOffset) r[i] = CornerOffset;
-            // corner arcs based on triangle vertex
-            List<Point[]> P = new List<Point[]>(3);
-            for (int i = 0; i < 3; i++)
-            {
-                double rV = r[i] * Math.Tan(Triangle.Angles[i] / 2) - EdgeOffset / Math.Cos(Triangle.Angles[i] / 2);
-                Point a1 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][2].Scale(r[i]));
-                Point a0 = a1.Add(Triangle.VertexVectors[i][1].Scale(rV)).Subtract(Triangle.VertexVectors[i][3].Scale(rV));
-                Point a2 = a1.Add(Triangle.VertexVectors[i][0].Scale(rV)).Add(Triangle.VertexVectors[i][3].Scale(rV));
-                Point[] arc0 = new Point[] { a0, a1, a2 };
-                P.Add(arc0);
-            }
-            ArcPoints = P.ToArray();
+            Solid S = (s.Translate(Face.Normal, -Thickness[1]) as Surface).Thicken(Thickness[0] + Thickness[1], false);
+            s.Dispose();
+            return S;
+        }
+        /// <summary>
+        /// add hole with center at closest point on panel to input point with given radius
+        /// </summary>
+        /// <param name="Point">Point is center of hole</param>
+        /// <param name="Radius">Radius of hole</param>
+        public void AddHole(Point Point, double Radius)
+        {
+            Surface s = GetPanelSurface();
+            Point p = s.ClosestPointTo(Point);
+            Holes.Add(new double[]{p.X,p.Y,p.Z,Radius});
+            s.Dispose();
+            p.Dispose();
         }
 
-        //**METHOD**CREATE
-        /// <summary>
-        /// creates TrianglePanel with single edge offset determined by greatest edge offset determined by angle at edge, with corner fillets based on offset from corner
-        /// </summary>
-        /// <param name="Triangle">reference triangular face on mesh</param>
-        /// <param name="Thickness">thickness of panel in mesh units</param>
-        /// <param name="MinEdgeOffset">minimum edge offset</param>
-        /// <param name="CornerOffset">offset of corner fillet from corner</param>
-        /// <param name="MinCornerRadius">minimum radius of corner fillet</param>
-        /// <param name="Direction">direction of panel extrusion into a solid</param>
-        /// <returns>TrianglePanel</returns>
-        public static TrianglePanelFaceBased ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerOffset, double MinCornerRadius, int Direction = 0)
-        { return new TrianglePanelFaceBased(Triangle, Thickness, MinEdgeOffset, CornerOffset, MinCornerRadius, Direction); }
     }
 
-    /// <summary>
-    /// TrianglePanelEdgeBased: extends TrianglePanel so that edge offset is face-based and corner fillets are distance based
-    /// </summary>
-    public class TrianglePanelEdgeBased : TrianglePanel
+    public class PanelZ : Panel
     {
-        //**PROPERTIES**QUERY
-        /// <summary>
-        /// gets edge offsets in mesh face order starting at vertex 0
-        /// </summary>
-        public double[] EdgeOffset { get; set; }
-
-        //**CONSTRUCTOR
-        internal TrianglePanelEdgeBased(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction)
-            : base(Triangle, Thickness, MinEdgeOffset, Direction)
+        internal PanelZ(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double MinCornerRadius, double MinFaceAngle, double OffsetBaseZ)
+            : base(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, MinCornerRadius, MinFaceAngle, 0)
         {
-            // edge offsets indexed by triangle halfedge angles
-            EdgeOffset = new double[] { MinEdgeOffset, MinEdgeOffset, MinEdgeOffset };
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < Face.E.Count; i++)
             {
-                if (Triangle.E[i].Angle == 360) continue;
-                EdgeOffset[i] = 0.5 * Thickness / Math.Tan(Triangle.E[i].Angle * Math.PI / 360);
-                double OffsetAngle = MinEdgeOffset / Math.Sin(Triangle.E[i].Angle * Math.PI / 360) - 0.5 * Thickness / Math.Tan(Triangle.E[i].Angle * Math.PI / 360);
-                if (EdgeOffset[i] < OffsetAngle) EdgeOffset[i] = OffsetAngle;
+                double Offset = OffsetBaseZ * Face.E[i].Edge.MidPoint.Z;
+                // check clearance in back
+                if (EdgeOffset[i] < Offset) EdgeOffset[i] = Offset;
             }
             // corner arcs based on triangle vertex
-            List<Point[]> P = new List<Point[]>(3);
-            for (int i = 0; i < 3; i++)
+            List<Point[]> P = new List<Point[]>(Face.E.Count);
+            for (int i = 0; i < Face.E.Count; i++)
             {
-                double sinA = Math.Sin(Triangle.Angles[i] * Math.PI/180);
-                double sinB = Math.Sin(Triangle.Angles[i] * Math.PI / 360);
-                double tanB = Math.Tan(Triangle.Angles[i] * Math.PI / 360);
-                int j = (i + 2) % 3;
-                Point a0 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA + CornerRadius / tanB)).Add(Triangle.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA));
-                Point a1 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(Triangle.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)).Add(Triangle.VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
-                Point a2 = Triangle.VertexPoints[i].Add(Triangle.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA + CornerRadius / tanB)).Add(Triangle.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA));
-                Point[] arc = new Point[] { a0, a1, a2 };
+                double sinA = Math.Sin(Face.Angles[i] * Math.PI / 180);
+                double sinB = Math.Sin(Face.Angles[i] * Math.PI / 360);
+                double tanB = Math.Abs(Math.Tan(Face.Angles[i] * Math.PI / 360));
+                double CornerRadius = MinCornerRadius * tanB;
+                int j = (i + Face.E.Count - 1) % Face.E.Count;
+                Point[] arc = new Point[] { Face.VertexPoints[i].Add(Face.VertexVectors[i][1].Scale(EdgeOffset[i] / sinA)).Add(Face.VertexVectors[i][0].Scale(EdgeOffset[j] / sinA)) };
+                if (Face.Angles[i] < 180)
+                {
+                    Point a0 = arc[0].Add(Face.VertexVectors[i][1].Scale(CornerRadius / tanB));
+                    Point a1 = arc[0].Add(Face.VertexVectors[i][2].Scale(CornerRadius / sinB - CornerRadius));
+                    Point a2 = arc[0].Add(Face.VertexVectors[i][0].Scale(CornerRadius / tanB));
+                    arc[0].Dispose();
+                    arc = new Point[] { a0, a1, a2 };
+                }
                 P.Add(arc);
             }
             ArcPoints = P.ToArray();
         }
+        //**CREATE
+        public static PanelZ ByFaceAndParameters(Face Face, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double MinCornerRadius, double MinFaceAngle, double OffsetBaseZ = 0)
+        { return new PanelZ(Face, ThicknessFront, ThicknessBack, MinEdgeOffset, MinCornerRadius, MinFaceAngle, OffsetBaseZ); }
 
-        //**METHOD**CREATE
-        /// <summary>
-        /// creates TrianglePanel with unique edge offsets determined by angle at edge, with given corner radius
-        /// </summary>
-        /// <param name="Triangle">reference triangular face on mesh</param>
-        /// <param name="Thickness">thickness of panel in mesh units</param>
-        /// <param name="MinEdgeOffset">minimum edge offset</param>
-        /// <param name="CornerRadius">radius of corner fillet</param>
-        /// <param name="Direction">direction of panel extrusion into a solid</param>
-        /// <returns>TrianglePanel</returns>
-        public static TrianglePanelEdgeBased ByMeshFace(Triangle Triangle, double Thickness, double MinEdgeOffset, double CornerRadius, int Direction = 0)
-        { return new TrianglePanelEdgeBased(Triangle, Thickness, MinEdgeOffset, CornerRadius, Direction); }
     }
 
-    /// <summary>
-    /// EdgeConnector: geometry wrapper for connectors based on halfedges at edge that returns connectors at given point
-    /// (connections are on backside of mesh except when there are an odd number of edges, ie there is branching in the mesh)
-    /// </summary>
     public class EdgeConnector : IDisposable
     {
         //**FIELDS
-        internal double Width;
+        internal int iAngle;
+        internal double BevelAngle;
+        internal Dictionary<char, double> Dim;
         bool disposed = false;
+        internal double EdgeOffset;
 
         //**PROPERTIES
         /// <summary>
         /// gets reference edge in mesh
         /// </summary>
-        public Topology.Edge Edge { get; private set; }
+        public Edge Edge { get; private set; }
         /// <summary>
         /// gets halfedges of faces being connected by connector
         /// </summary>
@@ -381,7 +366,7 @@ namespace Panelization
         /// <summary>
         /// get distance from mesh edge to panel edge
         /// </summary>
-        public double Inset { get; private set; }
+        public double Inset { get; set; }
         /// <summary>
         /// get angle between the faces being connected
         /// </summary>
@@ -395,21 +380,19 @@ namespace Panelization
         /// (halfedge1 CS),(halfedge1 CS),edge normal
         /// </summary>
         public Vector[] Vectors { get; private set; }
-        /// <summary>
-        /// gets pocket information for dowel nuts
-        /// </summary>
-        public List<Circle> Pockets { get; set; }
 
-        internal EdgeConnector(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness, double PanelMinOffset)
+        internal EdgeConnector(HalfEdge e1, HalfEdge e2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
         {
             // initialize properties
+            this.BevelAngle = BevelAngle;
             Profile = new List<Vector>();
-            Pockets = new List<Circle>();
             HalfEdges = new HalfEdge[] { e1, e2 };
             Edge = e1.Edge;
-            this.Width = Width;
+            Dim = new Dictionary<char, double>();
+            Dim.Add('H', Height); Dim.Add('D', Depth); Dim.Add('S', Spacing);
+            double R = Math.Min(CornerRadius, Dim['H'] / 2);
             // initial index for edge normal
-            int i = 0;
+            iAngle = 0;
             // determine HalfEdge index ( 0 - 1 - 2)
             int i1 = Edge.E.IndexOf(e1);
             int i2 = Edge.E.IndexOf(e2);
@@ -423,16 +406,18 @@ namespace Panelization
                 Vector X1 = e1.Face.Normal;
                 Vector Z1 = e1.GetVector().Normalized();
                 Vector Y1 = X1.Cross(Z1).Normalized();
+                X1 = Z1.Cross(Y1).Normalized();
                 Vector X2 = e2.Face.Normal;
                 Vector Z2 = e2.GetVector().Normalized();
                 Vector Y2 = X2.Cross(Z2).Normalized();
+                X2 = Z2.Cross(Y2).Normalized();
                 // case where there are three half edges to an edge
                 // and where it is a front face to a back face connection
                 // ie. halfedge1 and halfedge2
                 if (i1 + i2 == 3)
                 {
                     // edge normal is set to 1 which references normal between halfedge1 and halfedge2 
-                    i = 1;
+                    iAngle = 1;
                     // change orthonormal coordinate system to front face based for halfedge with index 1
                     if (Edge.E.IndexOf(e1) == 1) { X1 = X1.Reverse(); Z1 = Z1.Reverse(); }
                     if (Edge.E.IndexOf(e2) == 1) { X2 = X2.Reverse(); Z2 = Z2.Reverse(); }
@@ -442,50 +427,50 @@ namespace Panelization
                 // case halfedge count is two, edge normal array has one element that is average of face normals
                 // case halfedge count is three, edge normal array has inverse average of face normals (0,1), (1,2), (2,0)
                 // vector eN is edge normal vector pertinent to connector
-                Vector eN = Edge.Normal[i].Normalized();
+                Vector eN = Edge.Normal[iAngle].Normalized();
+                Vector eY = eN.Cross(Z1).Normalized();
+                eN = Z1.Cross(eY).Normalized();
+                eY.Dispose();
                 // case where halfedge count is three
                 if (Edge.E.Count > 2)
                 {
-                    // set inset calculation based on smallest angle pertinent to edgeconnectors at edge
-                    InsetAngle = Math.Min(Edge.Angle[0], Edge.Angle[1]);
                     // reverse normal
-                    if (i == 0) eN = eN.Reverse();
+                    if (iAngle == 0) eN = eN.Reverse();
                 }
                 // calculate inset distance based on inset angle and panel offsets based on inset angle
-                double EdgeOffset = Math.Max(0.5 * PanelThickness / Math.Tan(InsetAngle * Math.PI / 360), PanelMinOffset / Math.Sin(InsetAngle * Math.PI / 360) - PanelThickness / Math.Tan(InsetAngle * Math.PI / 360));
-                Inset = Math.Max(Width / 2 + EdgeOffset, (PanelThickness / 2 + Width) / Math.Tan(InsetAngle * Math.PI / 360));
+                // check clearance in back
+                EdgeOffset = 0;
+                if (InsetAngle == 360 || InsetAngle == 180) EdgeOffset = PanelMinOffset;
+                if (InsetAngle < 2 * (90 - BevelAngle))
+                    EdgeOffset = ThicknessBack / Math.Tan(InsetAngle * Math.PI / 360) - ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
+                // check clearance in front
+                double OffsetAngle = PanelMinOffset / Math.Sin(InsetAngle * Math.PI / 360) - ThicknessFront / Math.Tan(InsetAngle * Math.PI / 360);
+                if (EdgeOffset < OffsetAngle) EdgeOffset = OffsetAngle;
+                Inset = Math.Max(Dim['H'] / 2 + EdgeOffset, (ThicknessBack + Dim['H']) / Math.Tan(InsetAngle * Math.PI / 360));
                 // initialize Vector Lists to store affine geometry information
                 List<Vector> P1 = new List<Vector>();
                 List<Vector> P2 = new List<Vector>();
                 // v0: point closest to edge
-                P1.Add(eN.Scale(-PanelThickness / 2 / Math.Sin(Edge.Angle[i] * Math.PI / 360)));
+                P1.Add(eN.Scale(-ThicknessBack / Math.Sin(Edge.Angle[iAngle] * Math.PI / 360)));
                 // v1: farthest point in first halfedge face direction (inset + 1.5 spacing)
-                P1.Add(X1.Scale(-PanelThickness / 2).Add(Y1.Normalized().Scale(Inset + 1.5 * Width)));
+                P1.Add(X1.Scale(-ThicknessBack).Add(Y1.Scale(Inset + Dim['S'] + Dim['H'] / 2)));
                 // v2: point to create square edge with face and beginning of fillet arc
-                P1.Add(P1[1].Add(X1.Scale(-Width / 2)));
+                P1.Add(P1[1].Add(X1.Scale(CornerRadius - Dim['H'])));
                 // v3: center of fillet arc
-                P1.Add(P1[2].Add(Y1.Normalized().Scale(-Width / 2)));
+                P1.Add(P1[2].Add(Y1.Scale(-CornerRadius)));
                 // v4: end of fillet arc;
-                // if angle is concave ie less than 180, connector is pie shaped and normal at arc end is edge normal
-                if (Edge.Angle[i] < 180) P1.Add(P1[3].Add(eN.Scale(-Width / 2)));
-                // if angle is convex ie greater than 180, connector is boomerang shaped and normal at arc end is halfedge face normal
+                P1.Add(P1[3].Add(X1.Scale(-CornerRadius)));
                 // v5: point where two sides of the connector meet; line (v0,v5) is line of symmetry
-                else
-                {
-                    P1.Add(P1[3].Add(X1.Scale(-Width / 2)));
-                    P1.Add(P1[0].Add(eN.Scale(-Width / Math.Sin(Edge.Angle[i] * Math.PI / 360))));
-                }
+                P1.Add(P1[0].Add(eN.Scale(-Dim['H'] / Math.Sin(Edge.Angle[iAngle] * Math.PI / 360))));
+
                 // w0: farthest point in second halfedge face direction (inset + 1.5 spacing)
-                P2.Add(X2.Scale(-PanelThickness / 2).Add(Y2.Scale(Inset + 1.5 * Width)));
+                P2.Add(X2.Scale(-ThicknessBack).Add(Y2.Scale(Inset + Dim['S'] + Dim['H'] / 2)));
                 // w1: point to create square edge with face and beginning of fillet arc
-                P2.Add(P2[0].Add(X2.Scale(-Width / 2)));
+                P2.Add(P2[0].Add(X2.Scale(CornerRadius - Dim['H'])));
                 // w2: center of fillet arc
-                P2.Add(P2[1].Add(Y2.Normalized().Scale(-Width / 2)));
+                P2.Add(P2[1].Add(Y2.Scale(-CornerRadius)));
                 // w3: end of fillet arc
-                // if angle is concave ie less than 180, connector is pie shaped and normal at arc end is edge normal
-                if (Edge.Angle[i] < 180) P2.Add(P2[2].Add(eN.Scale(-Width / 2)));
-                // if angle is convex ie greater than 180, connector is boomerang shaped and normal at arc end is halfedge face normal
-                else P2.Add(P2[2].Add(X2.Scale(-Width / 2)));
+                P2.Add(P2[2].Add(X2.Scale(-CornerRadius)));
 
                 // reverse order of vectors generated by halfedge2 orthonormal coordinate system and combine vectors
                 // to create a list of vectors in the direction from halfedge1 to halfedge2
@@ -496,38 +481,16 @@ namespace Panelization
                 Vectors = new Vector[] { X1, Y1, Z1, X2, Y2, Z2, eN };
             }
         }
-        internal EdgeConnector(HalfEdge e1, double Width, double PanelThickness, double Thickness)
-        {
-            Profile = new List<Vector>();
-            Edge = e1.Edge;
-        }
-
 
         //**METHOD**CREATE
-        /// <summary>
-        /// returns edge connector given halfedges, connector width, panel thickness
-        /// </summary>
-        /// <param name="HalfEdge1">halfedge of first face to connect</param>
-        /// <param name="HalfEdge2">halfedge of second face to connect</param>
-        /// <param name="Width">width, thickness, and hole spacing of edge connector</param>
-        /// <param name="PanelThickness">thickness of panels that are being connected</param>
-        /// <param name="PanelMinOffset">minimum distance of first hole to panel edge</param>
-        /// <returns>EdgeConnector</returns>
-        public static EdgeConnector ByHalfEdge(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Width, double PanelThickness, double PanelMinOffset) { return new EdgeConnector(HalfEdge1, HalfEdge2, Width, PanelThickness, PanelMinOffset); }
-        /// <summary>
-        /// returns edge connector given edges, connector width, panel thickness
-        /// </summary>
-        /// <param name="e">edge to place connector(s)</param>
-        /// <param name="Width">width, thickness, and hole spacing of edge connector</param>
-        /// <param name="PanelThickness">thickness of panels that are being connected</param>
-        /// <param name="PanelMinOffset">minimum distance of first hole to panel edge</param>
-        /// <returns>EdgeConnector Array</returns>
-        public static EdgeConnector[] ByEdge(Topology.Edge e, double Width, double PanelThickness, double PanelMinOffset)
+        public static EdgeConnector ByHalfEdgeHeight(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Height, double Depth, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
+        { return new EdgeConnector(HalfEdge1, HalfEdge2, Height, Depth, Height, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle); }
+        public static EdgeConnector ByHalfEdge(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
+        { return new EdgeConnector(HalfEdge1, HalfEdge2, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle); }
+        public static EdgeConnector ByEdge(Topology.Edge e, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double BevelAngle)
         {
             if (e.E.Count < 2) return null;
-            if (e.E.Count == 2) return new EdgeConnector[] { new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset) };
-            return new EdgeConnector[]{ new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset),
-                                         new EdgeConnector(e.E[1], e.E[2], Width, PanelThickness, PanelMinOffset) };
+            return new EdgeConnector(e.E[0], e.E[1], Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, BevelAngle);
         }
 
 
@@ -545,21 +508,7 @@ namespace Panelization
             List<Point> Points = new List<Point>(Profile.Count);
             Profile.ForEach(v => Points.Add(Point.Add(v)));
             // initialize Curves for Profile
-            Curve[] Curves;
-            // generate curves for when angle is concave ie less than 180
-            if (Profile.Count == 9)
-                Curves = new Curve[] {
-                          Line.ByStartPointEndPoint(Points[0], Points[1]),
-                          Line.ByStartPointEndPoint(Points[1], Points[2]),
-                          Arc.ByCenterPointStartPointEndPoint(Points[3],Points[2],Points[4]),
-                          Line.ByStartPointEndPoint(Points[4], Points[5]),
-                          Arc.ByCenterPointStartPointEndPoint(Points[6],Points[5],Points[7]),
-                          Line.ByStartPointEndPoint(Points[7], Points[8]),
-                          Line.ByStartPointEndPoint(Points[8], Points[0])
-                      };
-            // generate curves for when angle is convex or greater than 180
-            else
-                Curves = new Curve[] {
+            Curve[] Curves = new Curve[] {
                           Line.ByStartPointEndPoint(Points[0], Points[1]),
                           Line.ByStartPointEndPoint(Points[1], Points[2]),
                           Arc.ByCenterPointStartPointEndPoint(Points[3],Points[2],Points[4]),
@@ -580,12 +529,10 @@ namespace Panelization
         /// </summary>
         /// <param name="Point">Point is origin of connector</param>
         /// <returns>Surface by Polycurve patch</returns>
-        public Surface GetConnectorSurface(Point Point)
+        public Surface GetConnectorSurface(PolyCurve Profile)
         {
-            Curve c = GetConnectorProfile(Point);
-            if (c.Equals(null)) { c.Dispose(); return null; }
-            Surface s = Surface.ByPatch(c);
-            c.Dispose();
+            if (Profile.Equals(null) || !Profile.IsClosed || !Profile.IsPlanar) return null;
+            Surface s = Surface.ByPatch(Profile);
             return s;
         }
         /// <summary>
@@ -593,143 +540,105 @@ namespace Panelization
         /// </summary>
         /// <param name="Point">Point is origin of connector</param>
         /// <returns>Solid by Polycurve sweep</returns>
-        public Solid GetConnectorSolid(Point Point)
+        public Solid GetConnectorSolid(PolyCurve Profile)
         {
-            Curve c = GetConnectorProfile(Point);
-            if (c.Equals(null)) { c.Dispose(); return null; }
-            Point a = c.StartPoint.Add(Vectors[2].Scale(Width / 2));
-            Point b = c.StartPoint.Add(Vectors[5].Scale(Width / 2));
+            if (Profile.Equals(null) || !Profile.IsClosed || !Profile.IsPlanar) return null;
+            Point a = Profile.StartPoint.Add(Vectors[2].Scale(Dim['D'] / 2));
+            Point b = Profile.StartPoint.Add(Vectors[5].Scale(Dim['D'] / 2));
             Line l = Line.ByStartPointEndPoint(a, b);
-            Solid s = c.SweepAsSolid(l);
-            c.Dispose();
+            Solid s = Profile.SweepAsSolid(l);
             a.Dispose();
             b.Dispose();
             l.Dispose();
             return s;
         }
         /// <summary>
-        /// returns solid panel with holes based on flat panel as single Solid
-        /// </summary>
-        /// <param name="Point">Point is origin of connector</param>
-        /// <returns>Solid by Surface Thickening</returns>
-        public Solid GetConnectorSolidHoles(Point Point)
-        {
-            Surface s = GetConnectorSurface(Point);
-            Solid S = null;
-            if (Pockets.Count > 3)
-            {
-                Geometry[] G0 = s.Split(Pockets[0]);
-                Geometry[] G1 = G0[1].Split(Pockets[1]);
-                Geometry[] G2 = G1[1].Split(Pockets[2]);
-                Geometry[] G3 = G2[1].Split(Pockets[3]);
-                S = (G3[1] as Surface).Thicken(Width, true);
-                G0.ForEach(g => g.Dispose());
-                G1.ForEach(g => g.Dispose());
-                G2.ForEach(g => g.Dispose());
-                G3.ForEach(g => g.Dispose());
-            }
-            else if (Pockets.Count > 1)
-            {
-                Geometry[] G0 = s.Split(Pockets[0]);
-                Geometry[] G1 = G0[1].Split(Pockets[1]);
-                S = (G1[1] as Surface).Thicken(Width, true);
-                G0.ForEach(g => g.Dispose());
-                G1.ForEach(g => g.Dispose());
-            }
-            s.Dispose();
-            return S;
-        }
-        /// <summary>
         /// returns edge labels at edge on triangular mesh face backside as an Polycurve Array
         /// </summary>
         /// <param name="Point">Point is origin of connector</param>
-        /// <param name="Scale">Scale = (letter height)/4; Scale is factor of width</param>
+        /// <param name="Scale">Scale = (letter height)/4; Scale is in project units</param>
         /// <returns>Polycurve Array</returns>
-        public PolyCurve[] GetEdgeLabel(Point Point, double Scale = 1/32)
+        public PolyCurve[] GetEdgeLabel(Point Point, double Scale, string LabelPrefix = "")
         {
-            if (!(Profile.Count > 8)) return null;
-            Point p4 = Point.Add(Profile[4]);
-            Point p5 = Point.Add(Profile[5]);
-            Point pt = p5;
-            if (Profile.Count == 9) pt = Point.ByCoordinates(p4.X / 2 + p5.X / 2, p4.Y / 2 + p5.Y / 2, p4.Z / 2 + p5.Z / 2);
+            Point pt = Point.Add(Profile[5]);
             Vector X = Vectors[3].Subtract(Vectors[0]);
             Vector Y = Vectors[6].Reverse();
-            if (InsetAngle > 180)
-            {
-                pt = Point.Add(Profile[0]);
-                X = X.Reverse();
-                Y = Y.Reverse();
-            }
-            Surface s = GetConnectorSurface(Point);
-            CoordinateSystem cs = s.CoordinateSystemAtParameter(0.5, 0.5);
+            if (Edge.Angle[iAngle] > 179.999 && Edge.Angle[iAngle] < 180.001) X = Profile[1].Subtract(Profile[0]);
+            if (Edge.Angle[iAngle] > 180) { pt = Point.Add(Profile[0]); X = X.Reverse(); Y = Y.Reverse(); }
+            CoordinateSystem cs = GetCS(Point);
             Vector Z1 = cs.ZAxis.Normalized();
             Vector Z2 = X.Cross(Y).Normalized();
             if (!Z1.IsAlmostEqualTo(Z2)) X = X.Reverse();
-            Word w = Word.ByStringOriginVectors(Edge.Name, pt, X, Y);
-            PolyCurve[] label = w.display(Scale * Width).ToArray();
-            p4.Dispose(); p5.Dispose(); pt.Dispose();
+            Word w = Word.ByStringOriginVectors(LabelPrefix + Edge.Name, pt, X.Normalized(), Y.Normalized());
+            List<PolyCurve> label = w.Display(Scale);
+            pt.Dispose();
             X.Dispose(); Y.Dispose(); Z1.Dispose(); Z2.Dispose();
-            s.Dispose(); cs.Dispose(); w.Dispose();
-            return label;
+            cs.Dispose(); w.Dispose();
+            return label.ToArray();
         }
-        /// <summary>
-        /// returns coordinate system for transformation of edge
-        /// </summary>
-        /// <param name="Point">Point is origin of connector</param>
-        /// <returns>CoordinateSystem</returns>
         public CoordinateSystem GetCS(Point Point)
         {
-            if (!(Profile.Count > 8)) return null;
-            Point p4 = Point.Add(Profile[4]);
-            Point p5 = Point.Add(Profile[5]);
-            Point pt = p5;
-            if (Profile.Count == 9) pt = Point.ByCoordinates(p4.X / 2 + p5.X / 2, p4.Y / 2 + p5.Y / 2, p4.Z / 2 + p5.Z / 2);
-            Vector X = Vectors[3].Subtract(Vectors[0]).Normalized();
-            Vector Y = Vectors[6].Reverse().Normalized();
-            if (InsetAngle > 180)
-            {
-                pt = Point.Add(Profile[0]);
-                X = X.Reverse();
-                Y = Y.Reverse();
-            }
-            CoordinateSystem CS = CoordinateSystem.ByOriginVectors(pt, X, Y);
-            p4.Dispose(); p5.Dispose(); pt.Dispose();
-            X.Dispose(); Y.Dispose();
-            return CS;
+            Surface s = GetConnectorSurface(GetConnectorProfile(Point));
+            CoordinateSystem cs = s.CoordinateSystemAtParameter(0.5, 0.5);
+            s.Dispose();
+            return cs;
         }
-        /// <summary>
-        /// add pockets based on edge condition and inset with given radius
-        /// </summary>
-        /// <param name="Point">Point is origin of connector</param>
-        /// <param name="Radius">Radius of pocket</param>
-        public void AddPockets(Point Point, double Radius)
+
+
+        //**MODS
+        public PolyCurve GetConnectorProfileBevel(Point Point)
         {
-            int i = Edge.E.IndexOf(HalfEdges[0]) + Edge.E.IndexOf(HalfEdges[1]);
-            int j = 0;
-            if (i > 2) j = 1;
-            double a = Edge.Angle[j];
-            Point p1a = Point.Add(Profile[3]);
-            Point p1b = p1a.Subtract(Vectors[1].Normalized().Scale(Width));
-            Point p2a = Point.Add(Profile[Profile.Count - 3]);
-            Point p2b = p2a.Subtract(Vectors[4].Normalized().Scale(Width));
-            if (a == InsetAngle)
+            // return default for angles smaller than 
+            if (Edge.Angle[iAngle] <= 2 * (90 - BevelAngle)) return GetConnectorProfile(Point);
+            // initialize and generate Point List using EdgeConnector geometry data at given point
+            List<Point> Points = new List<Point>(Profile.Count + 7);
+            double ThicknessBack = Profile[0].Length * Math.Sin(Edge.Angle[iAngle] * Math.PI / 360);
+            double BevelInset = ThicknessBack * Math.Tan(BevelAngle * Math.PI / 180);
+            //double DogBoneBevel = 2 * ToolRadius * Math.Sin(Math.PI / 4 - BevelAngle * Math.PI / 2);
+            //double DogBoneChord = 2 * ToolRadius / Math.Sin(Math.PI / 4 + BevelAngle * Math.PI / 2);
+            for (int i = 1; i < Profile.Count; i++) Points.Add(Point.Add(Profile[i]));
+            //Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset + 2 * ToolRadius)).Add(Vectors[3].Scale(-ThicknessBack)));
+            //Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset + ToolRadius)).Add(Vectors[3].Scale(-ThicknessBack - ToolRadius)));
+            Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset)).Add(Vectors[3].Scale(-ThicknessBack)));
+            if (Edge.Angle[iAngle] == 2 * (180 - BevelAngle)) { }
+            else if (Edge.Angle[iAngle] < 2 * (180 - BevelAngle))
             {
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p1a, Radius, Vectors[5]));
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p1b, Radius, Vectors[5]));
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p2a, Radius, Vectors[5]));
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p2b, Radius, Vectors[5]));
+                Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[3].Scale(-ThicknessBack / 2)));
+                Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[0].Scale(-ThicknessBack / 2)));
             }
-            else if (j == 1)
+            else if (Edge.Angle[iAngle] > 2 * (180 - BevelAngle))
             {
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p2a, Radius, Vectors[5]));
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p2b, Radius, Vectors[5]));
+                //hyp = o/(sin(e/2)*tan(b) + cos(e/2))
+                Points.Add(Point.Add(Vectors[6].Scale(EdgeOffset / (Math.Sin(Edge.Angle[iAngle] / 2) * Math.Tan(BevelAngle) + Math.Cos(Edge.Angle[iAngle] / 2)))));
             }
-            else if (j == 0)
-            {
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p1a, Radius, Vectors[5]));
-                Pockets.Add(Circle.ByCenterPointRadiusNormal(p1b, Radius, Vectors[5]));
-            }
-            p1a.Dispose(); p1b.Dispose(); p2a.Dispose(); p2b.Dispose();
+            Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset)).Add(Vectors[0].Scale(-ThicknessBack)));
+            //Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset + ToolRadius)).Add(Vectors[0].Scale(-ThicknessBack - ToolRadius)));
+            //Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset + 2 * ToolRadius)).Add(Vectors[0].Scale(-ThicknessBack)));
+            // initialize Curves for Profile
+            /*List<Curve> Curves = new List<Curve> {
+                Arc.ByThreePoints(Points[Points.Count-3],Points[Points.Count-2],Points[Points.Count-1]),
+                Line.ByStartPointEndPoint(Points[Points.Count-1], Points[0]),
+                Line.ByStartPointEndPoint(Points[0], Points[1]),
+                Arc.ByCenterPointStartPointEndPoint(Points[2],Points[1],Points[3]),
+                Line.ByStartPointEndPoint(Points[3], Points[4]),
+                Line.ByStartPointEndPoint(Points[4], Points[5]),
+                Arc.ByCenterPointStartPointEndPoint(Points[6],Points[5],Points[7]),
+                Line.ByStartPointEndPoint(Points[7],Points[8]),
+                Line.ByStartPointEndPoint(Points[8],Points[9]),
+                Arc.ByThreePoints(Points[9],Points[10],Points[11])};
+            for (int j = 11; j < Points.Count-3; j++) Curves.Add(Line.ByStartPointEndPoint(Points[j], Points[j + 1]));*/
+            List<Curve> Curves = new List<Curve> {
+                Line.ByStartPointEndPoint(Points[0], Points[1]),
+                Arc.ByCenterPointStartPointEndPoint(Points[2],Points[1],Points[3]),
+                Line.ByStartPointEndPoint(Points[3], Points[4]),
+                Line.ByStartPointEndPoint(Points[4], Points[5]),
+                Arc.ByCenterPointStartPointEndPoint(Points[6],Points[5],Points[7])};
+            for (int j = 7; j < Points.Count; j++) Curves.Add(Line.ByStartPointEndPoint(Points[j], Points[(j + 1) % Points.Count]));
+            // create closed polycurve from curves
+            PolyCurve Result = PolyCurve.ByJoinedCurves(Curves);
+            // dispose unmanaged resources
+            Points.ForEach(p => p.Dispose()); Curves.ForEach(c => c.Dispose());
+            return Result;
         }
 
         //**METHODS**DISPOSE
@@ -745,110 +654,166 @@ namespace Panelization
             {
                 if (!Profile.Equals(null)) Profile.ForEach(p => p.Dispose());
                 if (!Vectors.Equals(null)) Vectors.ForEach(v => v.Dispose());
-                if (!Pockets.Equals(null)) Pockets.ForEach(h => h.Dispose());
             }
             disposed = true;
         }
     }
 
-    /// <summary>
-    /// PanelSystem: Mesh based system of EdgeConnectors and TrianglePanels
-    /// </summary>
+    public class EdgeConnectorZ : EdgeConnector
+    {
+        //**FIELDS
+
+        internal EdgeConnectorZ(HalfEdge e1, HalfEdge e2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double Z)
+            : base(e1, e2, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, 0)
+        {
+            int i1 = Edge.E.IndexOf(e1);
+            int i2 = Edge.E.IndexOf(e2);
+            // do not create connector in the case where HalfEdge index is (0,2)
+            if (i1 + i2 != 2)
+            {
+                if (EdgeOffset < Edge.MidPoint.Z * Z) EdgeOffset = Edge.MidPoint.Z * Z;
+                Inset = Math.Max(Dim['H'] / 2 + EdgeOffset, (ThicknessBack + Dim['H']) / Math.Tan(InsetAngle * Math.PI / 360));
+                // initialize Vector Lists to store affine geometry information
+                List<Vector> P1 = new List<Vector>();
+                List<Vector> P2 = new List<Vector>();
+                // v0: point closest to edge
+                P1.Add(Vectors[6].Scale(-ThicknessBack / Math.Sin(Edge.Angle[iAngle] * Math.PI / 360)));
+                // v1: farthest point in first halfedge face direction (inset + 1.5 spacing)
+                P1.Add(Vectors[0].Scale(-ThicknessBack).Add(Vectors[1].Scale(Inset + Dim['S'] + Dim['H'] / 2)));
+                // v2: point to create square edge with face and beginning of fillet arc
+                P1.Add(P1[1].Add(Vectors[0].Scale(CornerRadius - Dim['H'])));
+                // v3: center of fillet arc
+                P1.Add(P1[2].Add(Vectors[1].Scale(-CornerRadius)));
+                // v4: end of fillet arc;
+                P1.Add(P1[3].Add(Vectors[0].Scale(-CornerRadius)));
+                // v5: point where two sides of the connector meet; line (v0,v5) is line of symmetry
+                P1.Add(P1[0].Add(Vectors[6].Scale(-Dim['H'] / Math.Sin(Edge.Angle[iAngle] * Math.PI / 360))));
+
+                // w0: farthest point in second halfedge face direction (inset + 1.5 spacing)
+                P2.Add(Vectors[3].Scale(-ThicknessBack).Add(Vectors[4].Scale(Inset + Dim['S'] + Dim['H'] / 2)));
+                // w1: point to create square edge with face and beginning of fillet arc
+                P2.Add(P2[0].Add(Vectors[3].Scale(CornerRadius - Dim['H'])));
+                // w2: center of fillet arc
+                P2.Add(P2[1].Add(Vectors[4].Scale(-CornerRadius)));
+                // w3: end of fillet arc
+                P2.Add(P2[2].Add(Vectors[3].Scale(-CornerRadius)));
+
+                // reverse order of vectors generated by halfedge2 orthonormal coordinate system and combine vectors
+                // to create a list of vectors in the direction from halfedge1 to halfedge2
+                P2.Reverse();
+                Profile.Clear();
+                Profile.AddRange(P1);
+                Profile.AddRange(P2);
+            }
+        }
+
+        //**METHOD**CREATE
+        public static EdgeConnectorZ ByHalfEdge(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double OffsetBaseZ)
+        { return new EdgeConnectorZ(HalfEdge1, HalfEdge2, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, OffsetBaseZ); }
+        public static EdgeConnectorZ ByEdge(Topology.Edge e, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double CornerRadius, double OffsetBaseZ)
+        {
+            if (e.E.Count < 2) return null;
+            return new EdgeConnectorZ(e.E[0], e.E[1], Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, CornerRadius, OffsetBaseZ);
+        }
+    }
+
     public class PanelSystem : IDisposable
     {
         //**FIELDS
         bool disposed = false;
-        internal Dictionary<Triangle, TrianglePanel> T;
-        internal Dictionary<Topology.Edge, EdgeConnector[]> E;
-        internal TriangleMesh M;
+        internal Dictionary<Face, Panel> F;
+        internal Dictionary<Edge, EdgeConnector> E;
+        internal Mesh M;
 
         //**PROPERTIES**QUERY
-        /// <summary>
-        /// gets TrianglePanel Array based on mesh
-        /// </summary>
-        public TrianglePanel[] Panels { get { return T.Values.ToArray(); } }
-        /// <summary>
-        /// gets two dimensional EdgeConnector Array indexed by mesh edge then by halfedge normals;
-        /// each edge can have more than one EdgeConnector
-        /// </summary>
-        public EdgeConnector[][] Connectors { get { return E.Values.ToArray(); } }
-        /// <summary>
-        /// gets EdgeConnector List of mesh
-        /// </summary>
-        public List<EdgeConnector> ConnectorList
-        {
-            get
-            {
-                List<EdgeConnector> C = new List<EdgeConnector>();
-                Connectors.ForEach(c => C.AddRange(c));
-                return C;
-            }
-        }
+        public Panel[] Panels { get { return F.Values.ToArray(); } }
+        public EdgeConnector[] Connectors { get { return E.Values.ToArray(); } }
 
         //**CONSTRUCTOR
-        internal PanelSystem(TriangleMesh Mesh) { M = Mesh; }
-        internal PanelSystem(TriangleMesh Mesh, double Width, double Thickness, double MinEdgeOffset, double CornerRadius, double HoleRadius, double PocketRadius)
+        internal PanelSystem(Mesh Mesh) { M = Mesh; }
+        internal PanelSystem(Mesh Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerOffset, double ConnectorFilletRadius, double BevelAngle)
             : this(Mesh)
-        { GenerateEdgeConnectors(Width, Thickness, MinEdgeOffset, PocketRadius); GenerateTrianglePanels(Thickness, MinEdgeOffset, CornerRadius, HoleRadius); }
+        { GenerateEdgeConnectors(Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, ConnectorFilletRadius, BevelAngle); GeneratePanels(ThicknessFront, ThicknessBack, MinEdgeOffset, CornerOffset, BevelAngle); }
 
         //**METHODS**CREATE
         /// <summary>
-        /// creates PanelSystem based on given Mesh and Panel parameters
+        /// returns default empty panel system with associated mesh
         /// </summary>
-        /// <param name="Mesh">BecauseWeDynamo Mesh</param>
-        /// <param name="Width">Width, thickness and spacing of EdgeConnectors</param>
-        /// <param name="Thickness">Thickness of TrianglePanels</param>
-        /// <param name="MinEdgeOffset">Minimum edge offset from mesh face of TrianglePanels</param>
-        /// <param name="CornerRadius">Radius of fillet for TrianglePanels</param>
-        /// <param name="HoleRadius">Radius of holes for TrianglePanels</param>
-        /// <param name="PocketRadius">Radius of pockets for EdgeConnectors</param>
-        /// <returns>PanelSystem</returns>
-        public static PanelSystem ByMesh(TriangleMesh Mesh, double Width, double Thickness, double MinEdgeOffset, double CornerRadius, double HoleRadius, double PocketRadius)
-        { return new PanelSystem(Mesh, Width, Thickness, MinEdgeOffset, CornerRadius, HoleRadius, PocketRadius); }
-
-        //**METHODS**ACTIONS
+        /// <param name="Mesh">Mesh Object</param>
+        /// <returns>Panel System</returns>
+        public static PanelSystem ByMesh(Mesh Mesh) { return new PanelSystem(Mesh); }
         /// <summary>
-        /// generates new Edge/EdgeConnector Dictionary with given parameters
+        /// creates panel system with clearance bevels
         /// </summary>
-        /// <param name="Width">Width, thickness and spacing of EdgeConnectors</param>
-        /// <param name="PanelThickness">Thickness of TrianglePanels</param>
-        /// <param name="PanelMinOffset">Minimum edge offset from mesh face of TrianglePanels</param>
-        /// <param name="PocketRadius">Radius of pockets for EdgeConnectors</param>
-        /// <returns>EdgeConnector Array from new Dictionary values</returns>
-        public EdgeConnector[][] GenerateEdgeConnectors(double Width, double PanelThickness, double PanelMinOffset, double PocketRadius)
+        /// <param name="Mesh">Mesh Geometry</param>
+        /// <param name="Height">Connector Height</param>
+        /// <param name="Depth">Connector Depth</param>
+        /// <param name="Spacing">Connector Hole Spacing</param>
+        /// <param name="ThicknessFront">Panel Thickness Normal Direction</param>
+        /// <param name="ThicknessBack">Panel Thickness Other Direction</param>
+        /// <param name="MinEdgeOffset">Panel Minimum Edge Offset</param>
+        /// <param name="CornerOffset">Panel Minimum Corner Offset</param>
+        /// <param name="ConnectorFilletRadius">Connector Fillet Radius</param>
+        /// <param name="BevelAngle">Panel Clearance Bevel Angle</param>
+        /// <returns>Panel System with Clearance Bevels</returns>
+        public static PanelSystem ByMeshParameters(Mesh Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerOffset, double ConnectorFilletRadius, double BevelAngle)
         {
-            // initialize mesh edge to edge connector dictionary
-            E = new Dictionary<Topology.Edge, EdgeConnector[]>(M.E2.Count + M.E3.Count);
-            // generate EdgeConnector for edges with two halfedges
-            M.E2.ForEach(e => E.Add(e, new EdgeConnector[] { new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset) }));
-            // generate EdgeConnector for edges with three halfedges
-            M.E3.ForEach(e => E.Add(e, new EdgeConnector[]{ 
-                new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset),
-                new EdgeConnector(e.E[1], e.E[2], Width, PanelThickness, PanelMinOffset)}));
-            // add pockets to EdgeConnectors
-            Connectors.ForEach(C => C.ForEach(c => c.AddPockets(c.Edge.MidPoint, PocketRadius)));
-            return Connectors;
+            PanelSystem P = new PanelSystem(Mesh);
+            P.GenerateEdgeConnectors(Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, ConnectorFilletRadius, BevelAngle); 
+            P.GeneratePanels(ThicknessFront, ThicknessBack, MinEdgeOffset, CornerOffset, BevelAngle);
+            return P;
         }
         /// <summary>
-        /// generates new Triangle/TrianglePanel Dictionary with given parameters based on EdgeConnectors
+        /// creates panel system with edge offset based on elevation
         /// </summary>
-        /// <param name="Thickness">Thickness of TrianglePanels</param>
-        /// <param name="MinEdgeOffset">Minimum edge offset from mesh face of TrianglePanels</param>
-        /// <param name="CornerRadius">Radius of fillet for TrianglePanels</param>
-        /// <param name="HoleRadius">Radius of holes for TrianglePanels</param>
-        /// <returns>TrianglePanel Array from new DIctionary values</returns>
-        public TrianglePanel[] GenerateTrianglePanels(double Thickness, double MinEdgeOffset, double CornerRadius, double HoleRadius)
+        /// <param name="Mesh">Mesh Geometry</param>
+        /// <param name="Height">Connector Height</param>
+        /// <param name="Depth">Connector Depth</param>
+        /// <param name="Spacing">Connector Hole Spacing</param>
+        /// <param name="ThicknessFront">Panel Thickness Normal Direction</param>
+        /// <param name="ThicknessBack">Panel Thickness Other Direction</param>
+        /// <param name="MinEdgeOffset">Panel Minimum Edge Offset</param>
+        /// <param name="CornerOffset">Panel Minimum Corner Offset</param>
+        /// <param name="ConnectorFilletRadius">Connector Fillet Radius</param>
+        /// <param name="OffsetBaseZ">Panel Edge Elevation-Based Offset</param>
+        /// <returns>Panel System with Elevation-Based Offsets</returns>
+        public static PanelSystem ByMeshParametersZ(Mesh Mesh, double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double CornerOffset, double ConnectorFilletRadius, double OffsetBaseZ)
         {
-            if (!(E.Count > 0)) return null;
+            PanelSystem P = new PanelSystem(Mesh);
+            P.GenerateEdgeConnectorsZ(Height, Depth, Spacing, ThicknessFront, ThicknessBack, MinEdgeOffset, ConnectorFilletRadius, OffsetBaseZ);
+            P.GeneratePanelsZ(ThicknessFront, ThicknessBack, MinEdgeOffset, CornerOffset, OffsetBaseZ);
+            return P;
+        }
+
+        //**METHODS**ACTIONS
+        public void GenerateEdgeConnectors(double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double ConnectorFilletRadius, double BevelAngle)
+        {
+            // initialize mesh edge to edge connector dictionary
+            E = new Dictionary<Topology.Edge, EdgeConnector>(M.E2.Count + M.E3.Count);
+            // generate EdgeConnector
+            M.E2.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, ConnectorFilletRadius, BevelAngle)));
+            M.E3.ForEach(e => E.Add(e, EdgeConnector.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, ConnectorFilletRadius, BevelAngle)));
+        }
+        public void GenerateEdgeConnectorsZ(double Height, double Depth, double Spacing, double ThicknessFront, double ThicknessBack, double PanelMinOffset, double ConnectorFilletRadius, double OffsetBaseZ)
+        {
+            // initialize mesh edge to edge connector dictionary
+            E = new Dictionary<Topology.Edge, EdgeConnector>(M.E2.Count + M.E3.Count);
+            // generate EdgeConnector
+            M.E2.ForEach(e => E.Add(e, EdgeConnectorZ.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, ConnectorFilletRadius, OffsetBaseZ)));
+            M.E3.ForEach(e => E.Add(e, EdgeConnectorZ.ByEdge(e, Height, Depth, Spacing, ThicknessFront, ThicknessBack, PanelMinOffset, ConnectorFilletRadius, OffsetBaseZ)));
+        }
+        public bool GeneratePanels(double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double ConnectorFilletRadius, double BevelAngle)
+        {
+            if (!(E.Count > 0)) return false;
             // initialize mesh face to panel dictionary
-            T = new Dictionary<Triangle, TrianglePanel>(M.Faces.Count);
+            F = new Dictionary<Face, Panel>(M.Faces.Count);
             // iterate through mesh faces to generate panels
             for (int i = 0; i < M.Faces.Count; i++)
             {
                 // generate triangle panel with input values at given face
-                TrianglePanel t = TrianglePanelEdgeBased.ByMeshFace(M.Faces[i], Thickness, MinEdgeOffset, CornerRadius);
+                Panel panel = Panel.ByFaceAndParameters(M.Faces[i], ThicknessFront, ThicknessBack, MinEdgeOffset, ConnectorFilletRadius, M.MinFaceAngle, BevelAngle);
                 // add face/panel pair to dictionary
-                T.Add(M.Faces[i], t);
+                F.Add(M.Faces[i], panel);
                 // iterate through edges and add holes based on edge connector calculations
                 for (int j = 0; j < M.Faces[i].Edges.Length; j++)
                     if (E.ContainsKey(M.Faces[i].Edges[j]))
@@ -857,23 +822,34 @@ namespace Panelization
                         Point p = M.Faces[i].Edges[j].MidPoint;
                         // orthogonal vector to edge that is on the plane of triangle face with direction towards center of face
                         Vector Y = M.Faces[i].Normal.Cross(M.Faces[i].E[j].GetVector()).Normalized();
-                        // calculate first hole position based on edge using midpoint as origin
-                        // distance between hole center and edge is equal to inset property of edge
-                        p = p.Add(Y.Scale(E[M.Faces[i].Edges[j]][0].Inset));
-                        // add hole to list of holes of TrianglePanel
-                        t.AddHole(p, HoleRadius);
-                        // calculate second hole position based on edge using midpoint as origin
-                        // distance between hole center and edge is equal to the sum of the inset property of edge and the width property of edge
-                        p = p.Add(Y.Scale(E[M.Faces[i].Edges[j]][0].Width));
-                        // add hole to list of holes of TrianglePanel
-                        t.AddHole(p, HoleRadius);
-                        //dispose of unmanaged resources
-                        p.Dispose(); Y.Dispose();
                     }
             }
-            return Panels;
+            return true;
         }
-
+        public bool GeneratePanelsZ(double ThicknessFront, double ThicknessBack, double MinEdgeOffset, double ConnectorFilletRadius, double OffsetBaseZ)
+        {
+            if (!(E.Count > 0)) return false;
+            // initialize mesh face to panel dictionary
+            F = new Dictionary<Face, Panel>(M.Faces.Count);
+            // iterate through mesh faces to generate panels
+            for (int i = 0; i < M.Faces.Count; i++)
+            {
+                // generate triangle panel with input values at given face
+                PanelZ panel = PanelZ.ByFaceAndParameters(M.Faces[i], ThicknessFront, ThicknessBack, MinEdgeOffset, ConnectorFilletRadius, M.MinFaceAngle, OffsetBaseZ);
+                // add face/panel pair to dictionary
+                F.Add(M.Faces[i], panel);
+                // iterate through edges and add holes based on edge connector calculations
+                for (int j = 0; j < M.Faces[i].Edges.Length; j++)
+                    if (E.ContainsKey(M.Faces[i].Edges[j]))
+                    {
+                        // midpoint of edge
+                        Point p = M.Faces[i].Edges[j].MidPoint;
+                        // orthogonal vector to edge that is on the plane of triangle face with direction towards center of face
+                        Vector Y = M.Faces[i].Normal.Cross(M.Faces[i].E[j].GetVector()).Normalized();
+                    }
+            }
+            return true;
+        }
         //**METHODS**DISPOSE
         public void Dispose()
         {
@@ -885,10 +861,10 @@ namespace Panelization
             if (disposed) return;
             if (disposing)
             {
-                if (!Panels.Equals(null)) Panels.ForEach(t => t.Dispose());
+                if (!Panels.Equals(null)) Panels.ForEach(p => p.Dispose());
                 if (!E.Equals(null)) E.Values.ToArray().ForEach(e => e.Dispose());
             }
             disposed = true;
         }
     }
-}*/
+}
