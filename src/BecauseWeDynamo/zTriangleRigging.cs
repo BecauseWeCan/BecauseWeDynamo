@@ -405,7 +405,7 @@ namespace TriangleRigging
         public Point circumcenter { get { return Circumcenter; } }
         public Point center { get { return Center; } }
         public Vector Normal { get; set; }
-        public Geometry Geometry { get; set; }
+        public Autodesk.DesignScript.Geometry.Geometry Geometry { get; set; }
         public string Name { get; set; }
         public int splineId { get; set; }
         public int numHoles { get; set; }

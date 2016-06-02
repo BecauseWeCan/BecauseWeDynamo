@@ -3,83 +3,86 @@ using System.Collections.Generic;
 using System.Linq;
 using Autodesk.DesignScript.Geometry;
 using Autodesk.DesignScript.Runtime;
-using Fabrication.Text;
+using Fabrication;
 using Topology;
-using Topology.Panelization;
+using Panelization;
+using Geometry;
 
-namespace Topology.Rigging
+namespace Topology
 {
-    internal class Rigging: Mesh
+    internal class rigging: mesh, IDisposable
     {
         //**PROPERTIES - **QUERY**
-        public List<List<Vertex>> Splines { get; set; }
+        new public List<List<vertex>> Splines { get; set; }
+        public Dictionary<face, Dictionary<string, Object>> Parameters;
+        private bool disposed = false;
 
         //**CONSTRUCTORS
-        internal Rigging(Solid[][] Solids, Point[][] SolidPoints, Point[][] OrderedSplines)
+        internal rigging(Solid[][] Solids, Point[][] SolidPoints, Point[][] OrderedSplines)
         {
             // initialize Vertices and Triangles
-            V = new Dictionary<Point, Vertex>();
-            Faces = new List<Face>(Solids.Length);
-            Edges = new List<Edge>();
-            Splines = new List<List<Vertex>>(OrderedSplines.Length);
+            V = new Dictionary<point, vertex>();
+            Faces = new List<face>(Solids.Length);
+            Edges = new List<edge>();
+            Splines = new List<List<vertex>>(OrderedSplines.Length);
+            Parameters = new Dictionary<face, Dictionary<string, object>>();
 
             // iterate over Solids and assign topology to Vertices
             // and create Triangles based on Solids
             int eCount = 1;
             for (int i = 0; i < Solids.Length; i++)
             {
-                List<Vertex> TriangleV = new List<Vertex>(3);
+                List<vertex> TriangleV = new List<vertex>(3);
                 for (int j = 0; j < SolidPoints[i].Length; j++)
                 {
-                    if (!V.ContainsKey(SolidPoints[i][j]))
+                    point v = point.ByPoint(SolidPoints[i][j]);
+                    if (!V.ContainsKey(v))
                     {
-                        V.Add(SolidPoints[i][j], new Vertex(SolidPoints[i][j]));
+                        V.Add(v, new vertex(v));
                     }
-                    TriangleV.Add(V[SolidPoints[i][j]]);
+                    TriangleV.Add(V[v]);
                 }
-                Triangle t = Triangle.ByVertices(TriangleV);
+                triangle t = triangle.ByVertices(TriangleV);
                 t.Name = "t" + (i + 1).ToString("D" + 4);
-                t.AddParameter("panel", Solids[i]);
+                Parameters.Add(t, new Dictionary<string,Object>());
+                Parameters[t].Add("panel", Solids[i]);
                 Faces.Add(t);
                 eCount = FindFaceEdges(t, eCount);
             }
             Points = V.Keys.ToArray();
             BuildEdges(OrderedSplines);
         }
-        internal Rigging(Surface[] TriangleSurfaces, Point[][] OrderedSplines)
+        internal rigging(Surface[] TriangleSurfaces, Point[][] OrderedSplines)
         {
             // initialize Vertices and Triangles
-            V = new Dictionary<Point, Vertex>();
-            Faces = new List<Face>(TriangleSurfaces.Length);
-            Edges = new List<Edge>();
-            Splines = new List<List<Vertex>>(OrderedSplines.Length);
+            V = new Dictionary<point, vertex>();
+            Faces = new List<face>(TriangleSurfaces.Length);
+            Edges = new List<edge>();
+            Splines = new List<List<vertex>>(OrderedSplines.Length);
 
             // iterate over Solids and assign topology to Vertices
             // and create Triangles based on Solids
             for (int i = 0; i < TriangleSurfaces.Length; i++)
             {
                 Autodesk.DesignScript.Geometry.Vertex[] vtx = TriangleSurfaces[i].Vertices;
-                List<Vertex> v = new List<Vertex>(vtx.Length);
+                List<vertex> v = new List<vertex>(vtx.Length);
                 for (int j = 0; j < vtx.Length; j++)
                 {
                     Point pt = vtx[j].PointGeometry;
-                    Vertex search = GetVertexAtPoint(pt);
-                    if (!search.Equals(null))
-                    {
-                        v.Add(search);
-                        pt.Dispose();
-                    }
+                    vertex search = GetVertexAtPoint(pt);
+                    if (!search.Equals(null)) v.Add(search);
                     else
                     {
-                        V.Add(pt, new Vertex(pt));
+                        point p = point.ByPoint(pt);
+                        V.Add(p, new vertex(p));
                         v.Add(GetVertexAtPoint(pt));
                     }
+                    pt.Dispose();
                 }
                 vtx.ForEach(x => x.Dispose());
             }
 
             Points = V.Keys.ToArray();
-
             BuildEdges(OrderedSplines);
         }
         
@@ -91,8 +94,7 @@ namespace Topology.Rigging
             int numD = OrderedSplines.Length.ToString().Length;
             for (int i = 0; i < OrderedSplines.Length; i++)
             {
-                List<Vertex> Spline = new List<Vertex>();
-                int z = 0;
+                List<vertex> Spline = new List<vertex>();
                 int edgeCount = 1;
                 int numDs = OrderedSplines[i].Length.ToString().Length;
                 // iterate through spline Vertices
@@ -104,7 +106,7 @@ namespace Topology.Rigging
                             if (j > 0)
                             {
                                 Line L = Line.ByStartPointEndPoint(OrderedSplines[i][j-1],OrderedSplines[i][j]);
-                                Edge e = GetEdgeAtLine(L);
+                                edge e = GetEdgeAtLine(L);
                                 if (!e.Equals(null)) 
                                 {
                                     e.Name = "s" + i.ToString("D" + numD) + "-" + edgeCount.ToString("D" + numDs);                                 
@@ -168,7 +170,7 @@ namespace Topology.Rigging
         }
 
         //**STATIC**METHODS - **CREATE**
-        public static Rigging BySolidsPointsSplines(Solid[][] Solids, Point[][] SolidsPoints, Point[][] Splines) { return new Rigging(Solids, SolidsPoints, Splines); }
+        public static rigging BySolidsPointsSplines(Solid[][] Solids, Point[][] SolidsPoints, Point[][] Splines) { return new rigging(Solids, SolidsPoints, Splines); }
 
         //**METHODS - **ACTION**
         /// <summary>
@@ -186,15 +188,15 @@ namespace Topology.Rigging
         }
         public void AddParamterToTriangles(string name, Object[] data)
         {
-            if (data.Length == Faces.Count) for (int i = 0; i < Faces.Count; i++) { Faces[i].Parameters.Add(name, data[i]); }
+            if (data.Length == Faces.Count) for (int i = 0; i < Faces.Count; i++) { Parameters[Faces[i]].Add(name, data[i]); }
         }
         public List<int> GetTriangleIndexByParameterValue(string parameter, Object value)
         {
-            if (!Faces[0].Parameters.Keys.Contains(parameter)) return null;
+            if (!Parameters[Faces[0]].Keys.Contains(parameter)) return null;
             List<int> result = new List<int>();
             for (int i = 0; i < Faces.Count; i++)
             {
-                if (Faces[i].Parameters[parameter].Equals(value)) result.Add(i);
+                if (Parameters[Faces[i]][parameter].Equals(value)) result.Add(i);
             }
             return result;
         }
@@ -218,6 +220,23 @@ namespace Topology.Rigging
                 result.Add(list);
             }
             return result;
+        }
+        public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                for (int j=0; j<Faces.Count;j++)
+                {
+                    face f = Faces[j];
+                    for (int i = 0; i < Parameters[f].Values.Count; i++)
+                    {
+                        if (Parameters[f].Values.ToArray()[i] is IDisposable) ((IDisposable)Parameters.Values.ToArray()[i]).Dispose();
+                    }
+                }
+            }
+            disposed = true;
         }
     } // end class
 

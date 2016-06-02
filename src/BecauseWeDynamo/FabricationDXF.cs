@@ -2,8 +2,9 @@
 using System.IO;
 using System.Collections.Generic;
 using Autodesk.DesignScript.Geometry;
+using Geometry;
 
-namespace Fabrication.DXF
+namespace Fabrication
 {
     /// <summary>
     /// Exports vectors to dxf;
@@ -111,7 +112,7 @@ namespace Fabrication.DXF
         /// <summary>
         /// adds curve to dxf data as arcs and lines
         /// </summary>
-        /// <param name="Curves">Curve</param>
+        /// <param name="Curve">Curve</param>
         /// <param name="LayerName">Layer Name (defaults to 0)</param>
         /// <param name="ACADcolor">Layer Color (defaults to white)</param>
         public void AddCurveAsArcLine(Curve Curve, string LayerName = "0", short ACADcolor = (short) 7)
@@ -232,11 +233,12 @@ namespace Fabrication.DXF
         }
         internal void AddArcXY(Arc Arc, string LayerName)
         {
-            Vector A = Vector.ByTwoPoints(Arc.CenterPoint, Arc.StartPoint);
-            double startAngle = VectorMath.Mod(360 + Math.Sign(A.Y) * VectorMath.toDegrees(VectorMath.AngleBetween(Vector.XAxis(), A)), 360);
+            point c = point.ByPoint(Arc.CenterPoint);
+            point s = point.ByPoint(Arc.StartPoint);
+            vector A = vector.ByTwoPoints(c, s);
+            double startAngle = math.Mod(360 + Math.Sign(A.Y) * math.toDegrees(vector.Xaxis().AngleBetween(A)), 360);
             Fabrication.DXFLibrary.Arc arc = new Fabrication.DXFLibrary.Arc(Arc.CenterPoint.X, Arc.CenterPoint.Y, Arc.Radius, startAngle, startAngle + Arc.SweepAngle, LayerName);
             dxf.add(arc);
-            A.Dispose();
         }
         internal void AddArcLineXY(Curve[] Curves, string LayerName)
         {
@@ -258,17 +260,18 @@ namespace Fabrication.DXF
         }
         internal void AddArc(Arc Arc, string LayerName)
         {
-            Vector A = Vector.ByTwoPoints(Arc.CenterPoint, Arc.StartPoint);
-            Vector[] XYZ = VectorMath.NormalizedBasisDXF(Arc.Normal);
-            double[] a = VectorMath.ChangeBasis(A, XYZ);
-            double[] center = VectorMath.ChangeBasis(Arc.CenterPoint, XYZ);
-            double startAngle = VectorMath.Mod(360 + Math.Sign(a[1]) * VectorMath.toDegrees(VectorMath.AngleBetween(XYZ[0], A)), 360);
-            if (VectorMath.IsParallel(A, Vector.XAxis()) && A.X < 0) startAngle += 180;
-            double endAngle = VectorMath.Mod(startAngle + Arc.SweepAngle, 360);
+            vector n = vector.ByCoordinates(Arc.Normal.X, Arc.Normal.Y, Arc.Normal.Z);
+            point c = point.ByPoint(Arc.CenterPoint);
+            point s = point.ByPoint(Arc.StartPoint);
+            vector A = vector.ByTwoPoints(c,s);
+            vector[] XYZ = vector.NormalizedBasisDXF(n);
+            double[] a = A.ChangeBasis(XYZ);
+            double[] center = c.ChangeBasis(XYZ);
+            double startAngle = math.Mod(360 + Math.Sign(a[1]) * math.toDegrees(XYZ[0].AngleBetween(A)), 360);
+            if (A.IsParallel(vector.Xaxis()) && A.X < 0) startAngle += 180;
+            double endAngle = math.Mod(startAngle + Arc.SweepAngle, 360);
             Fabrication.DXFLibrary.Arc arc = new Fabrication.DXFLibrary.Arc(center[0], center[1], center[2], Arc.Radius, startAngle, endAngle, Arc.Normal.X, Arc.Normal.Y, Arc.Normal.Z, LayerName);
             dxf.add(arc);
-            XYZ.ForEach(v => v.Dispose());
-            A.Dispose();
         }
         internal void AddArcLineCurves(Curve[] Curves, string LayerName)
         {

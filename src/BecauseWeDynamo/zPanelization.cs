@@ -113,12 +113,12 @@ namespace Panelization
             Solid S = null;
             if (Holes.Count > 5)
             {
-                Geometry[] G0 = s.Split(Holes[0]);
-                Geometry[] G1 = G0[1].Split(Holes[1]);
-                Geometry[] G2 = G1[1].Split(Holes[2]);
-                Geometry[] G3 = G2[1].Split(Holes[3]);
-                Geometry[] G4 = G3[1].Split(Holes[4]);
-                Geometry[] G5 = G4[1].Split(Holes[5]);
+                Autodesk.DesignScript.Geometry.Geometry[] G0 = s.Split(Holes[0]);
+                Autodesk.DesignScript.Geometry.Geometry[] G1 = G0[1].Split(Holes[1]);
+                Autodesk.DesignScript.Geometry.Geometry[] G2 = G1[1].Split(Holes[2]);
+                Autodesk.DesignScript.Geometry.Geometry[] G3 = G2[1].Split(Holes[3]);
+                Autodesk.DesignScript.Geometry.Geometry[] G4 = G3[1].Split(Holes[4]);
+                Autodesk.DesignScript.Geometry.Geometry[] G5 = G4[1].Split(Holes[5]);
                 S = (G5[1] as Surface).Thicken(Thickness);
                 G0.ForEach(g => g.Dispose());
                 G1.ForEach(g => g.Dispose());
@@ -129,10 +129,10 @@ namespace Panelization
             }
             else if (Holes.Count > 3)
             {
-                Geometry[] G0 = s.Split(Holes[0]);
-                Geometry[] G1 = G0[1].Split(Holes[1]);
-                Geometry[] G2 = G1[1].Split(Holes[2]);
-                Geometry[] G3 = G2[1].Split(Holes[3]);
+                Autodesk.DesignScript.Geometry.Geometry[] G0 = s.Split(Holes[0]);
+                Autodesk.DesignScript.Geometry.Geometry[] G1 = G0[1].Split(Holes[1]);
+                Autodesk.DesignScript.Geometry.Geometry[] G2 = G1[1].Split(Holes[2]);
+                Autodesk.DesignScript.Geometry.Geometry[] G3 = G2[1].Split(Holes[3]);
                 S = (G3[1] as Surface).Thicken(Thickness);
                 G0.ForEach(g => g.Dispose());
                 G1.ForEach(g => g.Dispose());
@@ -141,8 +141,8 @@ namespace Panelization
             }
             else if (Holes.Count > 1)
             {
-                Geometry[] G0 = s.Split(Holes[0]);
-                Geometry[] G1 = G0[1].Split(Holes[1]);
+                Autodesk.DesignScript.Geometry.Geometry[] G0 = s.Split(Holes[0]);
+                Autodesk.DesignScript.Geometry.Geometry[] G1 = G0[1].Split(Holes[1]);
                 S = (G1[1] as Surface).Thicken(Thickness);
                 G0.ForEach(g => g.Dispose());
                 G1.ForEach(g => g.Dispose());
@@ -362,7 +362,7 @@ namespace Panelization
     /// EdgeConnector: geometry wrapper for connectors based on halfedges at edge that returns connectors at given point
     /// (connections are on backside of mesh except when there are an odd number of edges, ie there is branching in the mesh)
     /// </summary>
-    class EdgeConnector : IDisposable
+    class EdgeConnectorHole : IDisposable
     {
         //**FIELDS
         internal double Width;
@@ -399,7 +399,7 @@ namespace Panelization
         /// </summary>
         public List<Circle> Pockets { get; set; }
 
-        internal EdgeConnector(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness, double PanelMinOffset)
+        internal EdgeConnectorHole(HalfEdge e1, HalfEdge e2, double Width, double PanelThickness, double PanelMinOffset)
         {
             // initialize properties
             Profile = new List<Vector>();
@@ -495,7 +495,7 @@ namespace Panelization
                 Vectors = new Vector[] { X1, Y1, Z1, X2, Y2, Z2, eN };
             }
         }
-        internal EdgeConnector(HalfEdge e1, double Width, double PanelThickness, double Thickness)
+        internal EdgeConnectorHole(HalfEdge e1, double Width, double PanelThickness, double Thickness)
         {
             Profile = new List<Vector>();
             Edge = e1.Edge;
@@ -512,7 +512,7 @@ namespace Panelization
         /// <param name="PanelThickness">thickness of panels that are being connected</param>
         /// <param name="PanelMinOffset">minimum distance of first hole to panel edge</param>
         /// <returns>EdgeConnector</returns>
-        public static EdgeConnector ByHalfEdge(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Width, double PanelThickness, double PanelMinOffset) { return new EdgeConnector(HalfEdge1, HalfEdge2, Width, PanelThickness, PanelMinOffset); }
+        public static EdgeConnectorHole ByHalfEdge(HalfEdge HalfEdge1, HalfEdge HalfEdge2, double Width, double PanelThickness, double PanelMinOffset) { return new EdgeConnectorHole(HalfEdge1, HalfEdge2, Width, PanelThickness, PanelMinOffset); }
         /// <summary>
         /// returns edge connector given edges, connector width, panel thickness
         /// </summary>
@@ -521,12 +521,12 @@ namespace Panelization
         /// <param name="PanelThickness">thickness of panels that are being connected</param>
         /// <param name="PanelMinOffset">minimum distance of first hole to panel edge</param>
         /// <returns>EdgeConnector Array</returns>
-        public static EdgeConnector[] ByEdge(Topology.Edge e, double Width, double PanelThickness, double PanelMinOffset)
+        public static EdgeConnectorHole[] ByEdge(Topology.Edge e, double Width, double PanelThickness, double PanelMinOffset)
         {
             if (e.E.Count < 2) return null;
-            if (e.E.Count == 2) return new EdgeConnector[] { new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset) };
-            return new EdgeConnector[]{ new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset),
-                                         new EdgeConnector(e.E[1], e.E[2], Width, PanelThickness, PanelMinOffset) };
+            if (e.E.Count == 2) return new EdgeConnectorHole[] { new EdgeConnectorHole(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset) };
+            return new EdgeConnectorHole[]{ new EdgeConnectorHole(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset),
+                                         new EdgeConnectorHole(e.E[1], e.E[2], Width, PanelThickness, PanelMinOffset) };
         }
 
 
@@ -758,7 +758,7 @@ namespace Panelization
         //**FIELDS
         bool disposed = false;
         internal Dictionary<Triangle, TrianglePanel> T;
-        internal Dictionary<Topology.Edge, EdgeConnector[]> E;
+        internal Dictionary<Topology.Edge, EdgeConnectorHole[]> E;
         internal TriangleMesh M;
 
         //**PROPERTIES**QUERY
@@ -770,15 +770,15 @@ namespace Panelization
         /// gets two dimensional EdgeConnector Array indexed by mesh edge then by halfedge normals;
         /// each edge can have more than one EdgeConnector
         /// </summary>
-        public EdgeConnector[][] Connectors { get { return E.Values.ToArray(); } }
+        public EdgeConnectorHole[][] Connectors { get { return E.Values.ToArray(); } }
         /// <summary>
         /// gets EdgeConnector List of mesh
         /// </summary>
-        public List<EdgeConnector> ConnectorList
+        public List<EdgeConnectorHole> ConnectorList
         {
             get
             {
-                List<EdgeConnector> C = new List<EdgeConnector>();
+                List<EdgeConnectorHole> C = new List<EdgeConnectorHole>();
                 Connectors.ForEach(c => C.AddRange(c));
                 return C;
             }
@@ -814,16 +814,16 @@ namespace Panelization
         /// <param name="PanelMinOffset">Minimum edge offset from mesh face of TrianglePanels</param>
         /// <param name="PocketRadius">Radius of pockets for EdgeConnectors</param>
         /// <returns>EdgeConnector Array from new Dictionary values</returns>
-        public EdgeConnector[][] GenerateEdgeConnectors(double Width, double PanelThickness, double PanelMinOffset, double PocketRadius)
+        public EdgeConnectorHole[][] GenerateEdgeConnectors(double Width, double PanelThickness, double PanelMinOffset, double PocketRadius)
         {
             // initialize mesh edge to edge connector dictionary
-            E = new Dictionary<Topology.Edge, EdgeConnector[]>(M.E2.Count + M.E3.Count);
+            E = new Dictionary<Topology.Edge, EdgeConnectorHole[]>(M.E2.Count + M.E3.Count);
             // generate EdgeConnector for edges with two halfedges
-            M.E2.ForEach(e => E.Add(e, new EdgeConnector[] { new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset) }));
+            M.E2.ForEach(e => E.Add(e, new EdgeConnectorHole[] { new EdgeConnectorHole(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset) }));
             // generate EdgeConnector for edges with three halfedges
-            M.E3.ForEach(e => E.Add(e, new EdgeConnector[]{ 
-                new EdgeConnector(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset),
-                new EdgeConnector(e.E[1], e.E[2], Width, PanelThickness, PanelMinOffset)}));
+            M.E3.ForEach(e => E.Add(e, new EdgeConnectorHole[]{ 
+                new EdgeConnectorHole(e.E[0], e.E[1], Width, PanelThickness, PanelMinOffset),
+                new EdgeConnectorHole(e.E[1], e.E[2], Width, PanelThickness, PanelMinOffset)}));
             // add pockets to EdgeConnectors
             Connectors.ForEach(C => C.ForEach(c => c.AddPockets(c.Edge.MidPoint, PocketRadius)));
             return Connectors;
