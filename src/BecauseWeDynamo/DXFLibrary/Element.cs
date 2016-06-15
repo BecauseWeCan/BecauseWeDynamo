@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 
-namespace DXFLibrary
+namespace Fabrication.DXFLibrary
 {
 	/// <summary>
 	/// Generic DXF element that conatins data

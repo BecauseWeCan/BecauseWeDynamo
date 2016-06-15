@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("BecauseWeDynamo")]
+[assembly: AssemblyTitle("BecauseWeDynamoTest")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("BecauseWeCan")]
-[assembly: AssemblyProduct("BecauseWeDynamo")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("BecauseWeDynamoTest")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("d4e5ee07-aa6e-48f2-9c33-fcca960e949e")]
+[assembly: Guid("91abe7b2-167f-4942-a07f-1dc280407018")]
 
 // Version information for an assembly consists of the following four values:
 //

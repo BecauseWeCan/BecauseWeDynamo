@@ -1,4 +1,4 @@
-namespace DXFLibrary
+namespace Fabrication.DXFLibrary
 {
 	/// <summary>
 	/// C# representation of data in a dxf file:

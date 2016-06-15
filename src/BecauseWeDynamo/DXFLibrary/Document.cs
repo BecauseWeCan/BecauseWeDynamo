@@ -1,43 +1,46 @@
-using System;
+﻿using System;
 
-namespace DXFLibrary
+namespace Fabrication.DXFLibrary
 {
-	class Document
-	{
-		internal Header header;
-		internal Entities entities;
-		internal Blocks blocks;
-		internal Tables tables;
-		public Document()
-		{
-			this.entities = new Entities();
-		}
 
-		public void SetHeader(Header h)
-		{
-			this.header = h;
-		}
-		public void SetEntities(Entities e)
-		{
-			this.entities = e;
-		}
-		public void SetBlocks(Blocks b)
-		{
-			this.blocks = b;
-		}
-		public void SetTables(Tables t)
-		{
-			this.tables = t;
-		}
-		public void add(Entity e)
-		{
-			this.entities.AddEntity(e);
-		}
-		public void add(Block b)
-		{
-			this.blocks.addBlock(b);
-		}
-	}
+    /// <summary>
+    /// The representation of a dxf document.
+    /// </summary>
+    class Document
+    {
+        internal Header header;
+        internal Entities entities;
+        internal Blocks blocks;
+        internal Tables tables;
+        public Document()
+        {
+            this.entities = new Entities();
+        }
+        internal void SetHeader(Header h)
+        {
+            this.header = h;
+        }
+        internal void SetEntities(Entities e)
+        {
+            this.entities = e;
+        }
+        internal void SetBlocks(Blocks b)
+        {
+            this.blocks = b;
+        }
+        internal void SetTables(Tables t)
+        {
+            this.tables = t;
+        }
+        internal void add(Entity e)
+        {
+            this.entities.AddEntity(e);
+        }
+        internal void add(Block b)
+        {
+            this.blocks.addBlock(b);
+        }
+    }
 
     class UnexpectedElement : Exception
     {

@@ -7,78 +7,87 @@
     <ProjectGuid>{F2C38804-A742-42B1-9777-5DFBA93A3CCC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Fabrication</RootNamespace>
     <AssemblyName>BecauseWeDynamo</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
+    <OutputPath Condition="'$(OutputPath)' == ''">$(SolutionDir)..\bin\$(Platform)\$(Configuration)</OutputPath>
+    <NunitPath Condition="'$(NunitPath)' == ''">$(SolutionDir)..\extern\NUnit</NunitPath>
+    <REVIT_API Condition="'$(REVIT_API)' == ''">C:\Program Files\Autodesk\Revit 2017</REVIT_API>
+    <DYNAMO_API Condition="'$(DYNAMO_API)' == ''">..\..\Dynamo\bin\AnyCPU\Debug</DYNAMO_API>
+    <REVIT_VERSION>Revit_2017</REVIT_VERSION>
+    <BaseIntermediateOutputPath>$(OutputPath)\int\</BaseIntermediateOutputPath>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\BecauseWeDynamo.xml</DocumentationFile>
+    <DocumentationFile>$(SolutionDir)..\bin\$(Platform)\$(Configuration)\BecauseWeDynamo.xml</DocumentationFile>
     <CodeAnalysisIgnoreGeneratedCode>true</CodeAnalysisIgnoreGeneratedCode>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
+    <OutputPath Condition="'$(OutputPath)' == ''">$(SolutionDir)..\bin\$(Platform)\$(Configuration)</OutputPath>
+    <NunitPath Condition="'$(NunitPath)' == ''">$(SolutionDir)..\extern\NUnit</NunitPath>
+    <REVIT_API Condition="'$(REVIT_API)' == ''">C:\Program Files\Autodesk\Revit 2017</REVIT_API>
+    <DYNAMO_API Condition="'$(DYNAMO_API)' == ''">..\..\Dynamo\bin\AnyCPU\Debug</DYNAMO_API>
+    <REVIT_VERSION>Revit_2017</REVIT_VERSION>
+    <BaseIntermediateOutputPath>$(OutputPath)\int\</BaseIntermediateOutputPath>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MeshToolkit, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="DynamoServices">
+      <HintPath>References\DynamoServices.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ProtoGeometry, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\MeshToolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="ProtoGeometry">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoGeometry.dll</HintPath>
-    </Reference>
-    <Reference Include="ProtoInterface">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Dynamo 0.9\ProtoInterface.dll</HintPath>
+      <HintPath>References\ProtoGeometry.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DXFLibrary\Document.cs" />
     <Compile Include="DXFLibrary\Entities.cs" />
     <Compile Include="DXFLibrary\Elements.cs" />
     <Compile Include="DXFLibrary\Data.cs" />
-    <Compile Include="DXFLibrary\Document.cs" />
     <Compile Include="DXFLibrary\Element.cs" />
     <Compile Include="DXFLibrary\Writer.cs" />
-    <Compile Include="ExportToDXF.cs" />
-    <Compile Include="Panelization.cs" />
-    <Compile Include="TopologyMesh.cs" />
+    <Compile Include="FabricationDXF.cs" />
+    <Compile Include="FabricationMap.cs" />
     <Compile Include="Topology.cs" />
+    <Compile Include="Panelization.cs" />
+    <Compile Include="Geometry.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DXFLibrary\Sections.cs" />
-    <Compile Include="Nesting.cs" />
-    <Compile Include="Sheets.cs" />
-    <Compile Include="Slicer.cs" />
+    <Compile Include="FabricationSlicer.cs" />
     <Compile Include="DXFLibrary\TableEntries.cs" />
-    <Compile Include="Text.cs" />
-    <Compile Include="TopologyPanelization.cs" />
-    <Compile Include="TriangleRigging.cs" />
+    <Compile Include="FabricationText.cs" />
     <Compile Include="TopologyRigging.cs" />
-    <Compile Include="Unroll.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
   <Target Name="AfterBuild">
+    <ItemGroup>
+      <Dlls Include="$(OutDir)*.dll" />
+      <Pdbs Include="$(OutDir)*.pdb" />
+      <Xmls Include="$(OutDir)*.xml" />
+      <Configs Include="$(OutDir)*.config" />
+    </ItemGroup>
+    <Copy SourceFiles="@(Dlls)" DestinationFolder="$(SolutionDir)..\packages\MyDynamoPackage\bin\" />
+    <Copy SourceFiles="@(Pdbs)" DestinationFolder="$(SolutionDir)..\packages\MyDynamoPackage\bin\" />
+    <Copy SourceFiles="@(Xmls)" DestinationFolder="$(SolutionDir)..\packages\MyDynamoPackage\bin\" />
+    <Copy SourceFiles="@(Configs)" DestinationFolder="$(SolutionDir)..\packages\MyDynamoPackage\bin\" />
+    <MakeDir Directories="$(SolutionDir)..\packages\MyDynamoPackage\dyf" />
+    <MakeDir Directories="$(SolutionDir)..\packages\MyDynamoPackage\extra" />
   </Target>
-  -->
 </Project>

@@ -1,6 +1,6 @@
 using System;
 
-namespace DXFLibrary
+namespace Fabrication.DXFLibrary
 {
 	class Layer : TableEntry
     {
@@ -69,6 +69,7 @@ namespace DXFLibrary
         /// Add a text element to the pattern.
         /// </summary>
         /// <param name="length">Dash, dot or space length</param>
+        /// <param name="absoluteRotation">Absolute rotation</param>
         /// <param name="text">Text string</param>
         /// <param name="rotation">R = (relative) or A = (absolute) rotation value in radians of embedded text. -1000 value represents no rotation</param>
         public void AddElement(double length, string text, bool absoluteRotation, double rotation)
@@ -89,6 +90,7 @@ namespace DXFLibrary
         /// </summary>
         /// <param name="length">The length of the added section to the pattern</param>
         /// <param name="shapeNumber">The SHAPE element number</param>
+        /// <param name="absoluteRotation">absolute rotation</param>
         /// <param name="rotation">R = (relative) or A = (absolute) rotation value in radians of embedded text. -1000 value represents no rotation</param>
         public void AddElement(double length, short shapeNumber, bool absoluteRotation, double rotation)
         {
