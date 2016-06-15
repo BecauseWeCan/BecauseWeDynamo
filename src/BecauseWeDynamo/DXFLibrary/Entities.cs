@@ -159,8 +159,6 @@ namespace Fabrication.DXFLibrary
         /// <summary>
         /// The secound alignament coords.
         /// </summary>
-        /// <param name="x">x coord (horizontal)</param>
-        /// <param name="y">y coord (vertical)</param>
         public void SetSecoundAlignament(double x, double y, double z = 0)
         {
             this.AddReplace(11, x);

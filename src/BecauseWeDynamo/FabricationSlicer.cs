@@ -6,18 +6,42 @@ using System.Collections.Generic;
 
 namespace Fabrication
 {
-    public class Slicer
+    /// <summary>
+    /// slicing object
+    /// </summary>
+    public class Slicer: IDisposable
     {
         bool disposed = false;
 
         //**QUERY
+        /// <summary>
+        /// slice thickness
+        /// </summary>
         public double Thickness { get; set; }
+        /// <summary>
+        /// spacing between slices
+        /// </summary>
         public double Spacing { get; set; }
+        /// <summary>
+        /// solid to be sliced
+        /// </summary>
         public Solid Solid { get; set; }
+        /// <summary>
+        /// primary cut planes
+        /// </summary>
         public List<Plane> CutPlanesPrimary { get; set; }
+        /// <summary>
+        /// secondary cut planes
+        /// </summary>
         public List<Plane> CutPlanesSecondary { get; set; }
+        /// <summary>
+        /// tertiary cut planes
+        /// </summary>
         public List<Plane> CutPlanesTertiary { get; set; }
-        public List<Geometry> InitialGeometry { get; set; }
+        /// <summary>
+        /// inital geometry
+        /// </summary>
+        public List<Autodesk.DesignScript.Geometry.Geometry> InitialGeometry { get; set; }
 
         //**CONSTRUCTORS
         /// <summary>
@@ -35,7 +59,7 @@ namespace Fabrication
             Thickness = thickness;
             Spacing = spacing;
             CutPlanesPrimary.AddRange(GenerateCutPlanes(plane));
-            InitialGeometry = new List<Geometry>();
+            InitialGeometry = new List<Autodesk.DesignScript.Geometry.Geometry>();
             InitialGeometry.Add(plane);
             if (line1 != null)
             {
@@ -56,6 +80,7 @@ namespace Fabrication
         /// If curve is too short, it will be extended using built-in extend function</param>
         /// <param name="thickness">Thickness: the thickness of the slices, or the thickness of the material to be used for the assembly</param>
         /// <param name="spacing">Spacing: the distance between each slice</param>
+        /// <param name="origin">Origin</param>
         /// <returns>A newly-constructed Slicer object</returns>
         internal Slicer(Solid solid, Curve curve, double thickness, double spacing, double origin)
         {
@@ -71,7 +96,7 @@ namespace Fabrication
             }
             CutPlanesPrimary.AddRange(GenerateCutPlanes(plane));
             CutPlanesSecondary.AddRange(GenerateCutPlanes(curvePlanar, origin));
-            InitialGeometry = new List<Geometry>(1){curvePlanar};
+            InitialGeometry = new List<Autodesk.DesignScript.Geometry.Geometry>(1) { curvePlanar };
         }
 
         //**CREATE
@@ -133,8 +158,8 @@ namespace Fabrication
 
             for (int i = 0; i < slicer.CutPlanesPrimary.Count; i++)
             {
-                Geometry[] Up = slicer.Solid.Intersect(Shifted[0][i]);
-                Geometry[] Down = slicer.Solid.Intersect(Shifted[1][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Up = slicer.Solid.Intersect(Shifted[0][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Down = slicer.Solid.Intersect(Shifted[1][i]);
                 List<Solid> solidsUp = new List<Solid>();
                 List<Solid> solidsDown = new List<Solid>();
 
@@ -151,7 +176,7 @@ namespace Fabrication
 
                 Solid solidUp = Solid.ByUnion(solidsUp);
                 Solid solidDown = Solid.ByUnion(solidsDown);
-                Geometry[] results = slicer.CutPlanesPrimary[i].IntersectAll(solidUp.Intersect(solidDown));
+                Autodesk.DesignScript.Geometry.Geometry[] results = slicer.CutPlanesPrimary[i].IntersectAll(solidUp.Intersect(solidDown));
 
                 List<Surface> surfaces = new List<Surface>();
                 List<Solid> slices = new List<Solid>();
@@ -193,8 +218,8 @@ namespace Fabrication
             List<Solid[]> Slices = new List<Solid[]>();
             for (int i = 0; i < slicer.CutPlanesPrimary.Count; i++)
             {
-                Geometry[] Up = slicer.Solid.Intersect(Shifted[0][i]);
-                Geometry[] Down = slicer.Solid.Intersect(Shifted[1][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Up = slicer.Solid.Intersect(Shifted[0][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Down = slicer.Solid.Intersect(Shifted[1][i]);
                 List<Solid> solidsUp = new List<Solid>();
                 List<Solid> solidsDown = new List<Solid>();
 
@@ -212,7 +237,7 @@ namespace Fabrication
                 Solid solidUp = Solid.ByUnion(solidsUp);
                 Solid solidDown = Solid.ByUnion(solidsDown);
                 Solid result = solidUp.Union(solidDown);
-                Geometry[] results = result.Intersect(slicer.CutPlanesPrimary[i]);
+                Autodesk.DesignScript.Geometry.Geometry[] results = result.Intersect(slicer.CutPlanesPrimary[i]);
 
                 List<PolyCurve> profiles = new List<PolyCurve>();
                 List<Surface> surfaces = new List<Surface>();
@@ -253,7 +278,7 @@ namespace Fabrication
 
             for (int i = 0; i < slicer.CutPlanesPrimary.Count; i++)
             {
-                Geometry[] geometry = slicer.Solid.Intersect(slicer.CutPlanesPrimary[i]);
+                Autodesk.DesignScript.Geometry.Geometry[] geometry = slicer.Solid.Intersect(slicer.CutPlanesPrimary[i]);
                 List<PolyCurve> profiles = new List<PolyCurve>();
                 List<Surface> surfaces = new List<Surface>();
                 List<Solid> slices = new List<Solid>();
@@ -380,16 +405,13 @@ namespace Fabrication
         /// <summary>
         /// Generates a list of arrays of closed result based on cutplanes 
         /// </summary>
-        /// <param name="planes">A List containing cutplanes</param>
-        /// <param name="solid">Solid being compared</param>
-        /// <returns></returns>
         public List<Surface[]> GenerateSurfaces(List<Plane> planes)
         {
             List<Surface[]> Surfaces = new List<Surface[]>();
             for (int i = 0; i < planes.Count; i++ )
             {
                 List<Surface> surfaces = new List<Surface>();
-                Geometry[] intersection = Solid.Intersect(planes[i]);
+                Autodesk.DesignScript.Geometry.Geometry[] intersection = Solid.Intersect(planes[i]);
                 for (int j = 0; j < intersection.Length; j++)
                 {
                     if (intersection[i] is Surface) surfaces.Add((Surface)intersection[i]);
@@ -399,6 +421,11 @@ namespace Fabrication
             }
             return Surfaces;
         }
+        /// <summary>
+        /// returns solid objects
+        /// </summary>
+        /// <param name="Surfaces"></param>
+        /// <returns></returns>
         public List<Solid[]> GenerateSlices(List<Surface[]> Surfaces)
         {
             List<Solid[]> Slices = new List<Solid[]>(Surfaces.Count);
@@ -409,14 +436,12 @@ namespace Fabrication
         /// <summary>
         /// Takes a list of surface arrays, and returns perimeters
         /// </summary>
-        /// <param name="Surfaces"></param>
-        /// <returns>A list of polycurve arrays with profiles </returns>
         private List<PolyCurve[]> GenerateProfiles(List<Plane> planes)
         {
             List<PolyCurve[]> Curves = new List<PolyCurve[]>();
             for (int i = 0; i < planes.Count; i++)
             {
-                Geometry[] geometry = Solid.Intersect(planes[i]);
+                Autodesk.DesignScript.Geometry.Geometry[] geometry = Solid.Intersect(planes[i]);
                 List<PolyCurve> profiles = new List<PolyCurve>();
                 for (int j = 0; j < geometry.Length; j++)
                 {
@@ -427,7 +452,6 @@ namespace Fabrication
             }
             return Curves;
         }
-
         private Plane[][] ShiftCutPlanes(List<Plane> planes, double thickness)
         {
             Plane[] shiftUp = new Plane[planes.Count];
@@ -440,15 +464,14 @@ namespace Fabrication
             Plane[][] shifted = {shiftUp, shiftDown};
             return shifted;
         }
-
         private List<Surface[]> GenerateCircumscribedSurfaces(List<Plane> planes)
         {
             Plane[][] Shifted = ShiftCutPlanes(planes, Thickness);
             List<Surface[]> Surfaces = new List<Surface[]>();
             for (int i = 0; i < planes.Count; i++)
             {
-                Geometry[] Up = Solid.Intersect(Shifted[0][i]);
-                Geometry[] Down = Solid.Intersect(Shifted[1][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Up = Solid.Intersect(Shifted[0][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Down = Solid.Intersect(Shifted[1][i]);
                 List<Solid> solidsUp = new List<Solid>();
                 List<Solid> solidsDown = new List<Solid>();
                 
@@ -467,7 +490,7 @@ namespace Fabrication
                 Solid solidDown = Solid.ByUnion(solidsDown);
                 Solid result = solidUp.Union(solidDown);
                 List<Surface> surfaces = new List<Surface>();
-                Geometry[] results = result.Intersect(planes[i]);
+                Autodesk.DesignScript.Geometry.Geometry[] results = result.Intersect(planes[i]);
                 for (int j = 0; j < results.Length; j++)
                 {
                     if ((results[j] is Point) ^ (results[j] is Curve)) { continue; }
@@ -477,15 +500,19 @@ namespace Fabrication
             }
             return Surfaces;
         }
-
+        /// <summary>
+        /// returns inscribed surfaces at cutplanes
+        /// </summary>
+        /// <param name="planes"></param>
+        /// <returns></returns>
         public List<Surface[]> GenerateInscribedSurfaces(List<Plane> planes)
         {
             Plane[][] Shifted = ShiftCutPlanes(planes, Thickness);
             List<Surface[]> Surfaces = new List<Surface[]>();
             for (int i = 0; i < planes.Count; i++)
             {
-                Geometry[] Up = Solid.Intersect(Shifted[0][i]);
-                Geometry[] Down = Solid.Intersect(Shifted[1][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Up = Solid.Intersect(Shifted[0][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] Down = Solid.Intersect(Shifted[1][i]);
                 List<Solid> solidsUp = new List<Solid>();
                 List<Solid> solidsDown = new List<Solid>();
 
@@ -503,7 +530,7 @@ namespace Fabrication
                 Solid solidUp = Solid.ByUnion(solidsUp);
                 Solid solidDown = Solid.ByUnion(solidsDown);
                 List<Surface> surfaces = new List<Surface>();
-                Geometry[] results = planes[i].IntersectAll(solidUp.Intersect(solidDown));
+                Autodesk.DesignScript.Geometry.Geometry[] results = planes[i].IntersectAll(solidUp.Intersect(solidDown));
                 for (int j = 0; j < results.Length; j++)
                 {
                     if ((results[j] is Point) ^ (results[j] is Curve)) { continue; }
@@ -512,6 +539,33 @@ namespace Fabrication
                 Surfaces.Add(surfaces.ToArray());
             }
             return Surfaces;
+        }
+
+        //**METHODS**DISPOSE
+        /// <summary>
+        /// dispose function
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        /// <summary>
+        /// protected dispose function
+        /// </summary>
+        /// <param name="disposing"></param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed) return;
+            if (disposing)
+            {
+                Solid.Dispose();
+                CutPlanesPrimary.ForEach(p => p.Dispose());
+                CutPlanesSecondary.ForEach(p => p.Dispose());
+                CutPlanesTertiary.ForEach(p => p.Dispose());
+                InitialGeometry.ForEach(p => p.Dispose());
+            }
+            disposed = true;
         }
 
     }

@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using Autodesk.DesignScript.Geometry;
 
-namespace Fabrication.Text
+namespace Fabrication
 {
 
-    internal class Letter : List<PolyCurve>, IDisposable
+    internal class letter : List<PolyCurve>, IDisposable
     {
         private char ltr;
         bool disposed = false;
 
-        internal Letter(char c)
+        internal letter(char c)
         {
             Point[,] points = new Point[3, 5];
             for (int i = 0; i < 3; i++) for (int j = 0; j < 5; j++) points[i, j] = Point.ByCoordinates(i - 1, -j - 1);
@@ -157,27 +157,30 @@ namespace Fabrication.Text
         }
     }// end letter
 
-    public class Word : IDisposable
+    /// <summary>
+    /// Word object composed on polycurve letters
+    /// </summary>
+    public class word : IDisposable
     {
-        internal string word;
+        internal string Word;
         internal CoordinateSystem cs;
         bool disposed = false;
 
         /// <summary>
-        /// Letter Array in Word(s)
+        /// letter array in word
         /// </summary>
-        internal Letter[] Letters { get; private set; }
+        internal letter[] Letters { get; private set; }
 
-        internal Word(string String, Point Origin, Vector X, Vector Y)
+        internal word(string String, Point Origin, Vector X, Vector Y)
         {
             cs = CoordinateSystem.ByOriginVectors(Origin, X, Y);
-            word = String;
+            Word = String;
             char[] chars = String.ToLower().ToCharArray();
-            Letters = new Letter[chars.Length];
+            Letters = new letter[chars.Length];
             double dblLtr = (chars.Length - 1) * (-1.5);
             for (int i = 0; i < chars.Length; i++)
             {
-                Letters[i] = new Letter(chars[i]);
+                Letters[i] = new letter(chars[i]);
                 for (int j = 0; j < Letters[i].Count; j++) Letters[i][j] = (PolyCurve)Letters[i][j].Transform(cs).Translate(cs.XAxis, dblLtr);
                 dblLtr = dblLtr + 3.0;
             }
@@ -186,27 +189,19 @@ namespace Fabrication.Text
         /// <summary>
         /// creates word object by string, origin point, orthonormal vectors X, Y
         /// </summary>
-        /// <param name="Word">Word</param>
-        /// <param name="Origin">Origin</param>
-        /// <param name="X">X-Axis</param>
-        /// <param name="Y">Y-Axis</param>
-        /// <returns>Word at Origin on XY Plane</returns>
-        public static Word ByStringOriginVectors(String Word, Point Origin, Vector X, Vector Y) { return new Word(Word, Origin, X, Y); }
+        public static word ByStringOriginVectors(String Word, Point Origin, Vector X, Vector Y) { return new word(Word, Origin, X, Y); }
 
         /// <summary>
         /// creates word object by string and coordinate system
         /// </summary>
-        /// <param name="Word">Word</param>
-        /// <param name="CS">Coordinate System</param>
-        /// <returns>Word at Origin on XY Plane</returns>
-        public static Word ByStringCS(String Word, CoordinateSystem CS) { return new Word(Word, CS.Origin, CS.XAxis, CS.YAxis); }
+        public static word ByStringCS(String Word, CoordinateSystem CS) { return new word(Word, CS.Origin, CS.XAxis, CS.YAxis); }
 
         /// <summary>
         /// transform word object to new coordinate system
         /// </summary>
         /// <param name="newCS">New Coordinate System</param>
         /// <returns>Transformed Word</returns>
-        public Word Transform(CoordinateSystem newCS)
+        public word Transform(CoordinateSystem newCS)
         {
             for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
                 { Letters[i][j] = Letters[i][j].Transform(newCS) as PolyCurve; }
@@ -220,7 +215,7 @@ namespace Fabrication.Text
         /// <param name="Direction">Direction Vector</param>
         /// <param name="Distance">Distance</param>
         /// <returns>Translated Object</returns>
-        public Word Translate(Vector Direction, double Distance)
+        public word Translate(Vector Direction, double Distance)
         {
             for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
                 { Letters[i][j] = Letters[i][j].Translate(Direction, Distance) as PolyCurve; }
@@ -232,7 +227,7 @@ namespace Fabrication.Text
         /// </summary>
         /// <param name="Factor">Scale Factor</param>
         /// <returns>Scaled Object</returns>
-        public Word Scale(double Factor=1)
+        public word Scale(double Factor=1)
         {
             for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
                 { Letters[i][j] = Letters[i][j].Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, Factor) as Point) as PolyCurve; }
@@ -251,13 +246,17 @@ namespace Fabrication.Text
                 { lines.Add(Letters[i][j].Scale(cs.Origin, cs.Origin.Translate(cs.XAxis, 1) as Point, cs.Origin.Translate(cs.XAxis, Scale) as Point) as PolyCurve); }
             return lines;
         }
-
+        /// <summary>
+        /// dispose function
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
+        /// <summary>
+        /// protected dispose function
+        /// </summary>
         protected virtual void Dispose(bool disposing)
         {
             if (disposed) return;
