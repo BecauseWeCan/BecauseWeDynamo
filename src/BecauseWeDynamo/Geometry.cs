@@ -231,7 +231,7 @@ namespace Geometry
         /// V1 is vector from vertex in right-hand rule
         /// V2 is vector from vertex in other direction
         /// where face normal is V1 x V2 (cross product).
-        /// returns array {V1, V2, V1+V2 (bisector), V1-V2 (ON vector to biscetor and normal), NxV1 + V2xN(exterior bisector)}
+        /// returns array {V1, V2, V1+V2 (bisector), V1-V2 (ON vector to biscetor and normal), NxV1 + V2xN(interior bisector)}
         /// </summary>
         /// <param name="V1"></param>
         /// <param name="V2"></param>
@@ -251,7 +251,7 @@ namespace Geometry
         {
             vector N1 = this.Normalized();
             vector N2 = Vector.Normalized();
-            return Math.Acos(N1.Dot(N2));
+            return math.Mod(Math.Acos(N1.Dot(N2)) + 2*math.PI, 2*math.PI);
         }
         /// <summary>
         /// dot product of two vectors (order invariant)

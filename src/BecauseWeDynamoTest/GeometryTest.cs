@@ -31,7 +31,7 @@ namespace BecauseWeDynamoTest
             point C = point.ByCoordinates(0, -1, 0);
             arc a = arc.ByThreePoints(A,B,C);
 
-            Assert.AreEqual(a.SweepAngle, math.toRadians(270), 0.00001);
+            Assert.AreEqual(a.SweepAngle, math.toRadians(270), 0.000000000000001);
         }
         [TestMethod]
         public void ArcNormal270()
@@ -51,7 +51,7 @@ namespace BecauseWeDynamoTest
             point C = point.ByCoordinates(-1, 0, 0);
             arc a = arc.ByThreePoints(A, B, C);
 
-            Assert.AreEqual(a.SweepAngle, Math.PI, 0.000000000000001);
+            Assert.AreEqual(a.SweepAngle, math.PI, 0.000000000000001);
         }
         [TestMethod]
         public void ArcNormal180()

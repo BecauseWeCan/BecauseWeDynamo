@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Autodesk.DesignScript.Geometry;
 using Geometry;
 using Topology;
 using Panelization;
@@ -14,7 +15,14 @@ namespace BecauseWeDynamoTest
         public void CreatePanel()
         {
             face Face = new face();
-            Panel p = Panel.ByFaceAndParameters(Face, 0, 0, 0, 0, 0);
+            panel p = panel.ByFaceAndParameters(Face, 0, 0, 0, 0, 0);
+        }
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException), "ThicknessFront must be greater than zero")]
+        public void CreatePanelHole()
+        {
+            face Face = new face();
+            panelHole p = panelHole.ByFaceAndParameters(Face, 0, 0, 0, 0, 0);
         }
     }
 }

@@ -36,7 +36,7 @@ namespace Topology
         //**CONSTRUCTOR**
         internal halfedge(vertex A, vertex B) : base(B.X - A.X, B.Y - A.Y, B.Z - A.Z)
         {
-            Angle = 360;
+            Angle = 2*math.PI;
             V = new vertex[] { A, B };
 
         }
@@ -503,7 +503,7 @@ namespace Topology
         {
             get
             {
-                double min = 360;
+                double min = 2*math.PI;
                 for (int i = 0; i < E.Count; i++) if (min > E[i].Angle) min = E[i].Angle;
                 return min;
             }
@@ -543,7 +543,7 @@ namespace Topology
             Angles = new double[E.Count];
             for (int i = 0; i < E.Count; i++)
             {
-                arc arc = arc.ByThreePoints(VertexVectors[i][1], VertexVectors[i][0], VertexVectors[i][4]);
+                arc arc = arc.ByThreePoints(VertexVectors[i][0], VertexVectors[i][4], VertexVectors[i][1]);
                 Angles[i] = arc.SweepAngle;
             }
         }
@@ -694,7 +694,7 @@ namespace Topology
         internal List<edge> E0;
         internal int Df = 0;
         internal int De = 0;
-        internal double MinFaceAngle = 180;
+        internal double MinFaceAngle = math.PI;
 
         //**PROPERTIES**QUERY
         /// <summary>
@@ -876,10 +876,10 @@ namespace Topology
                     if (n0[0] < n1[0]) { e1 = e[0]; e2 = e[1]; a1 = n0; a2 = n1; }
                     else { e1 = e[1]; e2 = e[0]; a1 = n1; a2 = n0; }
                     vector e1N = e1.Face.Normal, e2N = e2.Face.Normal;
-                    double[] a3 = { e1N.X - e2N.X, e1N.Y - e2N.Y, e1N.Z - e2N.Z };
+                    vector a3 = e1N.Reverse().NormalizedAdd(e2N);
                     Edges[i].E = new List<halfedge> { e0, e1, e2 };
-                    Edges[i].Angle = new double[] { a1[0], a2[0] - a1[0], 360 - a2[0] };
-                    Edges[i].N = new double[] { -a1[1], -a1[2], -a1[3], -a3[0], -a3[1], -a3[2], a2[1], a2[2], a2[3] };
+                    Edges[i].Angle = new double[] { a1[0], a2[0] - a1[0], 2*math.PI - a2[0] };
+                    Edges[i].N = new double[] { -a1[1], -a1[2], -a1[3], -a3.X, -a3.Y, -a3.Z, a2[1], a2[2], a2[3] };
                     Edges[i].E.ElementAt(0).Angle = a1[0];
                     Edges[i].E.ElementAt(1).Angle = Math.Min(a1[0], a2[0] - a1[0]);
                     Edges[i].E.ElementAt(2).Angle = a2[0] - a1[0];
