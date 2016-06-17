@@ -1,4 +1,4 @@
-<Workspace Version="1.0.0.1180" X="413.876723985785" Y="166.532218492293" zoom="0.379929137866106" Name="Home" Description="" RunType="Automatic" RunPeriod="1000" HasRunWithoutCrash="True">
+<Workspace Version="1.0.0.1180" X="-3522.60305600869" Y="-1309.19447616777" zoom="1.70451063476639" Name="Home" Description="" RunType="Automatic" RunPeriod="1000" HasRunWithoutCrash="True">
   <NamespaceResolutionMap>
     <ClassMap partialName="panel" resolvedName="Panelization.panel" assemblyName="BecauseWeDynamo.dll" />
     <ClassMap partialName="panel.Face" resolvedName="Panelization.panel" assemblyName="BecauseWeDynamo.dll" />
@@ -6,7 +6,7 @@
   <Elements>
     <CoreNodeModels.Input.Filename guid="ac8f2467-a168-40d7-93dd-928a3bdc2717" type="CoreNodeModels.Input.Filename" nickname="File Path" x="162.828500386609" y="558.662841404034" isVisible="true" isUpstreamVisible="true" lacing="Disabled" isSelectedInput="True" IsFrozen="false" isPinned="false">
       <System.String>.\Bench.sat</System.String>
-      <HintPath>E:\Dynamo\Bench.sat</HintPath>
+      <HintPath>D:\be\Documents\GitHub\BecauseWeDynamo\packages\BecauseWeDynamo\extra\Benches\Bench.sat</HintPath>
     </CoreNodeModels.Input.Filename>
     <Dynamo.Graph.Nodes.CodeBlockNodeModel guid="daa1211a-de67-4db3-8a6e-b6924b1c7312" type="Dynamo.Graph.Nodes.CodeBlockNodeModel" nickname="Triangle Search" x="1764.2426643634" y="85.092468873894" isVisible="true" isUpstreamVisible="true" lacing="Disabled" isSelectedInput="False" IsFrozen="false" isPinned="false" CodeText="{1};" ShouldFocus="false" />
     <Dynamo.Graph.Nodes.CodeBlockNodeModel guid="17612377-f407-47f3-8d3c-ada96338d597" type="Dynamo.Graph.Nodes.CodeBlockNodeModel" nickname="Code Block" x="2107.24079386765" y="219.63924058259" isVisible="true" isUpstreamVisible="true" lacing="Disabled" isSelectedInput="False" IsFrozen="false" isPinned="false" CodeText="3/8/12;" ShouldFocus="false" />
@@ -15,8 +15,8 @@
     <Dynamo.Graph.Nodes.CodeBlockNodeModel guid="3a120739-6dcb-48cc-8de0-c34949ffdd88" type="Dynamo.Graph.Nodes.CodeBlockNodeModel" nickname="Code Block" x="2801.95146662228" y="993.224430820844" isVisible="true" isUpstreamVisible="true" lacing="Disabled" isSelectedInput="False" IsFrozen="false" isPinned="false" CodeText="127;&#xA;{255,191,127,0,0,0,0,0,63};&#xA;{0,63,127,255,191,127,0,0,0};&#xA;{0,0,0,0,63,127,255,127,191};" ShouldFocus="false" />
     <Dynamo.Graph.Nodes.ZeroTouch.DSFunction guid="3bc2573c-3a78-4050-8f9e-f7d2b23b54c6" type="Dynamo.Graph.Nodes.ZeroTouch.DSFunction" nickname="List.GetItemAtIndex" x="2674.74601300693" y="707.911929899128" isVisible="false" isUpstreamVisible="true" lacing="Shortest" isSelectedInput="False" IsFrozen="false" isPinned="false" assembly="DSCoreNodes.dll" function="DSCore.List.GetItemAtIndex@var[]..[],int" />
     <CoreNodeModels.Input.Filename guid="35a80de3-3330-4abd-8993-ed5630d98999" type="CoreNodeModels.Input.Filename" nickname="File Path" x="1691.98349535204" y="958.728490205061" isVisible="true" isUpstreamVisible="true" lacing="Disabled" isSelectedInput="True" IsFrozen="false" isPinned="false">
-      <System.String>..\bench1.csv</System.String>
-      <HintPath>D:\be\Documents\BWC\Autodesk Dynamo Benches\bench1.csv</HintPath>
+      <System.String>.\Bench.csv</System.String>
+      <HintPath>D:\be\Documents\GitHub\BecauseWeDynamo\packages\BecauseWeDynamo\extra\Benches\Bench.csv</HintPath>
     </CoreNodeModels.Input.Filename>
     <CoreNodeModels.Input.FileObject guid="2d128181-c6c6-4693-a662-8c5d6aab3065" type="CoreNodeModels.Input.FileObject" nickname="File.FromPath" x="1809.92312641296" y="957.599814899544" isVisible="true" isUpstreamVisible="true" lacing="Disabled" isSelectedInput="False" IsFrozen="false" isPinned="false" />
     <Dynamo.Graph.Nodes.ZeroTouch.DSFunction guid="858485d3-3054-4d3b-8992-8c4de4c1603a" type="Dynamo.Graph.Nodes.ZeroTouch.DSFunction" nickname="CSV.ReadFromFile" x="1936.53831102234" y="956.083120102733" isVisible="true" isUpstreamVisible="true" lacing="Shortest" isSelectedInput="False" IsFrozen="false" isPinned="false" assembly="DSCoreNodes.dll" function="DSCore.IO.CSV.ReadFromFile@var" />
