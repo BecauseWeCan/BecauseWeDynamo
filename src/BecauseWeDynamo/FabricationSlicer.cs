@@ -9,7 +9,7 @@ namespace Fabrication
     /// <summary>
     /// slicing object
     /// </summary>
-    public class Slicer: IDisposable
+    public class Slicer : IDisposable
     {
         bool disposed = false;
 
@@ -27,23 +27,19 @@ namespace Fabrication
         /// </summary>
         public Solid Solid { get; set; }
         /// <summary>
-        /// primary cut planes
+        /// List of CutPlane Arrays
         /// </summary>
-        public List<Plane> CutPlanesPrimary { get; set; }
-        /// <summary>
-        /// secondary cut planes
-        /// </summary>
-        public List<Plane> CutPlanesSecondary { get; set; }
-        /// <summary>
-        /// tertiary cut planes
-        /// </summary>
-        public List<Plane> CutPlanesTertiary { get; set; }
-        /// <summary>
-        /// inital geometry
-        /// </summary>
-        public List<Autodesk.DesignScript.Geometry.Geometry> InitialGeometry { get; set; }
+        public List<Plane[]> CutPlanes { get; set; }
 
         //**CONSTRUCTORS
+        internal Slicer(Solid solid, Plane plane, double thickness, double spacing)
+        {
+            Solid = solid;
+            Thickness = thickness;
+            Spacing = Math.Max(spacing, thickness);
+            CutPlanes = new List<Plane[]>();
+            CutPlanes.Add(GenerateCutPlanes(plane));
+        }
         /// <summary>
         /// Internal constructor for the class that has all geometric inputs to create sliced model
         /// </summary>
@@ -54,22 +50,21 @@ namespace Fabrication
         /// <param name="thickness">Thickness: the thickness of the slices, or the thickness of the material to be used for the assembly</param>
         /// <param name="spacing">Spacing: the distance between each slice</param>
         internal Slicer(Solid solid, Plane plane, Line line1, Line line2, double thickness, double spacing)
+            : this(solid, plane, thickness, spacing)
         {
-            Solid = solid;
-            Thickness = thickness;
-            Spacing = spacing;
-            CutPlanesPrimary.AddRange(GenerateCutPlanes(plane));
-            InitialGeometry = new List<Autodesk.DesignScript.Geometry.Geometry>();
-            InitialGeometry.Add(plane);
             if (line1 != null)
             {
-                CutPlanesSecondary.AddRange(GenerateCutPlanes(Plane.ByThreePoints(line1.StartPoint, line1.EndPoint, line1.StartPoint.Add(plane.Normal))));
-                InitialGeometry.Add(line1);
+                Point pt1 = line1.StartPoint.Add(plane.Normal);
+                Plane p1 = Plane.ByLineAndPoint(line1, pt1);
+                CutPlanes.Add(GenerateCutPlanes(p1));
+                pt1.Dispose(); p1.Dispose();
             }
             if (line2 != null)
             {
-                CutPlanesTertiary.AddRange(GenerateCutPlanes(Plane.ByThreePoints(line2.StartPoint, line2.EndPoint, line2.StartPoint.Add(plane.Normal))));
-                InitialGeometry.Add(line2);
+                Point pt2 = line1.StartPoint.Add(plane.Normal);
+                Plane p2 = Plane.ByLineAndPoint(line2, pt2);
+                CutPlanes.Add(GenerateCutPlanes(p2));
+                pt2.Dispose(); p2.Dispose();
             }
         }
         /// <summary>
@@ -82,24 +77,42 @@ namespace Fabrication
         /// <param name="spacing">Spacing: the distance between each slice</param>
         /// <param name="origin">Origin</param>
         /// <returns>A newly-constructed Slicer object</returns>
-        internal Slicer(Solid solid, Curve curve, double thickness, double spacing, double origin)
+        private Slicer(Solid solid, Curve curve, double thickness, double spacing, double origin)
         {
             Solid = solid;
             Thickness = thickness;
             Spacing = spacing;
-            Plane plane = Plane.ByOriginNormal(curve.StartPoint, curve.Normal);
-            Curve curvePlanar = curve;
-            if(!curve.IsPlanar)
+            if (curve.IsPlanar)
             {
-                plane = Plane.ByBestFitThroughPoints(curve.ToNurbsCurve().ControlPoints());
-                curvePlanar = curve.PullOntoPlane(plane);
+                Plane p1 = curve.PlaneAtParameter();
+                CutPlanes.Add(GenerateCutPlanes(p1));
+                p1.Dispose();
             }
-            CutPlanesPrimary.AddRange(GenerateCutPlanes(plane));
-            CutPlanesSecondary.AddRange(GenerateCutPlanes(curvePlanar, origin));
-            InitialGeometry = new List<Autodesk.DesignScript.Geometry.Geometry>(1) { curvePlanar };
+            else
+            {
+                Point[] pts = curve.PointsAtEqualSegmentLength();
+                Plane p1 = Plane.ByBestFitThroughPoints(pts);
+                Curve crv = curve.PullOntoPlane(p1);
+                CutPlanes.Add(GenerateCutPlanes(p1));
+                CutPlanes.Add(GenerateCutPlanes(crv, origin));
+                pts.ForEach(p => p.Dispose()); p1.Dispose(); crv.Dispose();
+            }
         }
 
         //**CREATE
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="solid"></param>
+        /// <param name="plane"></param>
+        /// <param name="thickness"></param>
+        /// <param name="spacing"></param>
+        /// <returns></returns>
+        public static Slicer ByPlane(Solid solid, Plane plane, double thickness, double spacing)
+        {
+            if (!solid.DoesIntersect(plane)) throw new ArgumentException("plane does not intersection solid");
+            return new Slicer(solid, plane, thickness, spacing);
+        }
         /// <summary>
         /// Construct an instance of slicer via a static method.
         /// This makes vertical stacks of given solid
@@ -113,7 +126,7 @@ namespace Fabrication
         /// <param name="thickness">Thickness: the thickness of the slices, or the thickness of the material to be used for the assembly</param>
         /// <param name="spacing">Spacing: the distance between each slice</param>
         /// <returns>A newly-constructed Slicer object</returns>
-        public static Slicer ByPlaneAndLines(Solid solid, Plane plane, Line line1 = null, Line line2 = null, double thickness = 1, double spacing = 0)
+        public static Slicer ByPlaneAndLines(Solid solid, Plane plane, Line line1, Line line2 = null, double thickness = 0.25, double spacing = 1)
         {
             if (!solid.DoesIntersect(plane)) throw new ArgumentException("plane does not intersection solid");
             if (line1.Direction.IsParallel(plane.Normal)) throw new ArgumentException("line is perpendicular to plane");
@@ -133,11 +146,11 @@ namespace Fabrication
         /// <param name="spacing">Spacing: the distance between each slice</param>
         /// <param name="origin">Curve Parameter (0 - 1)</param>
         /// <returns>A newly-constructed Slicer object</returns>
-        public static Slicer ByCurve(Solid solid, Curve curve, double thickness = 1, double spacing = 0, double origin = 0)
+        internal static Slicer ByCurve(Solid solid, Curve curve, double thickness = 0.25, double spacing = 1, double origin = 0)
         {
             return new Slicer(solid, curve, thickness, spacing, origin);
         }
-        
+
         //**ACTIONS
         // *Note: needs to return results with intersection and assembly figured out;
         // *Insert code from 123Dmake;
@@ -149,51 +162,59 @@ namespace Fabrication
         /// <param name="slicer">slicer object</param>
         /// <returns>circles, planar surfaces, and solid slices listed by layer then by object</returns>
         [MultiReturn(new[] { "Profiles", "Surfaces", "Slices" })]
-        public static Dictionary<string, object> GetPrimaryInscribedResults (Slicer slicer)
+        public static Dictionary<string, object> GetResultsPlaneInscribed(Slicer slicer)
         {
-            Plane[][] Shifted = slicer.ShiftCutPlanes(slicer.CutPlanesPrimary, slicer.Thickness);
+            Plane[][] Shifted = slicer.ShiftCutPlanes(slicer.CutPlanes[0]);
+
             List<Surface[]> Surfaces = new List<Surface[]>();
             List<PolyCurve[]> Profiles = new List<PolyCurve[]>();
             List<Solid[]> Slices = new List<Solid[]>();
 
-            for (int i = 0; i < slicer.CutPlanesPrimary.Count; i++)
+            for (int i = 0; i < slicer.CutPlanes[0].Length; i++)
             {
-                Autodesk.DesignScript.Geometry.Geometry[] Up = slicer.Solid.Intersect(Shifted[0][i]);
-                Autodesk.DesignScript.Geometry.Geometry[] Down = slicer.Solid.Intersect(Shifted[1][i]);
-                List<Solid> solidsUp = new List<Solid>();
-                List<Solid> solidsDown = new List<Solid>();
+                Autodesk.DesignScript.Geometry.Geometry[] iUp = slicer.Solid.Intersect(Shifted[0][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] iDn = slicer.Solid.Intersect(Shifted[1][i]);
 
-                for (int j = 0; j < Up.Length; j++)
+                List<Solid> cutsUp = new List<Solid>();
+                List<Solid> cutsDn = new List<Solid>();
+                for (int j = 0; j < iUp.Length; j++) { if (iUp[j] is Surface) cutsUp.Add(((Surface)iUp[j].Translate(slicer.CutPlanes[0][i].Normal, -slicer.Thickness / 2.0)).Thicken(slicer.Thickness, true)); else iUp[j].Dispose(); }
+                for (int j = 0; j < iDn.Length; j++) { if (iDn[j] is Surface) cutsDn.Add(((Surface)iDn[j].Translate(slicer.CutPlanes[0][i].Normal, slicer.Thickness / 2.0)).Thicken(slicer.Thickness, true)); else iUp[j].Dispose(); }
+                if (cutsUp.Count < 1 || cutsDn.Count < 1)
                 {
-                    if ((Up[j] is Point) ^ (Up[j] is Curve)) { continue; }
-                    else { solidsUp.Add(((Surface)Up[j].Translate(slicer.CutPlanesPrimary[i].Normal.Scale(-slicer.Thickness / 2.0))).Thicken(slicer.Thickness)); }
+                    iUp.ForEach(s => s.Dispose());
+                    iDn.ForEach(s => s.Dispose());
+                    cutsUp.ForEach(s => s.Dispose());
+                    cutsDn.ForEach(s => s.Dispose());
+                    continue;
                 }
-                for (int j = 0; j < Down.Length; j++)
+                else
                 {
-                    if ((Down[j] is Point) ^ (Down[j] is Curve)) { continue; }
-                    else { solidsDown.Add(((Surface)Down[j].Translate(slicer.CutPlanesPrimary[i].Normal.Scale(slicer.Thickness / 2.0))).Thicken(slicer.Thickness)); }
-                }
+                    Solid[] Result = new Solid[] { Solid.ByUnion(cutsUp), Solid.ByUnion(cutsDn) };
+                    iUp.ForEach(s => s.Dispose());
+                    iDn.ForEach(s => s.Dispose());
+                    cutsUp.ForEach(s => s.Dispose());
+                    cutsDn.ForEach(s => s.Dispose());
 
-                Solid solidUp = Solid.ByUnion(solidsUp);
-                Solid solidDown = Solid.ByUnion(solidsDown);
-                Autodesk.DesignScript.Geometry.Geometry[] results = slicer.CutPlanesPrimary[i].IntersectAll(solidUp.Intersect(solidDown));
-
-                List<Surface> surfaces = new List<Surface>();
-                List<Solid> slices = new List<Solid>();
-                List<PolyCurve> profiles = new List<PolyCurve>();
-                for (int j = 0; j < results.Length; j++)
-                {
-                    if ((results[j] is Point) ^ (results[j] is Curve)) { continue; }
-                    else 
+                    Autodesk.DesignScript.Geometry.Geometry[] geometry = slicer.CutPlanes[0][i].IntersectAll(Result);
+                    List<PolyCurve> profiles = new List<PolyCurve>();
+                    List<Surface> surfaces = new List<Surface>();
+                    List<Solid> slices = new List<Solid>();
+                    for (int j = 0; j < geometry.Length; j++)
                     {
-                        surfaces.Add((Surface) results[j]);
-                        profiles.Add(PolyCurve.ByJoinedCurves(((Surface) results[j]).PerimeterCurves()));
-                        slices.Add(((Surface) results[j]).Thicken(slicer.Thickness)); 
+                        if (geometry[j] is Surface)
+                        {
+                            surfaces.Add((Surface)geometry[j]);
+                            profiles.Add(PolyCurve.ByJoinedCurves(((Surface)geometry[j]).PerimeterCurves()));
+                            slices.Add(((Surface)geometry[j]).Thicken(slicer.Thickness, true));
+                        }
+                        else geometry[j].Dispose();
                     }
+                    Result.ForEach(r => r.Dispose());
+
+                    Profiles.Add(profiles.ToArray());
+                    Surfaces.Add(surfaces.ToArray());
+                    Slices.Add(slices.ToArray());
                 }
-                Surfaces.Add(surfaces.ToArray());
-                Slices.Add(slices.ToArray());
-                Profiles.Add(profiles.ToArray());
             }
 
             return new Dictionary<string, object>
@@ -210,48 +231,43 @@ namespace Fabrication
         /// <param name="slicer">slicer object</param>
         /// <returns>circles, planar surfaces, and solid slices listed by layer then by object</returns>
         [MultiReturn(new[] { "Profiles", "Surfaces", "Slices" })]
-        public static Dictionary<string, object> GetPrimaryCircumscribedResults(Slicer slicer)
+        public static Dictionary<string, object> GetResultsPlaneCircumscribed(Slicer slicer)
         {
-            Plane[][] Shifted = slicer.ShiftCutPlanes(slicer.CutPlanesPrimary, slicer.Thickness);
+            Plane[][] Shifted = slicer.ShiftCutPlanes(slicer.CutPlanes[0]);
+
             List<Surface[]> Surfaces = new List<Surface[]>();
             List<PolyCurve[]> Profiles = new List<PolyCurve[]>();
             List<Solid[]> Slices = new List<Solid[]>();
-            for (int i = 0; i < slicer.CutPlanesPrimary.Count; i++)
+
+            for (int i = 0; i < slicer.CutPlanes[0].Length; i++)
             {
-                Autodesk.DesignScript.Geometry.Geometry[] Up = slicer.Solid.Intersect(Shifted[0][i]);
-                Autodesk.DesignScript.Geometry.Geometry[] Down = slicer.Solid.Intersect(Shifted[1][i]);
-                List<Solid> solidsUp = new List<Solid>();
-                List<Solid> solidsDown = new List<Solid>();
+                Autodesk.DesignScript.Geometry.Geometry[] iUp = slicer.Solid.Intersect(Shifted[0][i]);
+                Autodesk.DesignScript.Geometry.Geometry[] iDn = slicer.Solid.Intersect(Shifted[1][i]);
 
-                for (int j = 0; j < Up.Length; j++)
-                {
-                    if ((Up[j] is Point) ^ (Up[j] is Curve)) { continue; }
-                    else { solidsUp.Add(((Surface)Up[j].Translate(slicer.CutPlanesPrimary[i].Normal.Scale(-slicer.Thickness / 2.0))).Thicken(slicer.Thickness)); }
-                }
-                for (int j = 0; j < Down.Length; j++)
-                {
-                    if ((Down[j] is Point) ^ (Down[j] is Curve)) { continue; }
-                    else { solidsDown.Add(((Surface)Down[j].Translate(slicer.CutPlanesPrimary[i].Normal.Scale(slicer.Thickness / 2.0))).Thicken(slicer.Thickness)); }
-                }
+                List<Solid> cuts = new List<Solid>();
+                for (int j = 0; j < iUp.Length; j++) { if (iUp[j] is Surface) cuts.Add(((Surface)iUp[j].Translate(slicer.CutPlanes[0][i].Normal, -slicer.Thickness / 2.0)).Thicken(slicer.Thickness, true)); else iUp[j].Dispose(); }
+                for (int j = 0; j < iDn.Length; j++) { if (iDn[j] is Surface) cuts.Add(((Surface)iDn[j].Translate(slicer.CutPlanes[0][i].Normal, slicer.Thickness / 2.0)).Thicken(slicer.Thickness, true)); else iUp[j].Dispose(); }
+                Solid Result = Solid.ByUnion(cuts);
+                iUp.ForEach(s => s.Dispose());
+                iDn.ForEach(s => s.Dispose());
+                cuts.ForEach(s => s.Dispose());
 
-                Solid solidUp = Solid.ByUnion(solidsUp);
-                Solid solidDown = Solid.ByUnion(solidsDown);
-                Solid result = solidUp.Union(solidDown);
-                Autodesk.DesignScript.Geometry.Geometry[] results = result.Intersect(slicer.CutPlanesPrimary[i]);
-
+                Autodesk.DesignScript.Geometry.Geometry[] geometry = Result.Intersect(slicer.CutPlanes[0][i]);
                 List<PolyCurve> profiles = new List<PolyCurve>();
                 List<Surface> surfaces = new List<Surface>();
                 List<Solid> slices = new List<Solid>();
-                for (int j = 0; j < results.Length; j++)
+                for (int j = 0; j < geometry.Length; j++)
                 {
-                    if ((results[j] is Point) ^ (results[j] is Curve)) { continue; }
-                    else
+                    if (geometry[j] is Surface)
                     {
-                        surfaces.Add((Surface)results[j]);
-                        profiles.Add(PolyCurve.ByJoinedCurves(((Surface)results[j]).PerimeterCurves()));
-                        slices.Add(((Surface)results[j]).Thicken(slicer.Thickness));
+                        surfaces.Add((Surface)geometry[j]);
+                        profiles.Add(PolyCurve.ByJoinedCurves(((Surface)geometry[j]).PerimeterCurves()));
+                        slices.Add(((Surface)geometry[j]).Thicken(slicer.Thickness, true));
                     }
+                    else geometry[j].Dispose();
                 }
+                Result.Dispose();
+
                 Profiles.Add(profiles.ToArray());
                 Surfaces.Add(surfaces.ToArray());
                 Slices.Add(slices.ToArray());
@@ -270,27 +286,27 @@ namespace Fabrication
         /// <param name="slicer">slicer object</param>
         /// <returns>circles, planar surfaces, and solid slices listed by layer then by object</returns>
         [MultiReturn(new[] { "Profiles", "Surfaces", "Slices" })]
-        public static Dictionary<string, object> GetPrimaryResults(Slicer slicer)
+        public static Dictionary<string, object> GetResultsPlane(Slicer slicer)
         {
             List<Surface[]> Surfaces = new List<Surface[]>();
             List<PolyCurve[]> Profiles = new List<PolyCurve[]>();
             List<Solid[]> Slices = new List<Solid[]>();
 
-            for (int i = 0; i < slicer.CutPlanesPrimary.Count; i++)
+            for (int i = 0; i < slicer.CutPlanes[0].Length; i++)
             {
-                Autodesk.DesignScript.Geometry.Geometry[] geometry = slicer.Solid.Intersect(slicer.CutPlanesPrimary[i]);
+                Autodesk.DesignScript.Geometry.Geometry[] geometry = slicer.Solid.Intersect(slicer.CutPlanes[0][i]);
                 List<PolyCurve> profiles = new List<PolyCurve>();
                 List<Surface> surfaces = new List<Surface>();
                 List<Solid> slices = new List<Solid>();
                 for (int j = 0; j < geometry.Length; j++)
                 {
-                    if ((geometry[j] is Point) ^ (geometry[j] is Curve)) { continue; }
-                    else
+                    if (geometry[j] is Surface)
                     {
                         surfaces.Add((Surface)geometry[j]);
                         profiles.Add(PolyCurve.ByJoinedCurves(((Surface)geometry[j]).PerimeterCurves()));
-                        slices.Add(((Surface)geometry[j]).Thicken(slicer.Thickness));
+                        slices.Add(((Surface)geometry[j]).Thicken(slicer.Thickness, true));
                     }
+                    else geometry[j].Dispose();
                 }
                 Profiles.Add(profiles.ToArray());
                 Surfaces.Add(surfaces.ToArray());
@@ -309,47 +325,79 @@ namespace Fabrication
         /// </summary>
         /// <param name="slicer">slicer object</param>
         /// <returns>list of polycurve arrays</returns>
-        [MultiReturn(new[] { "Primary", "Secondary", "Tertiary" })]
-        public static Dictionary<string, object> GetSurfaces(Slicer slicer)
+        [MultiReturn(new[] { "Profiles", "Surfaces", "Slices" })]
+        public static Dictionary<string, object> GetResultsLine1(Slicer slicer)
         {
+            List<Surface[]> Surfaces = new List<Surface[]>();
+            List<PolyCurve[]> Profiles = new List<PolyCurve[]>();
+            List<Solid[]> Slices = new List<Solid[]>();
 
-            List<Solid[]> SliceResults = new List<Solid[]>(); // Container for Solid Results
+            for (int i = 0; i < slicer.CutPlanes[1].Length; i++)
+            {
+                Autodesk.DesignScript.Geometry.Geometry[] geometry = slicer.Solid.Intersect(slicer.CutPlanes[0][i]);
+                List<PolyCurve> profiles = new List<PolyCurve>();
+                List<Surface> surfaces = new List<Surface>();
+                List<Solid> slices = new List<Solid>();
+                for (int j = 0; j < geometry.Length; j++)
+                {
+                    if (geometry[j] is Surface)
+                    {
+                        surfaces.Add((Surface)geometry[j]);
+                        profiles.Add(PolyCurve.ByJoinedCurves(((Surface)geometry[j]).PerimeterCurves()));
+                        slices.Add(((Surface)geometry[j]).Thicken(slicer.Thickness, true));
+                    }
+                    else geometry[j].Dispose();
+                }
+                Profiles.Add(profiles.ToArray());
+                Surfaces.Add(surfaces.ToArray());
+                Slices.Add(slices.ToArray());
+            }
+
             return new Dictionary<string, object>
             {
-                { "Primary", slicer.GenerateSurfaces(slicer.CutPlanesPrimary) },
-                { "Secondary", slicer.GenerateSurfaces(slicer.CutPlanesSecondary)},
-                { "Tertiary", slicer.GenerateSurfaces(slicer.CutPlanesTertiary)}
+                { "Profiles", Profiles },
+                { "Surfaces", Surfaces},
+                { "Slices", Slices }
             };
         }
         /// <summary>
-        /// Returns solid slices by layer
-        /// </summary>
-        /// <param name="slicer">slicr object</param>
-        /// <returns>list of solid arrays</returns>
-        [MultiReturn(new[] { "Primary", "Secondary", "Tertiary" })]
-        public static Dictionary<string, object> GetSlices(Slicer slicer)
-        {
-            return new Dictionary<string, object>
-            {
-                { "Primary", slicer.GenerateSlices(slicer.GenerateSurfaces(slicer.CutPlanesPrimary)) },
-                { "Secondary", slicer.GenerateSlices(slicer.GenerateSurfaces(slicer.CutPlanesSecondary))},
-                { "Tertiary", slicer.GenerateSlices(slicer.GenerateSurfaces(slicer.CutPlanesTertiary))}
-            };
-        }
-        /// <summary>
-        /// Returns profiles by layer
+        /// Returns surfaces by layer
         /// </summary>
         /// <param name="slicer">slicer object</param>
         /// <returns>list of polycurve arrays</returns>
-        [MultiReturn(new[] { "Primary", "Secondary", "Tertiary" })]
-        public static Dictionary<string, object> GetProfiles(Slicer slicer)
+        [MultiReturn(new[] { "Profiles", "Surfaces", "Slices" })]
+        public static Dictionary<string, object> GetResultsLine2(Slicer slicer)
         {
-            List<Solid[]> SliceResults = new List<Solid[]>(); // Container for Solid Results
+            List<Surface[]> Surfaces = new List<Surface[]>();
+            List<PolyCurve[]> Profiles = new List<PolyCurve[]>();
+            List<Solid[]> Slices = new List<Solid[]>();
+
+            for (int i = 0; i < slicer.CutPlanes[2].Length; i++)
+            {
+                Autodesk.DesignScript.Geometry.Geometry[] geometry = slicer.Solid.Intersect(slicer.CutPlanes[0][i]);
+                List<PolyCurve> profiles = new List<PolyCurve>();
+                List<Surface> surfaces = new List<Surface>();
+                List<Solid> slices = new List<Solid>();
+                for (int j = 0; j < geometry.Length; j++)
+                {
+                    if (geometry[j] is Surface)
+                    {
+                        surfaces.Add((Surface)geometry[j]);
+                        profiles.Add(PolyCurve.ByJoinedCurves(((Surface)geometry[j]).PerimeterCurves()));
+                        slices.Add(((Surface)geometry[j]).Thicken(slicer.Thickness, true));
+                    }
+                    else geometry[j].Dispose();
+                }
+                Profiles.Add(profiles.ToArray());
+                Surfaces.Add(surfaces.ToArray());
+                Slices.Add(slices.ToArray());
+            }
+
             return new Dictionary<string, object>
             {
-                { "Primary", slicer.GenerateProfiles(slicer.CutPlanesPrimary) },
-                { "Secondary", slicer.GenerateProfiles(slicer.CutPlanesSecondary)},
-                { "Tertiary", slicer.GenerateProfiles(slicer.CutPlanesTertiary)}
+                { "Profiles", Profiles },
+                { "Surfaces", Surfaces},
+                { "Slices", Slices }
             };
         }
 
@@ -363,7 +411,7 @@ namespace Fabrication
         /// </summary>
         /// <param name="plane">initial plane</param>
         /// <returns>List containing all cut planes</returns>
-        private List<Plane> GenerateCutPlanes(Plane plane)
+        internal Plane[] GenerateCutPlanes(Plane plane)
         {
             List<Plane> Planes = new List<Plane>();     // List for planes that will be returned
             List<Plane> upPlanes = new List<Plane>();   // List of planes in normal direction
@@ -382,9 +430,9 @@ namespace Fabrication
             }
             downPlanes.Reverse();
             Planes.AddRange(downPlanes);
-            Planes.Add(plane);
+            Planes.Add(plane.Offset(0));
             Planes.AddRange(upPlanes);
-            return Planes;
+            return Planes.ToArray();
         }
         /// <summary>
         /// This function creates a list of cut planes;
@@ -395,20 +443,34 @@ namespace Fabrication
         /// <param name="curve"></param>
         /// <param name="origin"></param>
         /// <returns>List containing all cut planes</returns>
-        public List<Plane> GenerateCutPlanes(Curve curve, double origin)
+        internal Plane[] GenerateCutPlanes(Curve curve, double origin)
         {
             List<Plane> Planes = new List<Plane>();
-            if (origin > 0) Planes.Add(Plane.ByOriginNormal(curve.PointAtParameter(origin), curve.TangentAtParameter(origin)));
-            else Planes.Add(Plane.ByOriginNormal((Point)Solid.Intersect(curve)[0], curve.TangentAtParameter(curve.ParameterAtPoint((Point)Solid.Intersect(curve)[0]))));
-            return Planes;
+            if (origin > 0)
+            {
+                Point pt = curve.PointAtParameter(origin);
+                Vector vec = curve.TangentAtParameter(origin);
+                Planes.Add(Plane.ByOriginNormal(pt, vec));
+                pt.Dispose();
+                vec.Dispose();
+            }
+            else
+            {
+                Point pt = Solid.Intersect(curve)[0] as Point;
+                Vector vec = curve.TangentAtParameter(curve.ParameterAtPoint(pt));
+                Planes.Add(Plane.ByOriginNormal(pt, vec));
+                pt.Dispose();
+                vec.Dispose();
+            }
+            return Planes.ToArray();
         }
         /// <summary>
         /// Generates a list of arrays of closed result based on cutplanes 
         /// </summary>
-        public List<Surface[]> GenerateSurfaces(List<Plane> planes)
+        internal List<Surface[]> GenerateSurfaces(Plane[] planes)
         {
             List<Surface[]> Surfaces = new List<Surface[]>();
-            for (int i = 0; i < planes.Count; i++ )
+            for (int i = 0; i < planes.Length; i++)
             {
                 List<Surface> surfaces = new List<Surface>();
                 Autodesk.DesignScript.Geometry.Geometry[] intersection = Solid.Intersect(planes[i]);
@@ -426,121 +488,35 @@ namespace Fabrication
         /// </summary>
         /// <param name="Surfaces"></param>
         /// <returns></returns>
-        public List<Solid[]> GenerateSlices(List<Surface[]> Surfaces)
+        internal List<Solid[]> GenerateSlices(List<Surface[]> Surfaces)
         {
             List<Solid[]> Slices = new List<Solid[]>(Surfaces.Count);
             for (int i = 0; i < Surfaces.Count; i++) for (int j = 0; j < Surfaces[i].Length; j++)
-                    Slices[i][j] = Surfaces[i][j].Thicken(Thickness);
+                    Slices[i][j] = Surfaces[i][j].Thicken(Thickness, true);
             return Slices;
         }
         /// <summary>
         /// Takes a list of surface arrays, and returns perimeters
         /// </summary>
-        private List<PolyCurve[]> GenerateProfiles(List<Plane> planes)
+        internal List<PolyCurve[]> GenerateProfiles(List<Surface[]> Surfaces)
         {
             List<PolyCurve[]> Curves = new List<PolyCurve[]>();
-            for (int i = 0; i < planes.Count; i++)
-            {
-                Autodesk.DesignScript.Geometry.Geometry[] geometry = Solid.Intersect(planes[i]);
-                List<PolyCurve> profiles = new List<PolyCurve>();
-                for (int j = 0; j < geometry.Length; j++)
-                {
-                    if ((geometry[j] is Point) ^ (geometry[j] is Curve)) { continue; }
-                    else { profiles.Add(PolyCurve.ByJoinedCurves(((Surface)geometry[j]).PerimeterCurves())); }
-                }
-                Curves.Add(profiles.ToArray());
-            }
+            for (int i = 0; i < Surfaces.Count; i++) for (int j = 0; j < Surfaces[i].Length; j++)
+                    Curves[i][j] = PolyCurve.ByJoinedCurves(Surfaces[i][j].PerimeterCurves());
             return Curves;
         }
-        private Plane[][] ShiftCutPlanes(List<Plane> planes, double thickness)
+        internal Plane[][] ShiftCutPlanes(Plane[] planes)
         {
-            Plane[] shiftUp = new Plane[planes.Count];
-            Plane[] shiftDown = new Plane[planes.Count];
-            for (int i = 0; i < planes.Count; i++)
+            Plane[] shiftUp = new Plane[planes.Length];
+            Plane[] shiftDown = new Plane[planes.Length];
+            for (int i = 0; i < planes.Length; i++)
             {
-                shiftUp[i] = planes[i].Offset(thickness / 2.0);
-                shiftDown[i] = planes[i].Offset(- thickness / 2.0);
+                shiftUp[i] = planes[i].Offset(Thickness / 2.0);
+                shiftDown[i] = planes[i].Offset(-Thickness / 2.0);
             }
-            Plane[][] shifted = {shiftUp, shiftDown};
+            Plane[][] shifted = { shiftUp, shiftDown };
             return shifted;
         }
-        private List<Surface[]> GenerateCircumscribedSurfaces(List<Plane> planes)
-        {
-            Plane[][] Shifted = ShiftCutPlanes(planes, Thickness);
-            List<Surface[]> Surfaces = new List<Surface[]>();
-            for (int i = 0; i < planes.Count; i++)
-            {
-                Autodesk.DesignScript.Geometry.Geometry[] Up = Solid.Intersect(Shifted[0][i]);
-                Autodesk.DesignScript.Geometry.Geometry[] Down = Solid.Intersect(Shifted[1][i]);
-                List<Solid> solidsUp = new List<Solid>();
-                List<Solid> solidsDown = new List<Solid>();
-                
-                for (int j = 0; j < Up.Length; j++)
-                {
-                    if ((Up[j] is Point) ^ (Up[j] is Curve)) { continue; }
-                    else { solidsUp.Add(((Surface) Up[j].Translate(planes[i].Normal.Scale(-Thickness/2.0))).Thicken(Thickness)); }
-                }
-                for (int j = 0; j < Down.Length; j++)
-                {
-                    if ((Down[j] is Point) ^ (Down[j] is Curve)) { continue; }
-                    else { solidsDown.Add(((Surface)Down[j].Translate(planes[i].Normal.Scale(Thickness/2.0))).Thicken(Thickness)); }
-                }
-                
-                Solid solidUp = Solid.ByUnion(solidsUp);
-                Solid solidDown = Solid.ByUnion(solidsDown);
-                Solid result = solidUp.Union(solidDown);
-                List<Surface> surfaces = new List<Surface>();
-                Autodesk.DesignScript.Geometry.Geometry[] results = result.Intersect(planes[i]);
-                for (int j = 0; j < results.Length; j++)
-                {
-                    if ((results[j] is Point) ^ (results[j] is Curve)) { continue; }
-                    else { surfaces.Add((Surface) results[j]); }
-                }
-                Surfaces.Add(surfaces.ToArray());
-            }
-            return Surfaces;
-        }
-        /// <summary>
-        /// returns inscribed surfaces at cutplanes
-        /// </summary>
-        /// <param name="planes"></param>
-        /// <returns></returns>
-        public List<Surface[]> GenerateInscribedSurfaces(List<Plane> planes)
-        {
-            Plane[][] Shifted = ShiftCutPlanes(planes, Thickness);
-            List<Surface[]> Surfaces = new List<Surface[]>();
-            for (int i = 0; i < planes.Count; i++)
-            {
-                Autodesk.DesignScript.Geometry.Geometry[] Up = Solid.Intersect(Shifted[0][i]);
-                Autodesk.DesignScript.Geometry.Geometry[] Down = Solid.Intersect(Shifted[1][i]);
-                List<Solid> solidsUp = new List<Solid>();
-                List<Solid> solidsDown = new List<Solid>();
-
-                for (int j = 0; j < Up.Length; j++)
-                {
-                    if ((Up[j] is Point) ^ (Up[j] is Curve)) { continue; }
-                    else { solidsUp.Add(((Surface)Up[j].Translate(planes[i].Normal.Scale(-Thickness / 2.0))).Thicken(Thickness)); }
-                }
-                for (int j = 0; j < Down.Length; j++)
-                {
-                    if ((Down[j] is Point) ^ (Down[j] is Curve)) { continue; }
-                    else { solidsDown.Add(((Surface)Down[j].Translate(planes[i].Normal.Scale(Thickness / 2.0))).Thicken(Thickness)); }
-                }
-
-                Solid solidUp = Solid.ByUnion(solidsUp);
-                Solid solidDown = Solid.ByUnion(solidsDown);
-                List<Surface> surfaces = new List<Surface>();
-                Autodesk.DesignScript.Geometry.Geometry[] results = planes[i].IntersectAll(solidUp.Intersect(solidDown));
-                for (int j = 0; j < results.Length; j++)
-                {
-                    if ((results[j] is Point) ^ (results[j] is Curve)) { continue; }
-                    else { surfaces.Add((Surface)results[j]); }
-                }
-                Surfaces.Add(surfaces.ToArray());
-            }
-            return Surfaces;
-        }
-
         //**METHODS**DISPOSE
         /// <summary>
         /// dispose function
@@ -559,11 +535,7 @@ namespace Fabrication
             if (disposed) return;
             if (disposing)
             {
-                Solid.Dispose();
-                CutPlanesPrimary.ForEach(p => p.Dispose());
-                CutPlanesSecondary.ForEach(p => p.Dispose());
-                CutPlanesTertiary.ForEach(p => p.Dispose());
-                InitialGeometry.ForEach(p => p.Dispose());
+                CutPlanes.ForEach(plns => plns.ForEach(pln => pln.Dispose()));
             }
             disposed = true;
         }
