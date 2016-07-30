@@ -223,6 +223,20 @@ namespace Fabrication
         }
 
         /// <summary>
+        /// translates word object by x-amount and y-amount relative to itself
+        /// </summary>
+        /// <returns>Translated Object</returns>
+        public word Translate(double x, double y)
+        {
+            for (int i = 0; i < Letters.Length; i++) for (int j = 0; j < Letters[i].Count; j++)
+            { 
+                Letters[i][j] = Letters[i][j].Translate(cs.XAxis, x) as PolyCurve;
+                Letters[i][j] = Letters[i][j].Translate(cs.YAxis, y) as PolyCurve;
+            }
+            return this;
+        }
+
+        /// <summary>
         /// scales word about object origin by given scale factor
         /// </summary>
         /// <param name="Factor">Scale Factor</param>

@@ -361,6 +361,14 @@ namespace Topology
         {
             return (Vertices[0].IsAtPoint(Line.EndPoint) && Vertices[1].IsAtPoint(Line.StartPoint)) || (Vertices[0].IsAtPoint(Line.StartPoint) && Vertices[1].IsAtPoint(Line.EndPoint));
         }
+        /// <summary>
+        /// rename edge
+        /// </summary>
+        /// <param name="Name"></param>
+        public void Rename(string Name)
+        {
+            this.Name = Name;
+        }
     }
 
     /// <summary>
@@ -573,6 +581,14 @@ namespace Topology
             for (int i = 0; i < E.Count; i++) E[i] = temp[(index + 1) % E.Count];
             temp = null;
             return this;
+        }
+        /// <summary>
+        /// rename face
+        /// </summary>
+        /// <param name="Name">string</param>
+        public void Rename(string Name)
+        {
+            this.Name = Name;
         }
     }
     /// <summary>
