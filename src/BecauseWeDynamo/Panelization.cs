@@ -5,6 +5,7 @@ using Autodesk.DesignScript.Geometry;
 using Fabrication;
 using Geometry;
 using Topology;
+using System.Diagnostics;
 
 
 namespace Panelization
@@ -715,7 +716,7 @@ namespace Panelization
         {
             point p = point.ByCoordinates(Point.X, Point.Y, Point.Z);
             // return default for angles smaller than 
-            if (Edge.Angle[iAngle] <= 2 * (90 - BevelAngle)) return GetConnectorProfileAtPoint(Point);
+            if (Edge.Angle[iAngle] <= 2 * math.toRadians(90 - BevelAngle)) return GetConnectorProfileAtPoint(Point);
             // initialize and generate Point List using EdgeConnector geometry data at given point
             List<point> Points = new List<point>(Profile.Count + 7);
             double ThicknessBack = Profile[0].Length * Math.Sin(Edge.Angle[iAngle] /2);
@@ -726,16 +727,18 @@ namespace Panelization
             //Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset + 2 * ToolRadius)).Add(Vectors[3].Scale(-ThicknessBack)));
             //Points.Add(Point.Add(Vectors[4].Scale(EdgeOffset + BevelInset + ToolRadius)).Add(Vectors[3].Scale(-ThicknessBack - ToolRadius)));
             Points.Add(p.Add(Vectors[4].Scale(EdgeOffset + BevelInset)).Add(Vectors[3].Scale(-ThicknessBack)));
-            if (Edge.Angle[iAngle] == 2 * (180 - BevelAngle)) { }
-            else if (Edge.Angle[iAngle] < 2 * (180 - BevelAngle))
+            if (Edge.Angle[iAngle] == 2 * math.toRadians(180-BevelAngle)) { }
+            else if (Edge.Angle[iAngle] > 2 * math.toRadians(180-BevelAngle))
+            {
+                //hyp = o/(sin(e/2)*tan(b) + cos(e/2))
+                //Points.Add(p.Add(Vectors[6].Scale(EdgeOffset / (Math.Sin(Edge.Angle[iAngle] / 2) * Math.Tan(BevelAngle) + Math.Cos(Edge.Angle[iAngle] / 2)))));
+                Points.Add(p.Add(Vectors[6].Scale(EdgeOffset * Math.Sin(math.toRadians(90-BevelAngle)) / Math.Sin(Edge.Angle[iAngle] / 2 + math.toRadians(BevelAngle) - math.PI/2))));
+            }
+            else 
+                //if (Edge.Angle[iAngle] < 2 * math.toRadians(180 - BevelAngle))
             {
                 Points.Add(p.Add(Vectors[4].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[3].Scale(-ThicknessBack / 2)));
                 Points.Add(p.Add(Vectors[1].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[0].Scale(-ThicknessBack / 2)));
-            }
-            else if (Edge.Angle[iAngle] > 2 * (180 - BevelAngle))
-            {
-                //hyp = o/(sin(e/2)*tan(b) + cos(e/2))
-                Points.Add(p.Add(Vectors[6].Scale(EdgeOffset / (Math.Sin(Edge.Angle[iAngle] / 2) * Math.Tan(BevelAngle) + Math.Cos(Edge.Angle[iAngle] / 2)))));
             }
             Points.Add(p.Add(Vectors[1].Scale(EdgeOffset + BevelInset)).Add(Vectors[0].Scale(-ThicknessBack)));
             //Points.Add(Point.Add(Vectors[1].Scale(EdgeOffset + BevelInset + ToolRadius)).Add(Vectors[0].Scale(-ThicknessBack - ToolRadius)));
@@ -754,7 +757,7 @@ namespace Panelization
                 Arc.ByThreePoints(Points[9],Points[10],Points[11])};
             for (int j = 11; j < Points.Count-3; j++) Curves.Add(Line.ByStartPointEndPoint(Points[j], Points[j + 1]));*/
             List<Point> Pts = new List<Point>(Points.Count);
-            Points.ForEach(pt => Pts.Add(p.ToPoint()));
+            Points.ForEach(pt => Pts.Add(pt.ToPoint()));
             List<Curve> Curves = new List<Curve> {
                 Line.ByStartPointEndPoint(Pts[0], Pts[1]),
                 Arc.ByCenterPointStartPointEndPoint(Pts[2],Pts[1],Pts[3]),
@@ -767,6 +770,40 @@ namespace Panelization
             // dispose unmanaged resources
             Pts.ForEach(pt => pt.Dispose()); Curves.ForEach(c => c.Dispose());
             return Result;
+        }
+        /// <summary>
+        /// get bevel connector as points
+        /// </summary>
+        /// <param name="Point"></param>
+        /// <returns></returns>
+        public List<Point> GetConnectorProfileBevelPoint(Point Point)
+        {
+            point p = point.ByCoordinates(Point.X, Point.Y, Point.Z);
+            if (Edge.Angle[iAngle] <= 2 * math.toRadians(90 - BevelAngle)) return null;
+            List<point> Points = new List<point>(Profile.Count + 7);
+            double ThicknessBack = Profile[0].Length * Math.Sin(Edge.Angle[iAngle] / 2);
+            double BevelInset = ThicknessBack * Math.Tan(math.toRadians(BevelAngle));
+            for (int i = 1; i < Profile.Count; i++) Points.Add(p.Add(Profile[i]));
+            Points.Add(p.Add(Vectors[4].Scale(EdgeOffset + BevelInset)).Add(Vectors[3].Scale(-ThicknessBack)));
+            if (Edge.Angle[iAngle] == 2 * math.toRadians(180 - BevelAngle)) { }
+            else if (Edge.Angle[iAngle] < 2 * math.toRadians(180 - BevelAngle))
+            {
+                Points.Add(p.Add(Vectors[4].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[3].Scale(-ThicknessBack / 2)));
+                Points.Add(p.Add(Vectors[1].Scale(EdgeOffset + BevelInset / 2)).Add(Vectors[0].Scale(-ThicknessBack / 2)));
+            }
+            else if (Edge.Angle[iAngle] > 2 * math.toRadians(180 - BevelAngle))
+            {
+                Points.Add(p.Add(Vectors[6].Scale(EdgeOffset / (Math.Sin(Edge.Angle[iAngle] / 2) * Math.Tan(BevelAngle) + Math.Cos(Edge.Angle[iAngle] / 2)))));
+            }
+            Points.Add(p.Add(Vectors[1].Scale(EdgeOffset + BevelInset)).Add(Vectors[0].Scale(-ThicknessBack)));
+            List<Point> Pts = new List<Point>(Points.Count);
+            Points.ForEach(pt => Pts.Add(pt.ToPoint()));
+            Debug.WriteLine("Points:");
+            for (int i = 0; i < Points.Count; i++)
+            {
+                Debug.WriteLine(Points[i]);
+            }
+            return Pts;
         }
     }
 

@@ -258,7 +258,7 @@ namespace Topology
         /// </summary>
         public string Name { get; set; }
         /// <summary>
-        /// Angle between Faces at Edge
+        /// Angle between Faces at Edge (radians)
         /// </summary>
         public double[] Angle { get; set; }
         /// <summary>
